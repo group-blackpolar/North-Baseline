@@ -24,6 +24,7 @@ export interface SessionUser {
 // del proceso (nunca en localStorage) para el resto de las llamadas.
 let memorySession: { token: string; user: SessionUser } | null = null
 
+
 async function betterAuthFetch(path: string, options: RequestInit = {}) {
   const res = await fetch(`${API_URL}/api/auth${path}`, {
     ...options,
@@ -37,11 +38,16 @@ async function betterAuthFetch(path: string, options: RequestInit = {}) {
   return res
 }
 
-export async function loginWithAdminId(adminUniqueId: string): Promise<SessionUser> {
+export async function loginWithAdminId(adminUniqueId: string, email?: string): Promise<SessionUser> {
+  const payload: Record<string, string> = { adminUniqueId: adminUniqueId.trim() }
+  if (email?.trim()) {
+    payload.email = email.trim()
+  }
+
   const res = await fetch(`${API_URL}/api/admin/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ adminUniqueId }),
+    body: JSON.stringify(payload),
   })
 
   if (!res.ok) {
@@ -60,7 +66,6 @@ export async function loginWithAdminId(adminUniqueId: string): Promise<SessionUs
   // /api/admin/login no setea cookie — guardamos el token de sesión en
   // memoria tanto en web como en desktop.
   memorySession = { token: data.session.token, user }
-
   return user
 }
 
@@ -70,19 +75,6 @@ export async function adminExists(): Promise<boolean> {
   if (!res.ok) return true // ante la duda, no ofrecer el formulario de creación
   const data = await res.json()
   return Boolean(data.exists)
-}
-
-// Crea el primer admin — CoreCrow-API rechaza esto si ya existe uno.
-export async function initAdmin(params: { adminUniqueId: string; email: string; name?: string }): Promise<void> {
-  const res = await fetch(`${API_URL}/api/admin/init`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params),
-  })
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(body.error ?? 'No se pudo crear el admin')
-  }
 }
 
 export async function login(email: string, password: string): Promise<SessionUser> {
@@ -132,7 +124,10 @@ export async function logout(): Promise<void> {
   await betterAuthFetch('/sign-out', { method: 'POST' }).catch(() => {})
   memorySession = null
 }
-
 export function currentToken() {
   return memorySession?.token ?? null
+}
+
+export function loginWithGoogle() {
+  window.location.href = `${API_URL}/api/auth/sign-in/social?provider=google&callbackURL=${encodeURIComponent(window.location.origin)}`
 }

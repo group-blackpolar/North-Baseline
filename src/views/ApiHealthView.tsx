@@ -22,7 +22,7 @@ export function ApiHealthView() {
     async function ping() {
       const start = performance.now()
       try {
-        const res = await fetch(`${API_URL}/api/health`, { cache: 'no-store' })
+        const res = await fetch(`${API_URL}/health`, { cache: 'no-store' })
         const latencyMs = Math.round(performance.now() - start)
         if (cancelled) return
         setStatus(res.ok ? 'up' : 'down')

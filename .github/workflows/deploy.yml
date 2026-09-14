@@ -1,0 +1,37 @@
+name: Deploy North
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: north-production
+  cancel-in-progress: false
+jobs:
+  verify:
+    uses: ./.github/workflows/check.yml
+  deploy:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: git archive --format=tar.gz HEAD > north-source.tar.gz
+      - uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: north-source.tar.gz
+          target: /var/www/releases/north-${{ github.sha }}
+      - uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          command_timeout: 20m
+          script: |
+            set -eu
+            cd /var/www/releases/north-${{ github.sha }}
+            tar -xzf north-source.tar.gz
+            bash scripts/deploy-vps.sh

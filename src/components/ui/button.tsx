@@ -8,6 +8,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: 'bg-accent text-bg hover:bg-accent/90',
+        dark: 'bg-black text-white hover:bg-neutral-900',   // ← nuevo, para sign-in
         outline: 'border border-line text-text-dim hover:text-text hover:border-accent/40 bg-transparent',
         ghost: 'text-text-dim hover:text-text hover:bg-panel-2',
         subtle: 'bg-panel-2 text-text-dim border border-line hover:text-text',
@@ -21,7 +22,6 @@ const buttonVariants = cva(
     defaultVariants: { variant: 'default', size: 'default' },
   }
 )
-
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {}
