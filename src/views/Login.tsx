@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { LanguageSelector } from '@/components/LanguageSelector'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { expandWindow } from '@/lib/tauri'
 import { login, loginWithAdminId, loginWithGoogle, type SessionUser } from '@/lib/auth'
 
@@ -86,7 +87,7 @@ export function Login({ onSuccess }: { onSuccess: (user: SessionUser) => void })
 
   return (
     <div className="fixed inset-0 min-h-screen flex flex-col overflow-y-auto bg-bg" lang={lang}>
-      {!expanded && <header className="flex items-center justify-between px-8 py-6"><div className="flex items-center gap-2"><div className="w-7 h-7 rounded border border-accent/40 flex items-center justify-center font-display font-bold text-xs text-accent">N</div><span className="font-display text-xs tracking-[0.25em] text-text-dim">NORTH</span></div><LanguageSelector value={lang} onChange={(value) => setLang(value as Lang)} /></header>}
+      {!expanded && <header className="flex items-center justify-between px-8 py-6"><div className="flex items-center gap-2"><div className="w-7 h-7 rounded border border-accent/40 flex items-center justify-center font-display font-bold text-xs text-accent">N</div><span className="font-display text-xs tracking-[0.25em] text-text-dim">NORTH</span></div><div className="flex items-center gap-3"><ThemeToggle language={lang} /><LanguageSelector value={lang} onChange={(value) => setLang(value as Lang)} /></div></header>}
 
       <main className="flex-1 flex flex-col items-center justify-center px-4">
         <div className={`transition-all duration-500 ease-out rounded-2xl border border-line overflow-hidden bg-panel ${expanded ? 'w-full h-full rounded-none' : 'w-full max-w-[440px] shadow-sm'}`}>
@@ -101,7 +102,7 @@ export function Login({ onSuccess }: { onSuccess: (user: SessionUser) => void })
                 <label className="block"><span className="block text-sm font-medium text-text mb-1.5">{t.email}</span><Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" /></label>
                 <label className="block"><span className="block text-sm font-medium text-text mb-1.5">{t.password}</span><span className="relative block"><Input type={showPass ? 'text' : 'password'} value={pass} onChange={(event) => setPass(event.target.value)} autoComplete="current-password" className="pr-10" /><button type="button" onClick={() => setShowPass((visible) => !visible)} className="absolute right-2 top-1/2 -translate-y-1/2 text-text-dim hover:text-text" aria-label={showPass ? t.hidePassword : t.showPassword}><EyeIcon off={showPass} /></button></span></label>
                 {error && <div role="alert" className="text-xs text-red-600 font-mono">{error}</div>}
-                <Button type="submit" variant="dark" disabled={loading} className="w-full h-10">{loading ? t.signingIn : t.signIn}</Button>
+                <Button type="submit" variant="dark" disabled={loading} className="north-primary w-full h-10">{loading ? t.signingIn : t.signIn}</Button>
               </form>
               <div className="text-center text-sm text-text-dim mt-6 space-y-1"><div>{t.noAccount} <a href={`https://blackpolar.org/${localePath}/contact`} className="text-accent hover:underline">{t.requestAccess}</a></div><div>{t.help} <a href={`https://blackpolar.org/${localePath}/contact`} className="text-accent hover:underline">{t.contact}</a></div></div>
             </>}
@@ -111,7 +112,7 @@ export function Login({ onSuccess }: { onSuccess: (user: SessionUser) => void })
                 <label className="block"><span className="block text-sm font-medium text-text mb-1.5">{t.adminId}</span><Input value={adminId} onChange={(event) => setAdminId(event.target.value)} /></label>
                 <label className="block"><span className="block text-sm font-medium text-text mb-1.5">{t.email}</span><Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" /></label>
                 {error && <div role="alert" className="text-xs text-red-600 font-mono">{error}</div>}
-                <Button type="submit" variant="dark" disabled={loading} className="w-full h-10">{loading ? t.verifying : t.continue}</Button>
+                <Button type="submit" variant="dark" disabled={loading} className="north-primary w-full h-10">{loading ? t.verifying : t.continue}</Button>
                 <button type="button" onClick={() => setMode('email')} className="text-sm text-text-dim hover:text-text text-center w-full pt-1">{t.useEmail}</button>
               </form>
             </>}
