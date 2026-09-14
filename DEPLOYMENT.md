@@ -2,7 +2,7 @@
 
 The web build is live at `https://north.blackpolar.org` and calls CoreCrow at `https://api.blackpolar.org`. The repository includes a verified GitHub Actions deployment, an atomic static release script, and the nginx virtual host in `deploy/nginx.conf`.
 
-Production infrastructure already has the required DNS record, TLS certificate, nginx virtual host, and CoreCrow trusted origin. For GitHub Actions deployments, configure these repository secrets:
+Production infrastructure already has the required DNS record, TLS certificate, nginx virtual host, and CoreCrow trusted origin. The deploy workflow is manual. Before running it, configure these repository secrets:
 
 - `VPS_HOST`
 - `VPS_USER`

@@ -1,5 +1,10 @@
 name: Verify North
-on: [pull_request, workflow_dispatch, workflow_call]
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
 permissions:
   contents: read
 jobs:
