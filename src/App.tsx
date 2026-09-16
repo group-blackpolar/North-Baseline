@@ -12,7 +12,7 @@ import { CiCdView } from '@/views/CiCdView'
 import { AuditoriaView } from '@/views/AuditoriaView'
 import { DbBackupsView } from '@/views/DbBackupsView'
 import { PlaceholderView } from '@/views/PlaceholderView'
-import { getSession, logout, type SessionUser } from '@/lib/auth'
+import { completePendingOnboarding, getSession, logout, type SessionUser } from '@/lib/auth'
 import { isTauri } from '@/lib/tauri'
 
 
@@ -34,13 +34,24 @@ export default function App() {
   const [user, setUser] = useState<SessionUser | null>(null)
   const [checkingSession, setCheckingSession] = useState(!isTauri())
   const [active, setActive] = useState<ViewId>('notas-tareas')
+  const [onboardingIssue, setOnboardingIssue] = useState('')
 
   useEffect(() => {
     if (isTauri()) {
       setCheckingSession(false)
       return
     }
-    getSession().then(setUser).finally(() => setCheckingSession(false))
+    getSession()
+      .then(async (sessionUser) => {
+        if (!sessionUser) return
+        setUser(sessionUser)
+        try {
+          await completePendingOnboarding(sessionUser)
+        } catch (error) {
+          setOnboardingIssue(error instanceof Error ? error.message : 'No fue posible completar el registro')
+        }
+      })
+      .finally(() => setCheckingSession(false))
   }, [])
 
   async function handleLogout() {
@@ -57,10 +68,16 @@ export default function App() {
     )
   }
 
-  if (!user) return <Login onSuccess={setUser} />
+  if (!user) return <Login onSuccess={setUser} onOnboardingIssue={setOnboardingIssue} />
 
   return (
     <div className="h-screen w-screen flex bg-bg">
+      {onboardingIssue && (
+        <div role="alert" className="fixed z-50 left-1/2 top-4 -translate-x-1/2 max-w-xl rounded-lg border border-red-500/30 bg-panel px-4 py-3 text-sm text-text shadow-lg">
+          {onboardingIssue}
+          <button type="button" onClick={() => setOnboardingIssue('')} className="ml-4 text-text-dim hover:text-text" aria-label="Cerrar">&times;</button>
+        </div>
+      )}
       <Sidebar active={active} setActive={setActive} user={user} onLogout={handleLogout} />
       <div className="flex-1 flex flex-col min-w-0">
         <TopBar title={TITLES[active]} breadcrumb={active} />

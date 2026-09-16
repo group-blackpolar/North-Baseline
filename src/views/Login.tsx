@@ -1,30 +1,71 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { LanguageSelector } from '@/components/LanguageSelector'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { expandWindow } from '@/lib/tauri'
-import { login, loginWithAdminId, loginWithGoogle, type SessionUser } from '@/lib/auth'
+import {
+  completePendingOnboarding,
+  login,
+  loginWithGoogle,
+  savePendingOnboarding,
+  signUpWithEmail,
+  type SessionUser,
+} from '@/lib/auth'
 
-type Stage = 'boot' | 'login'
-type Mode = 'email' | 'admin'
+type Stage = 'boot' | 'ready'
+type Mode = 'login' | 'signup' | 'signup-success'
 type Lang = 'es' | 'en'
 
 const COPY = {
   es: {
-    initializing: 'Inicializando…', title: 'Inicia sesión en North', google: 'Continuar con Google', auid: 'Continuar con AUID', or: 'o', email: 'Correo electrónico', password: 'Contraseña', showPassword: 'Mostrar contraseña', hidePassword: 'Ocultar contraseña', signingIn: 'Iniciando sesión…', signIn: 'Iniciar sesión', noAccount: '¿Aún no tienes una cuenta?', requestAccess: 'Solicitar acceso', help: '¿Necesitas ayuda para acceder?', contact: 'Contactar soporte', auidTitle: 'Continuar con AUID', adminId: 'Identificador único de administrador', verifying: 'Verificando…', continue: 'Continuar', useEmail: 'Usar correo y contraseña', requiredAdmin: 'Ingresa tu AUID y correo electrónico.', invalidAdmin: 'El AUID no es válido.', requiredCredentials: 'Ingresa tu correo y contraseña.', invalidEmail: 'Ingresa un correo electrónico válido.', signInError: 'No fue posible iniciar sesión.', agreement: 'Al continuar, acepto los', terms: 'términos de uso', privacy: 'política de privacidad', and: 'y la', support: 'Soporte', status: 'Estado del sistema',
+    initializing: 'Inicializando…', signInTitle: 'Inicia sesión en North', createTitle: 'Crea tu cuenta',
+    createIntro: 'Tu identidad de Black Polar funcionará en North y en los servicios conectados.',
+    googleLogin: 'Continuar con Google', googleSignup: 'Crear cuenta con Google', or: 'o',
+    firstName: 'Nombre', lastName: 'Apellido', email: 'Correo electrónico', password: 'Contraseña',
+    confirmPassword: 'Confirmar contraseña', showPassword: 'Mostrar contraseña', hidePassword: 'Ocultar contraseña',
+    organizationQuestion: '¿Tienes una organización?', yes: 'Sí', no: 'No', invitation: 'Código de invitación',
+    invitationHint: '64 caracteres. Debe corresponder al mismo correo de la invitación.',
+    signingIn: 'Iniciando sesión…', signIn: 'Iniciar sesión', creating: 'Creando cuenta…', create: 'Crear cuenta',
+    noAccount: '¿Aún no tienes una cuenta?', createLink: 'Crear una cuenta', hasAccount: '¿Ya tienes una cuenta?',
+    backToLogin: 'Volver a iniciar sesión', help: '¿Necesitas ayuda para acceder?', contact: 'Contactar soporte',
+    requiredCredentials: 'Ingresa tu correo y contraseña.', invalidEmail: 'Ingresa un correo electrónico válido.',
+    signInError: 'No fue posible iniciar sesión.', requiredNames: 'Ingresa tu nombre y apellido.',
+    invalidPassword: 'Usa una contraseña de 12 a 128 caracteres y con seguridad buena o fuerte.',
+    passwordMismatch: 'Las contraseñas no coinciden.', invalidInvitation: 'El código debe tener exactamente 64 caracteres hexadecimales.',
+    acceptLegal: 'Debes aceptar los términos y la política de privacidad.', signupError: 'No fue posible crear la cuenta.',
+    legalCheck: 'Acepto los términos de uso y la política de privacidad.',
+    verifyTitle: 'Revisa tu correo', verifyBody: 'Enviamos un enlace de verificación. Después de verificar tu correo, inicia sesión para terminar el registro y aceptar la invitación, si corresponde.',
+    agreement: 'Al continuar, acepto los', terms: 'términos de uso', privacy: 'política de privacidad', and: 'y la',
+    support: 'Soporte', status: 'Estado del sistema', weak: 'Débil', fair: 'Básica', good: 'Buena', strong: 'Fuerte',
+    passwordHelp: 'Mínimo 12 caracteres; combina mayúsculas, minúsculas, números y símbolos.',
   },
   en: {
-    initializing: 'Initializing…', title: 'Sign in to North', google: 'Continue with Google', auid: 'Continue with AUID', or: 'or', email: 'Email', password: 'Password', showPassword: 'Show password', hidePassword: 'Hide password', signingIn: 'Signing in…', signIn: 'Sign in', noAccount: "Don’t have an account?", requestAccess: 'Request access', help: 'Need help accessing North?', contact: 'Contact support', auidTitle: 'Continue with AUID', adminId: 'Admin Unique ID', verifying: 'Verifying…', continue: 'Continue', useEmail: 'Use email and password', requiredAdmin: 'Enter your AUID and email.', invalidAdmin: 'Invalid AUID.', requiredCredentials: 'Enter your email and password.', invalidEmail: 'Enter a valid email.', signInError: 'Could not sign in.', agreement: 'By continuing, I agree to the', terms: 'terms of use', privacy: 'privacy policy', and: 'and', support: 'Support', status: 'System status',
+    initializing: 'Initializing…', signInTitle: 'Sign in to North', createTitle: 'Create your account',
+    createIntro: 'Your Black Polar identity works across North and connected services.',
+    googleLogin: 'Continue with Google', googleSignup: 'Create account with Google', or: 'or',
+    firstName: 'First name', lastName: 'Last name', email: 'Email', password: 'Password',
+    confirmPassword: 'Confirm password', showPassword: 'Show password', hidePassword: 'Hide password',
+    organizationQuestion: 'Do you have an organization?', yes: 'Yes', no: 'No', invitation: 'Organization invitation code',
+    invitationHint: '64 characters. It must belong to the same email address as the invitation.',
+    signingIn: 'Signing in…', signIn: 'Sign in', creating: 'Creating account…', create: 'Create account',
+    noAccount: "Don’t have an account?", createLink: 'Create an account', hasAccount: 'Already have an account?',
+    backToLogin: 'Back to sign in', help: 'Need help accessing North?', contact: 'Contact support',
+    requiredCredentials: 'Enter your email and password.', invalidEmail: 'Enter a valid email address.',
+    signInError: 'Could not sign in.', requiredNames: 'Enter your first and last name.',
+    invalidPassword: 'Use a 12–128 character password with good or strong security.',
+    passwordMismatch: 'Passwords do not match.', invalidInvitation: 'The code must contain exactly 64 hexadecimal characters.',
+    acceptLegal: 'You must accept the terms and privacy policy.', signupError: 'Could not create the account.',
+    legalCheck: 'I accept the terms of use and privacy policy.',
+    verifyTitle: 'Check your email', verifyBody: 'We sent you a verification link. After verifying your email, sign in to finish setup and accept the invitation, when applicable.',
+    agreement: 'By continuing, I agree to the', terms: 'terms of use', privacy: 'privacy policy', and: 'and',
+    support: 'Support', status: 'System status', weak: 'Weak', fair: 'Basic', good: 'Good', strong: 'Strong',
+    passwordHelp: 'Use at least 12 characters with uppercase, lowercase, numbers, and symbols.',
   },
 } as const
 
 function GoogleIcon() {
   return <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.52 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.47c-.28 1.5-1.13 2.77-2.4 3.62v3h3.87c2.27-2.09 3.58-5.17 3.58-8.81z" /><path fill="#34A853" d="M12 24c3.24 0 5.95-1.07 7.94-2.92l-3.87-3c-1.08.72-2.45 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.28v3.11C3.26 21.3 7.31 24 12 24z" /><path fill="#FBBC05" d="M5.27 14.27A7.2 7.2 0 0 1 4.9 12c0-.79.14-1.56.37-2.27V6.62H1.28A11.97 11.97 0 0 0 0 12c0 1.93.46 3.76 1.28 5.38l3.99-3.11z" /><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.94 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.28 6.62l3.99 3.11C6.22 6.86 8.87 4.75 12 4.75z" /></svg>
-}
-
-function BadgeIcon() {
-  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2" /><circle cx="12" cy="10" r="2.5" /><path d="M8 17c0-2 1.8-3 4-3s4 1 4 3" /></svg>
 }
 
 function EyeIcon({ off }: { off: boolean }) {
@@ -33,26 +74,56 @@ function EyeIcon({ off }: { off: boolean }) {
     : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M2 12c1-4 5-8 10-8s9 4 10 8c-1 4-5 8-10 8s-9-4-10-8z" /><circle cx="12" cy="12" r="3" /></svg>
 }
 
-export function Login({ onSuccess }: { onSuccess: (user: SessionUser) => void }) {
+function passwordScore(password: string, email: string, firstName: string, lastName: string) {
+  if (!password) return 0
+  let score = 0
+  if (password.length >= 12) score++
+  if (password.length >= 16) score++
+  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++
+  if (/\d/.test(password) && /[^A-Za-z0-9]/.test(password)) score++
+  const lowered = password.toLowerCase()
+  const personal = [email.split('@')[0], firstName, lastName].map((value) => value.trim().toLowerCase()).filter((value) => value.length >= 3)
+  if (personal.some((value) => lowered.includes(value))) score = Math.max(1, score - 1)
+  return Math.min(4, score)
+}
+
+interface LoginProps {
+  onSuccess: (user: SessionUser) => void
+  onOnboardingIssue: (message: string) => void
+}
+
+export function Login({ onSuccess, onOnboardingIssue }: LoginProps) {
   const [expanded, setExpanded] = useState(false)
   const [stage, setStage] = useState<Stage>('boot')
-  const [mode, setMode] = useState<Mode>('email')
+  const [mode, setMode] = useState<Mode>('login')
   const [lang, setLang] = useState<Lang>('es')
   const [showPass, setShowPass] = useState(false)
-  const [adminId, setAdminId] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [pass, setPass] = useState('')
+  const [confirmPass, setConfirmPass] = useState('')
+  const [hasOrganization, setHasOrganization] = useState(false)
+  const [invitationCode, setInvitationCode] = useState('')
+  const [acceptedLegal, setAcceptedLegal] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const t = COPY[lang]
   const localePath = lang === 'es' ? 'es-lat' : 'en-us'
+  const strength = useMemo(() => passwordScore(pass, email, firstName, lastName), [pass, email, firstName, lastName])
+  const strengthLabels = ['', t.weak, t.fair, t.good, t.strong]
 
   useEffect(() => {
-    const timer = setTimeout(() => setStage('login'), 700)
+    const timer = setTimeout(() => setStage('ready'), 500)
     return () => clearTimeout(timer)
   }, [])
 
   async function finish(user: SessionUser) {
+    try {
+      await completePendingOnboarding(user)
+    } catch (onboardingError) {
+      onOnboardingIssue(onboardingError instanceof Error ? onboardingError.message : 'No fue posible completar el registro')
+    }
     setLoading(false)
     setExpanded(true)
     await expandWindow()
@@ -60,18 +131,17 @@ export function Login({ onSuccess }: { onSuccess: (user: SessionUser) => void })
   }
 
   const validEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+  const validInvitation = (value: string) => /^[a-f0-9]{64}$/.test(value.trim().toLowerCase())
 
-  async function handleAdminLogin(event: React.FormEvent) {
-    event.preventDefault()
+  function validateSignup(includePassword: boolean) {
     setError('')
-    const normalizedId = adminId.trim()
-    const normalizedEmail = email.trim()
-    if (!normalizedId || !normalizedEmail) return setError(t.requiredAdmin)
-    if (normalizedId.length < 3) return setError(t.invalidAdmin)
-    if (!validEmail(normalizedEmail)) return setError(t.invalidEmail)
-    setLoading(true)
-    try { await finish(await loginWithAdminId(normalizedId, normalizedEmail)) }
-    catch { setLoading(false); setError(t.signInError) }
+    if (!firstName.trim() || !lastName.trim()) return t.requiredNames
+    if (!validEmail(email)) return t.invalidEmail
+    if (hasOrganization && !validInvitation(invitationCode)) return t.invalidInvitation
+    if (includePassword && (pass.length < 12 || pass.length > 128 || strength < 3)) return t.invalidPassword
+    if (includePassword && pass !== confirmPass) return t.passwordMismatch
+    if (!acceptedLegal) return t.acceptLegal
+    return ''
   }
 
   async function handleEmailLogin(event: React.FormEvent) {
@@ -85,43 +155,137 @@ export function Login({ onSuccess }: { onSuccess: (user: SessionUser) => void })
     catch { setLoading(false); setError(t.signInError) }
   }
 
+  async function handleGoogleLogin() {
+    setError('')
+    setLoading(true)
+    try { await loginWithGoogle() }
+    catch (googleError) {
+      setLoading(false)
+      setError(googleError instanceof Error ? googleError.message : t.signInError)
+    }
+  }
+
+  async function handleSignup(event: React.FormEvent) {
+    event.preventDefault()
+    const validationError = validateSignup(true)
+    if (validationError) return setError(validationError)
+    setLoading(true)
+    try {
+      await signUpWithEmail({ firstName, lastName, email, password: pass })
+      savePendingOnboarding({ firstName, lastName, email, ...(hasOrganization ? { invitationCode } : {}) })
+      setMode('signup-success')
+      setPass('')
+      setConfirmPass('')
+    } catch (signupError) {
+      setError(signupError instanceof Error ? signupError.message : t.signupError)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleGoogleSignup() {
+    const validationError = validateSignup(false)
+    if (validationError) return setError(validationError)
+    setLoading(true)
+    savePendingOnboarding({ firstName, lastName, email, ...(hasOrganization ? { invitationCode } : {}) })
+    try { await loginWithGoogle({ requestSignUp: true }) }
+    catch (googleError) {
+      setLoading(false)
+      setError(googleError instanceof Error ? googleError.message : t.signupError)
+    }
+  }
+
+  function switchMode(next: Mode) {
+    setMode(next)
+    setError('')
+    setPass('')
+    setConfirmPass('')
+  }
+
   return (
     <div className="fixed inset-0 min-h-screen flex flex-col overflow-y-auto bg-bg" lang={lang}>
-      {!expanded && <header className="flex items-center justify-between px-8 py-6"><div className="flex items-center gap-2"><div className="w-7 h-7 rounded border border-accent/40 flex items-center justify-center font-display font-bold text-xs text-accent">N</div><span className="font-display text-xs tracking-[0.25em] text-text-dim">NORTH</span></div><div className="flex items-center gap-3"><ThemeToggle language={lang} /><LanguageSelector value={lang} onChange={(value) => setLang(value as Lang)} /></div></header>}
+      {!expanded && <header className="flex items-center justify-between px-5 sm:px-8 py-5"><div className="flex items-center gap-2"><img src="/favicon.png" alt="" className="w-7 h-7 object-contain dark:invert" /><span className="font-display text-xs tracking-[0.25em] text-text-dim">NORTH</span></div><div className="flex items-center gap-3"><ThemeToggle language={lang} /><LanguageSelector value={lang} onChange={(value) => setLang(value as Lang)} /></div></header>}
 
-      <main className="flex-1 flex flex-col items-center justify-center px-4">
-        <div className={`transition-all duration-500 ease-out rounded-2xl border border-line overflow-hidden bg-panel ${expanded ? 'w-full h-full rounded-none' : 'w-full max-w-[440px] shadow-sm'}`}>
-          {!expanded && <div className="w-full px-10 py-10 animate-in fade-in">
+      <main className="flex-1 flex flex-col items-center justify-center px-4 py-8">
+        <div className={`transition-all duration-500 ease-out rounded-2xl border border-line overflow-hidden bg-panel ${expanded ? 'w-full h-full rounded-none' : `w-full ${mode === 'signup' ? 'max-w-[620px]' : 'max-w-[440px]'} shadow-sm`}`}>
+          {!expanded && <div className={`w-full ${mode === 'signup' ? 'px-6 sm:px-10 py-8' : 'px-6 sm:px-10 py-10'} animate-in fade-in`}>
             {stage === 'boot' && <div className="font-display text-xs text-text-dim flex items-center justify-center gap-2 py-20">{t.initializing}</div>}
-            {stage === 'login' && mode === 'email' && <>
-              <h1 className="font-display text-2xl font-bold text-text mb-6">{t.title}</h1>
-              <button type="button" onClick={loginWithGoogle} className="w-full h-10 rounded-md border border-line flex items-center justify-center gap-2 text-sm font-medium text-text hover:bg-panel-2 transition-colors mb-2"><GoogleIcon />{t.google}</button>
-              <button type="button" onClick={() => setMode('admin')} className="w-full h-10 rounded-md border border-line flex items-center justify-center gap-2 text-sm font-medium text-text hover:bg-panel-2 transition-colors mb-5"><BadgeIcon />{t.auid}</button>
+
+            {stage === 'ready' && mode === 'login' && <>
+              <h1 className="font-display text-2xl font-bold text-text mb-6">{t.signInTitle}</h1>
+              <button type="button" onClick={handleGoogleLogin} disabled={loading} className="w-full h-10 rounded-md border border-line flex items-center justify-center gap-2 text-sm font-medium text-text hover:bg-panel-2 transition-colors mb-5 disabled:opacity-50"><GoogleIcon />{t.googleLogin}</button>
               <div className="w-full flex items-center gap-3 mb-5"><div className="flex-1 h-px bg-line" /><span className="text-xs text-text-dim">{t.or}</span><div className="flex-1 h-px bg-line" /></div>
               <form onSubmit={handleEmailLogin} className="w-full space-y-4">
-                <label className="block"><span className="block text-sm font-medium text-text mb-1.5">{t.email}</span><Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" /></label>
-                <label className="block"><span className="block text-sm font-medium text-text mb-1.5">{t.password}</span><span className="relative block"><Input type={showPass ? 'text' : 'password'} value={pass} onChange={(event) => setPass(event.target.value)} autoComplete="current-password" className="pr-10" /><button type="button" onClick={() => setShowPass((visible) => !visible)} className="absolute right-2 top-1/2 -translate-y-1/2 text-text-dim hover:text-text" aria-label={showPass ? t.hidePassword : t.showPassword}><EyeIcon off={showPass} /></button></span></label>
-                {error && <div role="alert" className="text-xs text-red-600 font-mono">{error}</div>}
+                <Field label={t.email}><Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" /></Field>
+                <PasswordField label={t.password} value={pass} onChange={setPass} visible={showPass} setVisible={setShowPass} showLabel={t.showPassword} hideLabel={t.hidePassword} autoComplete="current-password" />
+                {error && <div role="alert" className="text-xs text-red-600 dark:text-red-400 font-mono">{error}</div>}
                 <Button type="submit" variant="dark" disabled={loading} className="north-primary w-full h-10">{loading ? t.signingIn : t.signIn}</Button>
               </form>
-              <div className="text-center text-sm text-text-dim mt-6 space-y-1"><div>{t.noAccount} <a href={`https://blackpolar.org/${localePath}/contact`} className="text-accent hover:underline">{t.requestAccess}</a></div><div>{t.help} <a href={`https://blackpolar.org/${localePath}/contact`} className="text-accent hover:underline">{t.contact}</a></div></div>
+              <div className="text-center text-sm text-text-dim mt-6 space-y-1"><div>{t.noAccount} <button type="button" onClick={() => switchMode('signup')} className="text-accent hover:underline">{t.createLink}</button></div><div>{t.help} <a href={`https://blackpolar.org/${localePath}/contact`} className="text-accent hover:underline">{t.contact}</a></div></div>
             </>}
-            {stage === 'login' && mode === 'admin' && <>
-              <h1 className="font-display text-2xl font-bold text-text mb-6">{t.auidTitle}</h1>
-              <form onSubmit={handleAdminLogin} className="w-full space-y-4">
-                <label className="block"><span className="block text-sm font-medium text-text mb-1.5">{t.adminId}</span><Input value={adminId} onChange={(event) => setAdminId(event.target.value)} /></label>
-                <label className="block"><span className="block text-sm font-medium text-text mb-1.5">{t.email}</span><Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" /></label>
-                {error && <div role="alert" className="text-xs text-red-600 font-mono">{error}</div>}
-                <Button type="submit" variant="dark" disabled={loading} className="north-primary w-full h-10">{loading ? t.verifying : t.continue}</Button>
-                <button type="button" onClick={() => setMode('email')} className="text-sm text-text-dim hover:text-text text-center w-full pt-1">{t.useEmail}</button>
+
+            {stage === 'ready' && mode === 'signup' && <>
+              <h1 className="font-display text-2xl font-bold text-text">{t.createTitle}</h1>
+              <p className="text-sm text-text-dim mt-2 mb-6">{t.createIntro}</p>
+              <form onSubmit={handleSignup} className="space-y-4">
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <Field label={t.firstName}><Input value={firstName} onChange={(event) => setFirstName(event.target.value)} autoComplete="given-name" maxLength={60} /></Field>
+                  <Field label={t.lastName}><Input value={lastName} onChange={(event) => setLastName(event.target.value)} autoComplete="family-name" maxLength={60} /></Field>
+                </div>
+                <Field label={t.email}><Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></Field>
+                <fieldset>
+                  <legend className="block text-sm font-medium text-text mb-2">{t.organizationQuestion}</legend>
+                  <div className="grid grid-cols-2 gap-2 rounded-lg bg-panel-2 p-1 border border-line">
+                    {[false, true].map((value) => <button key={String(value)} type="button" onClick={() => setHasOrganization(value)} aria-pressed={hasOrganization === value} className={`h-9 rounded-md text-sm font-medium transition-colors ${hasOrganization === value ? 'bg-panel text-text shadow-sm' : 'text-text-dim hover:text-text'}`}>{value ? t.yes : t.no}</button>)}
+                  </div>
+                </fieldset>
+                {hasOrganization && <Field label={t.invitation} hint={t.invitationHint}><Input value={invitationCode} onChange={(event) => setInvitationCode(event.target.value.replace(/\s/g, '').toLowerCase())} autoComplete="off" maxLength={64} className="tracking-wide" /></Field>}
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <PasswordField label={t.password} value={pass} onChange={setPass} visible={showPass} setVisible={setShowPass} showLabel={t.showPassword} hideLabel={t.hidePassword} autoComplete="new-password" />
+                  <PasswordField label={t.confirmPassword} value={confirmPass} onChange={setConfirmPass} visible={showPass} setVisible={setShowPass} showLabel={t.showPassword} hideLabel={t.hidePassword} autoComplete="new-password" />
+                </div>
+                <div>
+                  <div className="grid grid-cols-4 gap-1" role="progressbar" aria-label={t.password} aria-valuemin={0} aria-valuemax={4} aria-valuenow={strength}>{[1, 2, 3, 4].map((level) => <span key={level} className={`h-1.5 rounded-full ${strength >= level ? (strength < 3 ? 'bg-orange-500' : 'bg-accent') : 'bg-line'}`} />)}</div>
+                  <div className="mt-1.5 flex justify-between gap-3 text-[11px] text-text-dim"><span>{t.passwordHelp}</span><span className="font-medium text-text shrink-0">{strengthLabels[strength]}</span></div>
+                </div>
+                <label className="flex items-start gap-2.5 text-xs text-text-dim cursor-pointer"><input type="checkbox" checked={acceptedLegal} onChange={(event) => setAcceptedLegal(event.target.checked)} className="mt-0.5 accent-[var(--color-accent)]" /><span>{t.legalCheck}</span></label>
+                {error && <div role="alert" className="text-xs text-red-600 dark:text-red-400 font-mono">{error}</div>}
+                <Button type="submit" variant="dark" disabled={loading} className="north-primary w-full h-10">{loading ? t.creating : t.create}</Button>
+                <div className="relative py-1"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-line" /></div><div className="relative flex justify-center"><span className="bg-panel px-3 text-xs text-text-dim">{t.or}</span></div></div>
+                <button type="button" onClick={handleGoogleSignup} disabled={loading} className="w-full h-10 rounded-md border border-line flex items-center justify-center gap-2 text-sm font-medium text-text hover:bg-panel-2 transition-colors disabled:opacity-50"><GoogleIcon />{t.googleSignup}</button>
+                <div className="text-center text-sm text-text-dim">{t.hasAccount} <button type="button" onClick={() => switchMode('login')} className="text-accent hover:underline">{t.signIn}</button></div>
               </form>
             </>}
+
+            {stage === 'ready' && mode === 'signup-success' && <div className="text-center py-8">
+              <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent text-xl">✓</div>
+              <h1 className="font-display text-2xl font-bold text-text">{t.verifyTitle}</h1>
+              <p className="mt-3 text-sm leading-relaxed text-text-dim">{t.verifyBody}</p>
+              <Button type="button" variant="dark" onClick={() => switchMode('login')} className="north-primary w-full h-10 mt-7">{t.backToLogin}</Button>
+            </div>}
           </div>}
         </div>
-        {!expanded && <p className="max-w-[440px] w-full text-center text-xs text-text-dim mt-6 leading-relaxed">{t.agreement} <a href={`https://blackpolar.org/${localePath}/legal/terms`} className="underline hover:text-text">{t.terms}</a> {t.and} <a href={`https://blackpolar.org/${localePath}/legal/privacy`} className="underline hover:text-text">{t.privacy}</a>.</p>}
+        {!expanded && mode !== 'signup' && <p className="max-w-[440px] w-full text-center text-xs text-text-dim mt-6 leading-relaxed">{t.agreement} <a href={`https://blackpolar.org/${localePath}/legal/terms`} className="underline hover:text-text">{t.terms}</a> {t.and} <a href={`https://blackpolar.org/${localePath}/legal/privacy`} className="underline hover:text-text">{t.privacy}</a>.</p>}
       </main>
 
-      {!expanded && <footer className="flex flex-wrap items-end justify-center gap-6 px-8 py-8 text-[11px] font-mono text-text-dim"><a href={`https://blackpolar.org/${localePath}/contact`} className="hover:text-text">{t.support}</a><a href="https://api.blackpolar.org" className="hover:text-text">{t.status}</a><a href={`https://blackpolar.org/${localePath}/legal/terms`} className="hover:text-text">{t.terms}</a><a href={`https://blackpolar.org/${localePath}/legal/privacy`} className="hover:text-text">{t.privacy}</a></footer>}
+      {!expanded && <footer className="flex flex-wrap items-end justify-center gap-6 px-8 py-7 text-[11px] font-mono text-text-dim"><a href={`https://blackpolar.org/${localePath}/contact`} className="hover:text-text">{t.support}</a><a href="https://api.blackpolar.org" className="hover:text-text">{t.status}</a><a href={`https://blackpolar.org/${localePath}/legal/terms`} className="hover:text-text">{t.terms}</a><a href={`https://blackpolar.org/${localePath}/legal/privacy`} className="hover:text-text">{t.privacy}</a></footer>}
     </div>
   )
+}
+
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return <label className="block"><span className="block text-sm font-medium text-text mb-1.5">{label}</span>{children}{hint && <span className="block text-[11px] text-text-dim mt-1.5">{hint}</span>}</label>
+}
+
+function PasswordField({ label, value, onChange, visible, setVisible, showLabel, hideLabel, autoComplete }: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  visible: boolean
+  setVisible: (value: boolean) => void
+  showLabel: string
+  hideLabel: string
+  autoComplete: string
+}) {
+  return <Field label={label}><span className="relative block"><Input type={visible ? 'text' : 'password'} value={value} onChange={(event) => onChange(event.target.value)} autoComplete={autoComplete} minLength={12} maxLength={128} className="pr-10" /><button type="button" onClick={() => setVisible(!visible)} className="absolute right-2 top-1/2 -translate-y-1/2 text-text-dim hover:text-text" aria-label={visible ? hideLabel : showLabel}><EyeIcon off={visible} /></button></span></Field>
 }
