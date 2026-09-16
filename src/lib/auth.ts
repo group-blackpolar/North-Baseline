@@ -2,7 +2,7 @@
 // real que usa blackpolar.org — así el login es "único" de verdad: la
 // misma cuenta funciona en el mainsite y aquí en North.
 //
-// Better Auth expone /api/auth/* (sign-in/email, sign-up/email,
+// Better Auth expone /v1/auth/* (sign-in/email, sign-up/email,
 // get-session, sign-out, etc.) — ver CoreCrow-API/src/server.ts y
 // src/lib/auth.ts. La sesión viaja por cookie (credentials: 'include')
 // en web; en desktop (Tauri) no hay cookie de navegador compartida, así
@@ -17,7 +17,7 @@ export interface SessionUser {
   id: string
   email: string
   name: string | null
-  role: 'USER' | 'ADMIN'
+  role: 'USER' | 'DEVELOPER' | 'ADMIN' | 'SUPERADMIN'
 }
 
 // En desktop no hay cookie de navegador — guardamos la sesión en memoria
@@ -26,7 +26,7 @@ let memorySession: { token: string; user: SessionUser } | null = null
 
 
 async function betterAuthFetch(path: string, options: RequestInit = {}) {
-  const res = await fetch(`${API_URL}/api/auth${path}`, {
+  const res = await fetch(`${API_URL}/v1/auth${path}`, {
     ...options,
     credentials: isTauri() ? 'omit' : 'include',
     headers: {

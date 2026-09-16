@@ -1,11 +1,12 @@
 export type JobStatus = 'idle' | 'running' | 'done'
 
-// ── Usuarios (real — CoreCrow-API GET /api/users) ──────────────────────
+// ── Usuarios (real — CoreCrow-API GET /v1/users) ───────────────────────
 export interface ApiUser {
   id: string
   email: string
   name: string | null
-  role: 'USER' | 'ADMIN'
+  role: 'USER' | 'DEVELOPER' | 'ADMIN' | 'SUPERADMIN'
+  emailVerified: boolean
   createdAt: string
 }
 

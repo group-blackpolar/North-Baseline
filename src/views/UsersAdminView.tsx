@@ -13,7 +13,7 @@ export function UsersAdminView() {
 
   useEffect(() => {
     api
-      .get<ApiUser[]>('/api/users')
+      .get<ApiUser[]>('/v1/users')
       .then(setUsers)
       .catch((e) => setError(e instanceof Error ? e.message : 'no se pudo cargar'))
   }, [])
@@ -24,7 +24,7 @@ export function UsersAdminView() {
 
   return (
     <div className="p-6 max-w-4xl">
-      <PendingNote>creación de usuarios, edición de permisos/contraseñas y accesos por rol (endpoints POST/PATCH aún no existen — hoy solo hay GET /api/users)</PendingNote>
+      <PendingNote>La lectura usa el contrato v1 real. La creación visual se conectará después de definir el flujo de activación por correo y contraseña inicial.</PendingNote>
 
       <div className="flex items-center justify-between mb-4 gap-3">
         <Input placeholder="buscar usuario…" value={filter} onChange={(e) => setFilter(e.target.value)} className="max-w-xs" />
@@ -49,7 +49,7 @@ export function UsersAdminView() {
             >
               <div className="font-display">{u.name ?? '—'}</div>
               <div className="font-mono text-text-dim text-xs">{u.email}</div>
-              <div><Badge className={u.role === 'ADMIN' ? 'text-accent border-accent/40' : ''}>{u.role.toLowerCase()}</Badge></div>
+              <div><Badge className={['ADMIN', 'SUPERADMIN'].includes(u.role) ? 'text-accent border-accent/40' : ''}>{u.role.toLowerCase()}</Badge></div>
               <div className="font-mono text-text-dim text-xs">{new Date(u.createdAt).toLocaleDateString()}</div>
             </div>
           ))}
