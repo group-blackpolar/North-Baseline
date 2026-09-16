@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { LanguageSelector } from '@/components/LanguageSelector'
@@ -6,15 +6,21 @@ import { ThemeToggle } from '@/components/ThemeToggle'
 import { expandWindow } from '@/lib/tauri'
 import {
   completePendingOnboarding,
+  FALLBACK_TERMS_VERSION,
+  getIdentityConfig,
+  listenForDesktopAuth,
   login,
   loginWithGoogle,
+  requestPasswordReset,
+  resendVerification,
+  resetPassword,
   savePendingOnboarding,
   signUpWithEmail,
   type SessionUser,
 } from '@/lib/auth'
 
 type Stage = 'boot' | 'ready'
-type Mode = 'login' | 'signup' | 'signup-success'
+type Mode = 'login' | 'signup' | 'signup-success' | 'forgot' | 'forgot-success' | 'reset' | 'reset-success'
 type Lang = 'es' | 'en'
 
 const COPY = {
@@ -39,6 +45,10 @@ const COPY = {
     agreement: 'Al continuar, acepto los', terms: 'términos de uso', privacy: 'política de privacidad', and: 'y la',
     support: 'Soporte', status: 'Estado del sistema', weak: 'Débil', fair: 'Básica', good: 'Buena', strong: 'Fuerte',
     passwordHelp: 'Mínimo 12 caracteres; combina mayúsculas, minúsculas, números y símbolos.',
+    forgotPassword: '¿Olvidaste tu contraseña?', recoveryTitle: 'Recupera tu cuenta', recoveryBody: 'Te enviaremos un enlace seguro si el correo pertenece a una cuenta.',
+    sendRecovery: 'Enviar enlace', recoverySent: 'Revisa tu correo', recoverySentBody: 'Si existe una cuenta con ese correo, recibirás un enlace para restablecer la contraseña.',
+    resetTitle: 'Crea una nueva contraseña', resetAction: 'Cambiar contraseña', resetDone: 'Contraseña actualizada', resetDoneBody: 'Ya puedes iniciar sesión con tu nueva contraseña.',
+    resend: 'Reenviar verificación', resent: 'Correo reenviado.', googleUnavailable: 'Google estará disponible cuando se configure OAuth.',
   },
   en: {
     initializing: 'Initializing…', signInTitle: 'Sign in to North', createTitle: 'Create your account',
@@ -61,6 +71,10 @@ const COPY = {
     agreement: 'By continuing, I agree to the', terms: 'terms of use', privacy: 'privacy policy', and: 'and',
     support: 'Support', status: 'System status', weak: 'Weak', fair: 'Basic', good: 'Good', strong: 'Strong',
     passwordHelp: 'Use at least 12 characters with uppercase, lowercase, numbers, and symbols.',
+    forgotPassword: 'Forgot your password?', recoveryTitle: 'Recover your account', recoveryBody: 'We will send a secure link if the email belongs to an account.',
+    sendRecovery: 'Send link', recoverySent: 'Check your email', recoverySentBody: 'If an account exists for that email, you will receive a password reset link.',
+    resetTitle: 'Create a new password', resetAction: 'Change password', resetDone: 'Password updated', resetDoneBody: 'You can now sign in with your new password.',
+    resend: 'Resend verification', resent: 'Verification email sent.', googleUnavailable: 'Google will be available when OAuth is configured.',
   },
 } as const
 
@@ -108,27 +122,45 @@ export function Login({ onSuccess, onOnboardingIssue }: LoginProps) {
   const [acceptedLegal, setAcceptedLegal] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [termsVersion, setTermsVersion] = useState(FALLBACK_TERMS_VERSION)
+  const [googleEnabled, setGoogleEnabled] = useState(false)
+  const [resetToken] = useState(() => new URLSearchParams(window.location.search).get('token') ?? '')
   const t = COPY[lang]
   const localePath = lang === 'es' ? 'es-lat' : 'en-us'
   const strength = useMemo(() => passwordScore(pass, email, firstName, lastName), [pass, email, firstName, lastName])
   const strengthLabels = ['', t.weak, t.fair, t.good, t.strong]
 
-  useEffect(() => {
-    const timer = setTimeout(() => setStage('ready'), 500)
-    return () => clearTimeout(timer)
-  }, [])
-
-  async function finish(user: SessionUser) {
+  const finish = useCallback(async (user: SessionUser) => {
+    let finalUser = user
     try {
-      await completePendingOnboarding(user)
+      const onboarding = await completePendingOnboarding(user)
+      finalUser = onboarding?.user ?? user
     } catch (onboardingError) {
       onOnboardingIssue(onboardingError instanceof Error ? onboardingError.message : 'No fue posible completar el registro')
     }
     setLoading(false)
     setExpanded(true)
     await expandWindow()
-    setTimeout(() => onSuccess(user), 500)
-  }
+    setTimeout(() => onSuccess(finalUser), 500)
+  }, [onOnboardingIssue, onSuccess])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setStage('ready')
+      if (resetToken) setMode('reset')
+    }, 500)
+    getIdentityConfig().then((config) => {
+      setTermsVersion(config.termsVersion)
+      setGoogleEnabled(config.googleAuthEnabled)
+    }).catch(() => {})
+    let unlisten = () => {}
+    listenForDesktopAuth(
+      (user) => { void finish(user) },
+      (message) => { setLoading(false); setError(message) },
+    ).then((dispose) => { unlisten = dispose }).catch(() => {})
+    return () => { clearTimeout(timer); unlisten() }
+  }, [finish, resetToken])
 
   const validEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
   const validInvitation = (value: string) => /^[a-f0-9]{64}$/.test(value.trim().toLowerCase())
@@ -158,6 +190,7 @@ export function Login({ onSuccess, onOnboardingIssue }: LoginProps) {
   async function handleGoogleLogin() {
     setError('')
     setLoading(true)
+    if (!googleEnabled) return setError(t.googleUnavailable)
     try { await loginWithGoogle() }
     catch (googleError) {
       setLoading(false)
@@ -172,7 +205,7 @@ export function Login({ onSuccess, onOnboardingIssue }: LoginProps) {
     setLoading(true)
     try {
       await signUpWithEmail({ firstName, lastName, email, password: pass })
-      savePendingOnboarding({ firstName, lastName, email, ...(hasOrganization ? { invitationCode } : {}) })
+      savePendingOnboarding({ firstName, lastName, email, termsVersion, ...(hasOrganization ? { invitationCode } : {}) })
       setMode('signup-success')
       setPass('')
       setConfirmPass('')
@@ -186,8 +219,9 @@ export function Login({ onSuccess, onOnboardingIssue }: LoginProps) {
   async function handleGoogleSignup() {
     const validationError = validateSignup(false)
     if (validationError) return setError(validationError)
+    if (!googleEnabled) return setError(t.googleUnavailable)
     setLoading(true)
-    savePendingOnboarding({ firstName, lastName, email, ...(hasOrganization ? { invitationCode } : {}) })
+    savePendingOnboarding({ firstName, lastName, email, termsVersion, ...(hasOrganization ? { invitationCode } : {}) })
     try { await loginWithGoogle({ requestSignUp: true }) }
     catch (googleError) {
       setLoading(false)
@@ -195,9 +229,47 @@ export function Login({ onSuccess, onOnboardingIssue }: LoginProps) {
     }
   }
 
+  async function handleRecovery(event: React.FormEvent) {
+    event.preventDefault()
+    setError('')
+    if (!validEmail(email)) return setError(t.invalidEmail)
+    setLoading(true)
+    try { await requestPasswordReset(email); setMode('forgot-success') }
+    catch (recoveryError) { setError(recoveryError instanceof Error ? recoveryError.message : t.signInError) }
+    finally { setLoading(false) }
+  }
+
+  async function handleReset(event: React.FormEvent) {
+    event.preventDefault()
+    setError('')
+    if (!resetToken) return setError(t.signInError)
+    if (pass.length < 12 || pass.length > 128 || strength < 3) return setError(t.invalidPassword)
+    if (pass !== confirmPass) return setError(t.passwordMismatch)
+    setLoading(true)
+    try {
+      await resetPassword(resetToken, pass)
+      window.history.replaceState({}, '', window.location.pathname)
+      setPass('')
+      setConfirmPass('')
+      setMode('reset-success')
+    } catch (resetError) { setError(resetError instanceof Error ? resetError.message : t.signInError) }
+    finally { setLoading(false) }
+  }
+
+  async function handleResend() {
+    setError('')
+    setNotice('')
+    if (!validEmail(email)) return setError(t.invalidEmail)
+    setLoading(true)
+    try { await resendVerification(email); setNotice(t.resent) }
+    catch (resendError) { setError(resendError instanceof Error ? resendError.message : t.signupError) }
+    finally { setLoading(false) }
+  }
+
   function switchMode(next: Mode) {
     setMode(next)
     setError('')
+    setNotice('')
     setPass('')
     setConfirmPass('')
   }
@@ -213,11 +285,13 @@ export function Login({ onSuccess, onOnboardingIssue }: LoginProps) {
 
             {stage === 'ready' && mode === 'login' && <>
               <h1 className="font-display text-2xl font-bold text-text mb-6">{t.signInTitle}</h1>
-              <button type="button" onClick={handleGoogleLogin} disabled={loading} className="w-full h-10 rounded-md border border-line flex items-center justify-center gap-2 text-sm font-medium text-text hover:bg-panel-2 transition-colors mb-5 disabled:opacity-50"><GoogleIcon />{t.googleLogin}</button>
+              <button type="button" onClick={handleGoogleLogin} disabled={loading || !googleEnabled} title={!googleEnabled ? t.googleUnavailable : undefined} className="w-full h-10 rounded-md border border-line flex items-center justify-center gap-2 text-sm font-medium text-text hover:bg-panel-2 transition-colors mb-5 disabled:opacity-50"><GoogleIcon />{t.googleLogin}</button>
               <div className="w-full flex items-center gap-3 mb-5"><div className="flex-1 h-px bg-line" /><span className="text-xs text-text-dim">{t.or}</span><div className="flex-1 h-px bg-line" /></div>
               <form onSubmit={handleEmailLogin} className="w-full space-y-4">
                 <Field label={t.email}><Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" /></Field>
                 <PasswordField label={t.password} value={pass} onChange={setPass} visible={showPass} setVisible={setShowPass} showLabel={t.showPassword} hideLabel={t.hidePassword} autoComplete="current-password" />
+                <div className="flex justify-between gap-3"><button type="button" onClick={handleResend} className="text-xs text-accent hover:underline">{t.resend}</button><button type="button" onClick={() => switchMode('forgot')} className="text-xs text-accent hover:underline">{t.forgotPassword}</button></div>
+                {notice && <div role="status" className="text-xs text-accent font-mono">{notice}</div>}
                 {error && <div role="alert" className="text-xs text-red-600 dark:text-red-400 font-mono">{error}</div>}
                 <Button type="submit" variant="dark" disabled={loading} className="north-primary w-full h-10">{loading ? t.signingIn : t.signIn}</Button>
               </form>
@@ -248,11 +322,11 @@ export function Login({ onSuccess, onOnboardingIssue }: LoginProps) {
                   <div className="grid grid-cols-4 gap-1" role="progressbar" aria-label={t.password} aria-valuemin={0} aria-valuemax={4} aria-valuenow={strength}>{[1, 2, 3, 4].map((level) => <span key={level} className={`h-1.5 rounded-full ${strength >= level ? (strength < 3 ? 'bg-orange-500' : 'bg-accent') : 'bg-line'}`} />)}</div>
                   <div className="mt-1.5 flex justify-between gap-3 text-[11px] text-text-dim"><span>{t.passwordHelp}</span><span className="font-medium text-text shrink-0">{strengthLabels[strength]}</span></div>
                 </div>
-                <label className="flex items-start gap-2.5 text-xs text-text-dim cursor-pointer"><input type="checkbox" checked={acceptedLegal} onChange={(event) => setAcceptedLegal(event.target.checked)} className="mt-0.5 accent-[var(--color-accent)]" /><span>{t.legalCheck}</span></label>
+                <label className="flex items-start gap-2.5 text-xs text-text-dim cursor-pointer"><input type="checkbox" checked={acceptedLegal} onChange={(event) => setAcceptedLegal(event.target.checked)} className="mt-0.5 accent-[var(--color-accent)]" /><span>{t.legalCheck} <span className="font-mono text-[10px]">({termsVersion})</span></span></label>
                 {error && <div role="alert" className="text-xs text-red-600 dark:text-red-400 font-mono">{error}</div>}
                 <Button type="submit" variant="dark" disabled={loading} className="north-primary w-full h-10">{loading ? t.creating : t.create}</Button>
                 <div className="relative py-1"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-line" /></div><div className="relative flex justify-center"><span className="bg-panel px-3 text-xs text-text-dim">{t.or}</span></div></div>
-                <button type="button" onClick={handleGoogleSignup} disabled={loading} className="w-full h-10 rounded-md border border-line flex items-center justify-center gap-2 text-sm font-medium text-text hover:bg-panel-2 transition-colors disabled:opacity-50"><GoogleIcon />{t.googleSignup}</button>
+                <button type="button" onClick={handleGoogleSignup} disabled={loading || !googleEnabled} title={!googleEnabled ? t.googleUnavailable : undefined} className="w-full h-10 rounded-md border border-line flex items-center justify-center gap-2 text-sm font-medium text-text hover:bg-panel-2 transition-colors disabled:opacity-50"><GoogleIcon />{t.googleSignup}</button>
                 <div className="text-center text-sm text-text-dim">{t.hasAccount} <button type="button" onClick={() => switchMode('login')} className="text-accent hover:underline">{t.signIn}</button></div>
               </form>
             </>}
@@ -261,8 +335,26 @@ export function Login({ onSuccess, onOnboardingIssue }: LoginProps) {
               <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent text-xl">✓</div>
               <h1 className="font-display text-2xl font-bold text-text">{t.verifyTitle}</h1>
               <p className="mt-3 text-sm leading-relaxed text-text-dim">{t.verifyBody}</p>
+              {notice && <p role="status" className="mt-3 text-xs text-accent">{notice}</p>}
+              {error && <p role="alert" className="mt-3 text-xs text-red-600 dark:text-red-400">{error}</p>}
+              <button type="button" onClick={handleResend} disabled={loading} className="mt-5 text-sm text-accent hover:underline disabled:opacity-50">{t.resend}</button>
               <Button type="button" variant="dark" onClick={() => switchMode('login')} className="north-primary w-full h-10 mt-7">{t.backToLogin}</Button>
             </div>}
+
+            {stage === 'ready' && mode === 'forgot' && <>
+              <h1 className="font-display text-2xl font-bold text-text">{t.recoveryTitle}</h1>
+              <p className="mt-2 mb-6 text-sm text-text-dim">{t.recoveryBody}</p>
+              <form onSubmit={handleRecovery} className="space-y-4"><Field label={t.email}><Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></Field>{error && <p role="alert" className="text-xs text-red-600 dark:text-red-400">{error}</p>}<Button type="submit" variant="dark" disabled={loading} className="north-primary w-full h-10">{loading ? t.creating : t.sendRecovery}</Button><button type="button" onClick={() => switchMode('login')} className="w-full text-sm text-text-dim hover:text-text">{t.backToLogin}</button></form>
+            </>}
+
+            {stage === 'ready' && mode === 'forgot-success' && <div className="text-center py-8"><div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent text-xl">✓</div><h1 className="font-display text-2xl font-bold text-text">{t.recoverySent}</h1><p className="mt-3 text-sm leading-relaxed text-text-dim">{t.recoverySentBody}</p><Button type="button" variant="dark" onClick={() => switchMode('login')} className="north-primary w-full h-10 mt-7">{t.backToLogin}</Button></div>}
+
+            {stage === 'ready' && mode === 'reset' && <>
+              <h1 className="font-display text-2xl font-bold text-text mb-6">{t.resetTitle}</h1>
+              <form onSubmit={handleReset} className="space-y-4"><PasswordField label={t.password} value={pass} onChange={setPass} visible={showPass} setVisible={setShowPass} showLabel={t.showPassword} hideLabel={t.hidePassword} autoComplete="new-password" /><PasswordField label={t.confirmPassword} value={confirmPass} onChange={setConfirmPass} visible={showPass} setVisible={setShowPass} showLabel={t.showPassword} hideLabel={t.hidePassword} autoComplete="new-password" /><div className="grid grid-cols-4 gap-1" role="progressbar" aria-label={t.password} aria-valuemin={0} aria-valuemax={4} aria-valuenow={strength}>{[1, 2, 3, 4].map((level) => <span key={level} className={`h-1.5 rounded-full ${strength >= level ? (strength < 3 ? 'bg-orange-500' : 'bg-accent') : 'bg-line'}`} />)}</div>{error && <p role="alert" className="text-xs text-red-600 dark:text-red-400">{error}</p>}<Button type="submit" variant="dark" disabled={loading} className="north-primary w-full h-10">{loading ? t.creating : t.resetAction}</Button></form>
+            </>}
+
+            {stage === 'ready' && mode === 'reset-success' && <div className="text-center py-8"><div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent text-xl">✓</div><h1 className="font-display text-2xl font-bold text-text">{t.resetDone}</h1><p className="mt-3 text-sm text-text-dim">{t.resetDoneBody}</p><Button type="button" variant="dark" onClick={() => switchMode('login')} className="north-primary w-full h-10 mt-7">{t.signIn}</Button></div>}
           </div>}
         </div>
         {!expanded && mode !== 'signup' && <p className="max-w-[440px] w-full text-center text-xs text-text-dim mt-6 leading-relaxed">{t.agreement} <a href={`https://blackpolar.org/${localePath}/legal/terms`} className="underline hover:text-text">{t.terms}</a> {t.and} <a href={`https://blackpolar.org/${localePath}/legal/privacy`} className="underline hover:text-text">{t.privacy}</a>.</p>}

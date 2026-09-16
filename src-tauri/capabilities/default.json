@@ -10,6 +10,15 @@
     "core:window:allow-set-size",
     "core:window:allow-set-resizable",
     "core:window:allow-center",
-    "core:window:allow-set-min-size"
+    "core:window:allow-set-min-size",
+    "core:event:default",
+    "deep-link:default",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "https://api.blackpolar.org/v1/desktop-auth/google/start*" },
+        { "url": "http://localhost:4000/v1/desktop-auth/google/start*" }
+      ]
+    }
   ]
 }
