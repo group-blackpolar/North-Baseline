@@ -1,42 +1,121 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #F7F8FA;
-  --color-panel: #FFFFFF;
-  --color-panel-2: #F3F4F6;
-  --color-line: #E5E7EB;
-  --color-accent: #14B8A6;
-  --color-accent-2: #EA580C;
-  --color-text: #0F172A;
-  --color-text-dim: #6B7280;
+  /* ── Paleta NORTH: neutros fríos, sin negro/blanco puros ── */
+  --color-background: #F6F7F9;
+  --color-surface: #FBFCFD;
+  --color-surface-hover: #F2F4F7;
+  --color-surface-active: #EAEDF1;
+  --color-border: #E4E7EC;
+  --color-border-strong: #D0D5DD;
+  --color-text: #16181D;
+  --color-text-secondary: #5A6472;
+  --color-text-muted: #8A94A3;
 
-  --font-display: "Space Grotesk", sans-serif;
-  --font-mono: "IBM Plex Mono", monospace;
-  --font-sans: "Inter", sans-serif;
+  --color-accent: #0FA396;
+  --color-accent-hover: #0C8578;
+  --color-accent-soft: rgba(15, 163, 150, 0.12);
+  --color-success: #12B76A;
+  --color-warning: #F79009;
+  --color-error: #F04438;
+
+  /* Aliases legacy — remover en TASK de migración (no usar en código nuevo) */
+  --color-bg: #F6F7F9;
+  --color-panel: #FBFCFD;
+  --color-panel-2: #F2F4F7;
+  --color-line: #E4E7EC;
+  --color-text-dim: #5A6472;
+  --color-accent-2: #EA580C;
+
+  /* Tipografía */
+  --font-display: "Manrope", "Inter", system-ui, sans-serif;
+  --font-sans: "Manrope", "Inter", system-ui, sans-serif;
+  --font-mono: "Geist Mono", "SFMono-Regular", Consolas, monospace;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+
+  /* Elevación sutil */
+  --shadow-soft: 0 1px 2px rgb(16 24 40 / 0.04), 0 1px 3px rgb(16 24 40 / 0.06);
+  --shadow-pop: 0 4px 6px -2px rgb(16 24 40 / 0.05), 0 12px 16px -4px rgb(16 24 40 / 0.10);
 }
 
 @layer base {
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --color-bg: #090D12;
-    --color-panel: #0F151C;
-    --color-panel-2: #171E27;
-    --color-line: #29323D;
-    --color-accent: #45CDB8;
+    --color-background: #0D0F13;
+    --color-surface: #14171C;
+    --color-surface-hover: #1A1E24;
+    --color-surface-active: #232830;
+    --color-border: #262B33;
+    --color-border-strong: #343B45;
+    --color-text: #EEF1F4;
+    --color-text-secondary: #A6AFBA;
+    --color-text-muted: #6E7885;
+    --color-accent: #3ECFBA;
+    --color-accent-hover: #5EEAD4;
+    --color-accent-soft: rgba(62, 207, 186, 0.14);
+    --color-success: #34D399;
+    --color-warning: #FBBF24;
+    --color-error: #F87171;
+    /* aliases legacy dark */
+    --color-bg: #0D0F13;
+    --color-panel: #14171C;
+    --color-panel-2: #1A1E24;
+    --color-line: #262B33;
+    --color-text-dim: #A6AFBA;
     --color-accent-2: #FB7A3D;
-    --color-text: #F2F5F7;
-    --color-text-dim: #94A0AE;
   }
+
   body {
-    background: var(--color-bg);
+    background: var(--color-background);
     color: var(--color-text);
     font-family: var(--font-sans);
-    transition: background-color 240ms ease, color 240ms ease;
+    font-size: 14px;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 200ms ease, color 200ms ease;
   }
+
+  ::selection { background: var(--color-accent-soft); }
+
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-background), 0 0 0 4px var(--color-accent-soft);
+  }
+
   ::-webkit-scrollbar { width: 8px; height: 8px; }
-  ::-webkit-scrollbar-thumb { background: var(--color-line); border-radius: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--color-border-strong); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
+
   :root[data-theme="dark"] .north-primary {
     background: var(--color-text);
-    color: var(--color-bg);
+    color: var(--color-background);
+  }
+}
+
+@layer components {
+  .ui-label {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+  .mono-data {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .np-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-soft);
   }
 }

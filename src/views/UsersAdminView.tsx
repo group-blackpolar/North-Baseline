@@ -15,7 +15,7 @@ export function UsersAdminView() {
     api
       .get<ApiUser[]>('/v1/users')
       .then(setUsers)
-      .catch((e) => setError(e instanceof Error ? e.message : 'no se pudo cargar'))
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : 'no se pudo cargar'))
   }, [])
 
   const visible = (users ?? []).filter((u) =>

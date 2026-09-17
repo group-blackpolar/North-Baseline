@@ -12,6 +12,7 @@ export interface SessionUser {
   emailVerified: boolean
   termsAcceptedAt: string | null
   termsVersion: string | null
+  createdAt?: string
 }
 
 export interface IdentityConfig {
@@ -50,6 +51,7 @@ function parseUser(data: Record<string, unknown>): SessionUser {
     emailVerified: Boolean(data.emailVerified),
     termsAcceptedAt: typeof data.termsAcceptedAt === 'string' ? data.termsAcceptedAt : null,
     termsVersion: typeof data.termsVersion === 'string' ? data.termsVersion : null,
+    createdAt: typeof data.createdAt === 'string' ? data.createdAt : undefined,
   }
 }
 
@@ -351,4 +353,22 @@ export async function completePendingOnboarding(user: SessionUser): Promise<Onbo
 
   clearPendingOnboarding()
   return { invitationAccepted: Boolean(pending.invitationCode), user: updatedUser }
+}
+export async function loginWithAUID(email: string, adminUniqueId: string): Promise<SessionUser> {
+  const response = await fetch('https://api.blackpolar.org/api/admin/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email, adminUniqueId }),
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Credenciales de administrador inválidas' }));
+    throw new Error(error.message || 'AUID inválido');
+  }
+
+  const data = await response.json();
+  return data.user;
 }

@@ -10,6 +10,13 @@ export interface ApiUser {
   createdAt: string
 }
 
+export interface Organization {
+  id: string
+  name: string
+  slug?: string
+  createdAt?: string
+}
+
 // ── Notas y Tareas (mock — pendiente de endpoints en CoreCrow-API) ─────
 export interface Workspace {
   id: string

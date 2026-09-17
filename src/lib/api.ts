@@ -1,34 +1,48 @@
-import { currentToken } from './auth'
-import { isTauri } from './tauri'
+const API_BASE = 'https://api.blackpolar.org';
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'https://api.blackpolar.org'
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+  requestId?: string;
+  constructor(status: number, message: string, code?: string, requestId?: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code;
+    this.requestId = requestId;
+  }
+}
 
-type RequestOptions = Omit<RequestInit, 'body'> & { body?: unknown }
+export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    credentials: 'include',
+    ...init,
+    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
+  });
 
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const token = currentToken()
-  const res = await fetch(`${API_URL}${path}`, {
-    ...options,
-    credentials: isTauri() ? 'omit' : 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  })
-
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: res.statusText }))
-    throw new Error(error?.error?.message ?? error?.message ?? 'Request failed')
+  if (!response.ok) {
+    let message = response.statusText;
+    let code: string | undefined;
+    let requestId: string | undefined;
+    try {
+      const body = await response.json();
+      message = body?.error?.message ?? message;
+      code = body?.error?.code;
+      requestId = body?.error?.requestId;
+    } catch {
+      /* respuesta sin cuerpo JSON */
+    }
+    throw new ApiError(response.status, message, code, requestId);
   }
 
-  return res.json()
+  if (response.status === 204) return undefined as T;
+  return (await response.json()) as T;
 }
 
 export const api = {
-  get: <T>(path: string) => request<T>(path),
-  post: <T>(path: string, body?: unknown) => request<T>(path, { method: 'POST', body }),
-  put: <T>(path: string, body?: unknown) => request<T>(path, { method: 'PUT', body }),
-  delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
-}
+  get: <T>(path: string) => apiRequest<T>(path),
+  post: <T>(path: string, body?: unknown) => apiRequest<T>(path, {
+    method: 'POST',
+    body: body === undefined ? undefined : JSON.stringify(body),
+  }),
+};
