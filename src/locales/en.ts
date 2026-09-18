@@ -204,6 +204,8 @@ const en: Dictionary = {
   'terms.accept': 'Accept and continue',
   'shark.tagline': 'Panama maritime import intelligence.',
   'shark.quickAccess': 'QUICK ACCESS',
+  'profile.me': 'My profile',
+  'profile.logout': 'Sign out',
 };
 
 export default en;

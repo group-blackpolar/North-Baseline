@@ -13,7 +13,6 @@ import { OrganizationProvider, useOrganization } from '@/context/OrganizationCon
 import { WorkspaceProvider, useWorkspace } from '@/context/WorkspaceContext';
 import { TabsProvider, useTabs } from '@/context/TabsContext';
 import { CatalogProvider, useCatalog } from '@/context/CatalogContext';
-import type { ViewId } from '@/lib/navigation';
 import { PermissionProvider } from '@/context/PermissionContext';
 import { I18nProvider, useI18n } from '@/lib/i18n';
 import { SessionGuard } from '@/components/session/SessionGuard';
@@ -34,12 +33,9 @@ import {
 } from '@/lib/auth';
 import { isTauri } from '@/lib/tauri';
 
-/** IDs de categorías de los workspaces especiales (Personal y SHARK demo).
- *  Usados por ViewRenderer para renderizar las vistas correctas. */
 const PERSONAL_CATEGORIES = new Set(['home', 'profile', 'billing', 'preferences']);
 const SHARK_CATEGORIES = new Set(['shark-home', 'master-house']);
 
-// Exports para uso en ViewRenderer (archivo externo)
 export { PERSONAL_CATEGORIES, SHARK_CATEGORIES };
 
 function ShellSkeleton() {
@@ -76,12 +72,6 @@ function NoOrganizationState() {
   );
 }
 
-/**
- * CatalogSync — wrapper que escucha cambios del catálogo y re-rutea
- * la tab activa a una categoría/subcategoría válida del workspace actual.
- * Necesario cuando el usuario cambia de organización (las tabs legacy
- * podrían referir categorías que ya no existen).
- */
 function CatalogSync({ children }: { children: React.ReactNode }) {
   const { categories, isLoading } = useCatalog();
   const { activeTab, navigate } = useTabs();
@@ -92,7 +82,7 @@ function CatalogSync({ children }: { children: React.ReactNode }) {
     if (!hasCategory) {
       const firstCategory = categories[0];
       if (firstCategory) {
-        navigate(firstCategory.id as ViewId, firstCategory.subcategories[0]?.id ?? null);
+        navigate(firstCategory.id as Parameters<typeof navigate>[0], firstCategory.subcategories[0]?.id ?? null);
       }
     }
   }, [categories, isLoading, activeTab, navigate]);
@@ -100,18 +90,11 @@ function CatalogSync({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-/**
- * WorkspaceGate — wrapper que vive dentro de WorkspaceProvider para
- * poder leer el workspaceId activo y pasarlo a CatalogProvider/PermissionProvider.
- * Evita acoplamiento directo entre providers.
- */
 function WorkspaceGate({
   organizationId,
-  role,
   user,
 }: {
   organizationId: string;
-  role: string;
   user: SessionUser;
 }) {
   const { activeWorkspace } = useWorkspace();
@@ -121,8 +104,8 @@ function WorkspaceGate({
     <CatalogProvider workspaceId={activeWorkspaceId}>
       <PermissionProvider
         organizationId={organizationId}
-        workspaceId={activeWorkspaceId}
-        role={role}
+        workspaceId={activeWorkspaceId ?? undefined}
+        role={user.role}
       >
         <TabsProvider>
           <LayoutProvider>
@@ -131,7 +114,7 @@ function WorkspaceGate({
                 <div className="h-screen w-screen flex bg-background text-text">
                   <OrganizationRail />
                   <CategoryRail />
-                  <ContextSidebar />
+                  <ContextSidebar user={user} />
                   <div className="flex-1 flex flex-col min-w-0">
                     <CurrentPath />
                     <TabBar />
@@ -160,15 +143,12 @@ function AppShell({
   const { activeOrganization, isLoading } = useOrganization();
 
   if (isLoading) return <ShellSkeleton />;
-  // Fallback defensivo: el flujo normal garantiza activeOrganization (demo fallback),
-  // pero si algo falla mostramos empty state en lugar de romper el shell.
   if (!activeOrganization) return <NoOrganizationState />;
 
   return (
     <WorkspaceProvider organizationId={activeOrganization.id} onAuthError={onAuthError}>
       <WorkspaceGate
         organizationId={activeOrganization.id}
-        role={user.role}
         user={user}
       />
     </WorkspaceProvider>
@@ -272,10 +252,6 @@ export default function App() {
   );
 }
 
-/**
- * Pantalla de aceptación de términos legales (términos + privacidad).
- * Se muestra cuando el usuario no ha aceptado la versión vigente.
- */
 function TermsAcceptance({
   version,
   onAccept,

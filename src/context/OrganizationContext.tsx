@@ -3,9 +3,7 @@ import { createContext, useCallback, useContext, useState, useEffect, type React
 import { getOrganizations } from '@/lib/organizations';
 import { useAppErrorSafe } from '@/context/ErrorContext';
 import { hasEstablishedSession, markSessionEstablished } from '@/lib/sessionState';
-import { PERSONAL_ORG_ID } from '@/lib/personalCatalog';
 import { getDemoOrganizations } from '@/lib/demo/store';
-
 
 type Organization = Awaited<ReturnType<typeof getOrganizations>>[number];
 
@@ -39,35 +37,30 @@ export function OrganizationProvider({
     setIsLoading(true);
     setError(null);
     try {
-
-      const orgs = await getOrganizations();
+      const apiOrgs = await getOrganizations();
       markSessionEstablished();
-      const effective = orgs.length > 0 ? orgs : getDemoOrganizations();
+
+      // Fallback demo: si la API no devuelve orgs reales, usar demo store
+      // (incluye Personal + SHARK sembrados + cualquier org creada vía modal)
+      const effective = apiOrgs.length > 0 ? apiOrgs : getDemoOrganizations();
       setOrganizations(effective);
       setActiveOrganization((current) => current ?? effective[0] ?? null);
-
-      if (orgs.length === 0) {
-        // Usuario sin organizaciones: crear workspace personal virtual
-        const personalOrg: Organization = {
-          id: PERSONAL_ORG_ID,
-          name: 'Personal',
-          slug: 'personal',
-          avatarUrl: null,
-        };
-        setOrganizations([personalOrg]);
-        setActiveOrganization(personalOrg);
-      } else {
-        setOrganizations(orgs);
-        setActiveOrganization((current) => current ?? orgs[0]);
-      }
     } catch (err) {
       const status = (err as { status?: number }).status;
       if (status === 401 && !hasEstablishedSession()) {
+        // 401 en el primer fetch (cookie aún no aceptada): logout silencioso
         onAuthError?.();
         return;
       }
-      appError?.classifyAndRaise(err);
-      setError(err instanceof Error ? err.message : 'Error al cargar organizaciones');
+      // En otros errores, intentar el fallback demo para no bloquear la demo
+      const fallback = getDemoOrganizations();
+      if (fallback.length > 0) {
+        setOrganizations(fallback);
+        setActiveOrganization((current) => current ?? fallback[0] ?? null);
+      } else {
+        appError?.classifyAndRaise(err);
+        setError(err instanceof Error ? err.message : 'Error al cargar organizaciones');
+      }
     } finally {
       setIsLoading(false);
     }

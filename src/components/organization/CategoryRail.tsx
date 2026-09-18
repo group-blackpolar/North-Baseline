@@ -28,7 +28,7 @@ export function CategoryRail() {
         {categories.map((category) => {
           const Icon = resolveIcon(category.icon);
           const active = category.id === activeCategory;
-          const allowed = can(category.requiredPermission);
+          const allowed = !category.requiredPermission || can(category.requiredPermission);
           return (
             <button
               key={category.id}

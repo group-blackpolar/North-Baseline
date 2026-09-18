@@ -202,6 +202,8 @@ const es = {
   'terms.accept': 'Aceptar y continuar',
   'shark.tagline': 'Inteligencia de importaciones marítimas de Panamá.',
   'shark.quickAccess': 'ACCESO RÁPIDO',
+  'profile.me': 'Mi perfil',
+  'profile.logout': 'Cerrar sesión',
 } as const;
 
 export type Dictionary = { [K in keyof typeof es]: string };

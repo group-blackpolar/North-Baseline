@@ -19,6 +19,9 @@ const PERSONAL_CATEGORIES = new Set(['home', 'profile', 'billing', 'preferences'
 const SHARK_CATEGORIES = new Set(['shark-home', 'master-house']);
 
 export function ViewRenderer({ user, tab }: { user: SessionUser; tab: Tab | null }) {
+  // 🐛 DEBUG: log de lo que llega
+  console.log('[ViewRenderer] tab completa:', JSON.stringify(tab, null, 2));
+
   if (!tab) {
     return (
       <div className="flex-1 flex items-center justify-center text-text-dim text-sm">
@@ -26,9 +29,17 @@ export function ViewRenderer({ user, tab }: { user: SessionUser; tab: Tab | null
       </div>
     );
   }
-  if (tab && PERSONAL_CATEGORIES.has(tab.route.categoryId)) return <PersonalView route={tab.route} user={user} />;
-  if (tab && SHARK_CATEGORIES.has(tab.route.categoryId)) return <SharkView route={tab.route} />;
 
+  if (PERSONAL_CATEGORIES.has(tab.route.categoryId)) {
+    console.log('[ViewRenderer] → PersonalView');
+    return <PersonalView route={tab.route} user={user} />;
+  }
+  if (SHARK_CATEGORIES.has(tab.route.categoryId)) {
+    console.log('[ViewRenderer] → SharkView con categoryId:', tab.route.categoryId);
+    return <SharkView route={tab.route} />;
+  }
+
+  console.log('[ViewRenderer] → switch legacy, viewId:', tab.viewId);
   switch (tab.viewId as string) {
     case 'home': return <HomeView />;
     case 'billing': return <div className="p-6 text-text-secondary">Billing en construcción</div>;
@@ -45,6 +56,13 @@ export function ViewRenderer({ user, tab }: { user: SessionUser; tab: Tab | null
     case 'settings': return <SettingsView />;
     
     default:
-      return <div className="p-6 text-text-dim text-sm">Vista en construcción: {tabTitle(tab)}</div>;
+      return (
+        <div className="p-6 text-text-dim text-sm">
+          <p>Vista en construcción: {tabTitle(tab)}</p>
+          <pre className="mt-4 text-xs bg-surface-hover p-3 rounded overflow-x-auto">
+            {JSON.stringify(tab, null, 2)}
+          </pre>
+        </div>
+      );
   }
 }

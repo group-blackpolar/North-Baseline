@@ -3,9 +3,6 @@ import { createContext, useCallback, useContext, useState, useEffect, type React
 import { getWorkspaces } from '@/lib/organizations';
 import { useAppErrorSafe } from '@/context/ErrorContext';
 import { hasEstablishedSession, markSessionEstablished } from '@/lib/sessionState';
-import { PERSONAL_ORG_ID, PERSONAL_WORKSPACE_ID } from '@/lib/personalCatalog';
-import { getDemoWorkspaces, isDemoOrganization } from '@/lib/demo/store';
-
 
 type Workspace = Awaited<ReturnType<typeof getWorkspaces>>[number];
 
@@ -39,32 +36,39 @@ export function WorkspaceProvider({
     setIsLoading(true);
     setError(null);
     try {
-      if (isDemoOrganization(organizationId)) {
-        const ws = getDemoWorkspaces(organizationId);
+      // MOCK: workspaces hardcodeados para orgs demo
+      if (organizationId === 'shark') {
+        const sharkWs = {
+          id: 'shark-ws',
+          organizationId: 'shark',
+          name: 'SHARK Workspace',
+          slug: 'shark',
+          description: 'Panama maritime import intelligence',
+        };
         markSessionEstablished();
-        setWorkspaces(ws);
-        setActiveWorkspace((current) => current ?? ws[0] ?? null);
-        return; // el finally ya hace setIsLoading(false)
+        setWorkspaces([sharkWs]);
+        setActiveWorkspace(sharkWs);
+        return;
       }
-
-      if (organizationId === PERSONAL_ORG_ID) {
-        // Workspace personal virtual
-        const personalWorkspace: Workspace = {
-          id: PERSONAL_WORKSPACE_ID,
-          organizationId: PERSONAL_ORG_ID,
+      if (organizationId === 'personal') {
+        const personalWs = {
+          id: 'personal-ws',
+          organizationId: 'personal',
           name: 'Personal Workspace',
           slug: 'personal',
           description: 'Tu espacio personal',
         };
-        setWorkspaces([personalWorkspace]);
-        setActiveWorkspace(personalWorkspace);
         markSessionEstablished();
-      } else {
-        const wss = await getWorkspaces(organizationId);
-        markSessionEstablished();
-        setWorkspaces(wss);
-        if (wss.length > 0) setActiveWorkspace((current) => current ?? wss[0]);
+        setWorkspaces([personalWs]);
+        setActiveWorkspace(personalWs);
+        return;
       }
+
+      // Para orgs reales, llamar a la API
+      const wss = await getWorkspaces(organizationId);
+      markSessionEstablished();
+      setWorkspaces(wss);
+      if (wss.length > 0) setActiveWorkspace((current) => current ?? wss[0]);
     } catch (err) {
       const status = (err as { status?: number }).status;
       if (status === 401 && !hasEstablishedSession()) {

@@ -2,25 +2,32 @@ import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useOrganization } from '@/context/OrganizationContext';
 import { useI18n } from '@/lib/i18n';
-import { Skeleton } from '@/components/ui/skeleton';
 import { OrganizationModal } from '@/components/organization/OrganizationModal';
 import { cn } from '@/lib/utils';
 
+/** MOCK para la demo: lista fija de organizaciones visibles en el rail.
+ *  TODO: quitar este hack y depender de OrganizationContext cuando CoreCrow esté listo. */
+const MOCK_ORGS = [
+  { id: 'personal', name: 'Personal', initials: 'P', avatarUrl: null },
+  { id: 'shark',    name: 'SHARK',    initials: 'S', avatarUrl: null },
+];
+
 export function OrganizationRail() {
-  const { organizations, activeOrganization, switchOrganization, isLoading } = useOrganization();
+  const { activeOrganization, switchOrganization } = useOrganization();
   const { t } = useI18n();
   const [modalOpen, setModalOpen] = useState(false);
+
+  const handleSelect = (orgId: string) => {
+    switchOrganization(orgId);
+  };
 
   return (
     <div className="w-14 shrink-0 h-full bg-surface border-r border-border flex flex-col items-center py-3 gap-1.5">
       <div className="h-9 w-9 rounded-xl bg-accent-soft text-accent flex items-center justify-center font-display font-bold text-sm mb-1.5">N</div>
       <div className="w-6 h-px bg-border mb-1.5" />
       <div className="flex-1 flex flex-col items-center gap-1.5 overflow-y-auto w-full px-2">
-        {isLoading && <><Skeleton className="h-9 w-9 rounded-xl" /><Skeleton className="h-9 w-9 rounded-xl" /></>}
-        {!isLoading && organizations.map((org) => {
+        {MOCK_ORGS.map((org) => {
           const active = org.id === activeOrganization?.id;
-          const avatar = (org as { avatarUrl?: string | null }).avatarUrl ?? null;
-          const initials = (org as { initials?: string }).initials ?? (org.name ?? '?').slice(0, 2).toUpperCase();
           return (
             <button
               key={org.id}
@@ -28,12 +35,18 @@ export function OrganizationRail() {
               title={org.name}
               aria-current={active ? 'true' : undefined}
               className={cn(
-                'h-9 w-9 rounded-xl overflow-hidden flex items-center justify-center font-display text-sm transition-[background-color,color,border-radius,box-shadow] duration-150 shrink-0',
-                active ? 'bg-surface-active text-text font-semibold shadow-soft ring-1 ring-border' : 'bg-surface-hover text-text-secondary hover:bg-surface-active hover:text-text'
+                'h-9 w-9 rounded-xl overflow-hidden flex items-center justify-center font-display text-sm transition-[background-color,color,box-shadow] duration-150 shrink-0',
+                active
+                  ? 'bg-surface-active text-text font-semibold shadow-soft ring-1 ring-border'
+                  : 'bg-surface-hover text-text-secondary hover:bg-surface-active hover:text-text'
               )}
-              onClick={() => switchOrganization(org.id)}
+              onClick={() => handleSelect(org.id)}
             >
-              {avatar ? <img src={avatar} alt="" className="size-full object-cover" /> : initials}
+              {org.avatarUrl ? (
+                <img src={org.avatarUrl} alt="" className="size-full object-cover" />
+              ) : (
+                org.initials
+              )}
             </button>
           );
         })}

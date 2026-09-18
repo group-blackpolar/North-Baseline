@@ -17,7 +17,8 @@ export function ReportInfo() {
       <div>
         <h1 className="text-2xl font-display font-bold text-text">Maritime Imports</h1>
         <p className="text-sm text-text-secondary mt-1 max-w-2xl leading-relaxed">
-          Containerized import activity received through Panama's main ports: volumes, consignees, origin markets and port performance, updated monthly.
+          Containerized import activity received through Panama's main ports: volumes, consignees,
+          origin markets and port performance, updated monthly.
         </p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -27,16 +28,32 @@ export function ReportInfo() {
       </div>
       <DashboardCard title="Dataset information" description="Source: Panama maritime import records (demo dataset).">
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
-          <div><dt className="ui-label pb-1">SCOPE</dt><dd className="text-text-secondary">Container arrivals, TEUs, consignees, carriers, origin country and departure port.</dd></div>
-          <div><dt className="ui-label pb-1">GRAIN</dt><dd className="mono-data text-text-secondary">month × port × carrier × consignee</dd></div>
+          <div>
+            <dt className="ui-label pb-1">SCOPE</dt>
+            <dd className="text-text-secondary">
+              Container arrivals, TEUs, consignees, carriers, origin country and departure port.
+            </dd>
+          </div>
+          <div>
+            <dt className="ui-label pb-1">GRAIN</dt>
+            <dd className="mono-data text-text-secondary">month × port × carrier × consignee</dd>
+          </div>
         </dl>
       </DashboardCard>
       <section className="space-y-3">
         <h2 className="ui-label">Quick navigation</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {sections.map((section) => (
-            <button key={section.sub} type="button" className="np-card p-4 text-left hover:bg-surface-hover transition-colors duration-150" onClick={() => navigate('master-house', section.sub)}>
-              <p className="text-sm font-semibold text-text flex items-center gap-2"><Database className="w-3.5 h-3.5 text-accent" />{section.title}</p>
+            <button
+              key={section.sub}
+              type="button"
+              className="np-card p-4 text-left hover:bg-surface-hover transition-colors duration-150"
+              onClick={() => navigate('master-house', section.sub)}
+            >
+              <p className="text-sm font-semibold text-text flex items-center gap-2">
+                <Database className="w-3.5 h-3.5 text-accent" />
+                {section.title}
+              </p>
               <p className="text-xs text-text-secondary mt-0.5">{section.body}</p>
             </button>
           ))}

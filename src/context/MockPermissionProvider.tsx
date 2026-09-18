@@ -10,18 +10,9 @@ interface PermissionContextValue {
 const PermissionContext = createContext<PermissionContextValue | null>(null);
 
 /** MOCK para demo: todos los permisos habilitados, sin llamadas a API.
- *  TODO: reemplazar con la versión real que llama a CoreCrow cuando esté listo. */
-export function PermissionProvider({
-  organizationId: _organizationId,
-  workspaceId: _workspaceId,
-  role: _role,
-  children,
-}: {
-  organizationId?: string;
-  workspaceId?: string;
-  role?: string;
-  children: ReactNode;
-}) {
+ *  TODO: reemplazar con PermissionProvider real cuando CoreCrow esté listo. */
+export function MockPermissionProvider({ children }: { children: ReactNode }) {
+  // Mock: dar todos los permisos posibles para que la demo funcione sin restricciones
   const allPermissions = [
     'organization:read',
     'organization:write',
@@ -35,15 +26,12 @@ export function PermissionProvider({
     'members:write',
     'members:admin',
     'audit:read',
-    'categories:read',
-    'categories:write',
-    'catalog:manage',
   ];
 
   return (
     <PermissionContext.Provider
       value={{
-        can: () => true,
+        can: () => true, // Todo permitido en mock
         permissions: allPermissions,
         isLoading: false,
       }}
@@ -56,7 +44,7 @@ export function PermissionProvider({
 export function usePermissions() {
   const context = useContext(PermissionContext);
   if (!context) {
-    throw new Error('usePermissions must be used within PermissionProvider');
+    throw new Error('usePermissions must be used within MockPermissionProvider');
   }
   return context;
 }
