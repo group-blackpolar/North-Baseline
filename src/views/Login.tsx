@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { NorthIcon } from '@/components/brand/NorthLogo'
 import { LanguageSelector } from '@/components/LanguageSelector'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { expandWindow } from '@/lib/tauri'
@@ -242,7 +243,11 @@ export function Login({ onSuccess, onOnboardingIssue }: LoginProps) {
 
   return (
     <div className="fixed inset-0 min-h-screen flex flex-col overflow-y-auto bg-bg" lang={lang}>
-      {!expanded && <header className="flex items-center justify-between px-5 sm:px-8 py-5"><div className="flex items-center gap-2"><img src="/favicon.png" alt="" className="w-7 h-7 object-contain dark:invert" /><span className="font-display text-xs tracking-[0.25em] text-text-dim">NORTH</span></div><div className="flex items-center gap-3"><ThemeToggle language={lang} /><LanguageSelector value={lang} onChange={(value) => setLang(value as Locale)} /></div></header>}
+      {!expanded && <header className="flex items-center justify-between px-5 sm:px-8 py-5">
+        <div className="flex items-center gap-2">
+          <NorthIcon className="size-7" />
+          <span className="font-display text-xs tracking-[0.25em] text-text-dim">NORTH</span>
+        </div><div className="flex items-center gap-3"><ThemeToggle language={lang} /><LanguageSelector value={lang} onChange={(value) => setLang(value as Locale)} /></div></header>}
 
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-8">
         <div className={`transition-all duration-500 ease-out rounded-2xl border border-line overflow-hidden bg-panel ${expanded ? 'w-full h-full rounded-none' : `w-full ${mode === 'signup' ? 'max-w-[620px]' : 'max-w-[440px]'} shadow-sm`}`}>

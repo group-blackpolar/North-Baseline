@@ -1,4 +1,3 @@
-/* oxlint-disable react/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { fetchCatalog } from '@/lib/catalog';
 import type { CategoryModel, SubcategoryModel } from '@/lib/models';
@@ -12,7 +11,13 @@ interface CatalogContextValue {
 
 const CatalogContext = createContext<CatalogContextValue | null>(null);
 
-export function CatalogProvider({ workspaceId, children }: { workspaceId: string | null; children: ReactNode }) {
+export function CatalogProvider({
+  workspaceId,
+  children,
+}: {
+  workspaceId: string | null;
+  children: ReactNode;
+}) {
   const [categories, setCategories] = useState<CategoryModel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 

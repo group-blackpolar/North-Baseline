@@ -96,6 +96,21 @@
     background: var(--color-text);
     color: var(--color-background);
   }
+
+  [data-theme='midnight'] {
+    --color-background: #0a1020;
+    --color-surface: #0e1526;
+    --color-surface-hover: #16203a;
+    --color-surface-active: #1b2745;
+    --color-border: #223052;
+    --color-border-strong: #2e3f6b;
+    --color-text: #e2e8f8;
+    --color-text-secondary: #a8b3d0;
+    --color-text-muted: #6d7aa0;
+    --color-accent: #3ecfba;
+    --color-accent-hover: #5adcc8;
+    --color-accent-soft: rgba(62, 207, 186, 0.14);
+  }
 }
 
 @layer components {
@@ -118,4 +133,19 @@
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-soft);
   }
+}
+
+/* ---------------------------------------------------------------------------
+   NORTH brand icons theme-aware (black512 / white512)
+   --------------------------------------------------------------------------- */
+.north-icon-dark {
+  display: none;
+}
+
+:is([data-theme='dark'], [data-theme='midnight']) .north-icon-dark {
+  display: block;
+}
+
+:is([data-theme='dark'], [data-theme='midnight']) .north-icon-light {
+  display: none;
 }

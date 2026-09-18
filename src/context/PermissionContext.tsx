@@ -59,4 +59,4 @@ export function usePermissions() {
     throw new Error('usePermissions must be used within PermissionProvider');
   }
   return context;
-}
+}   

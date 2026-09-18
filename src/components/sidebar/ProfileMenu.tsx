@@ -1,11 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
-import { LogOut } from 'lucide-react';
-import { logout } from '@/lib/auth';
+import { Loader2, LogOut } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
+import { useNotifications } from '@/context/NotificationContext';
+import { useLogout } from '@/hooks/useLogout';
 import type { SessionUser } from '@/lib/auth';
 
 export function ProfileMenu({ user }: { user: SessionUser }) {
   const { t } = useI18n();
+  const { push } = useNotifications();
+  const { logout, isLoggingOut } = useLogout();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -19,21 +22,23 @@ export function ProfileMenu({ user }: { user: SessionUser }) {
   }, [open]);
 
   const handleLogout = async () => {
-    setOpen(false);
-    try {
-      await logout();
-    } catch {
-      /* ignore */
+    const { serverFailed } = await logout();
+    if (serverFailed) {
+      push({
+        type: 'warning',
+        title: t('profile.logoutLocalTitle') || 'Sesión cerrada localmente',
+        body:
+          t('profile.logoutLocalBody') ||
+          'No se pudo invalidar en el servidor; se limpió tu sesión en este dispositivo.',
+      });
     }
-    document.cookie.split(';').forEach((cookie) => {
-      document.cookie = cookie.replace(/^ +/, '').replace(/=.*/, `=;expires=${new Date().toUTCString()};path=/`);
-    });
-    localStorage.clear();
-    sessionStorage.clear();
-    window.location.reload();
+    // replace (no assign): sin entrada de historial → el botón atrás no vuelve al dashboard.
+    // El kill-switch garantiza que el boot muestre Login aunque la cookie siga viva.
+    window.location.replace('/');
   };
 
-  const initials = (user.name ?? user.email).slice(0, 2).toUpperCase();
+  const displayName = user.name ?? user.email;
+  const initials = displayName.slice(0, 2).toUpperCase();
 
   return (
     <div ref={ref} className="relative">
@@ -46,7 +51,7 @@ export function ProfileMenu({ user }: { user: SessionUser }) {
           {initials}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-text truncate">{user.name ?? (t('profile.me') || 'Mi perfil')}</p>
+          <p className="text-xs font-medium text-text truncate">{displayName}</p>
           <p className="text-[10px] text-text-muted truncate">{user.email}</p>
         </div>
       </button>
@@ -54,16 +59,19 @@ export function ProfileMenu({ user }: { user: SessionUser }) {
       {open && (
         <div className="absolute bottom-full left-0 right-0 mb-1 np-card p-1.5 space-y-0.5 shadow-pop z-50">
           <div className="px-2 py-2 border-b border-border">
-            <p className="text-xs font-semibold text-text">{user.name ?? (t('profile.me') || 'Mi perfil')}</p>
+            <p className="text-xs font-semibold text-text">{displayName}</p>
             <p className="text-[11px] text-text-muted mono-data truncate">{user.role}</p>
           </div>
           <button
             type="button"
+            disabled={isLoggingOut}
             onClick={() => void handleLogout()}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-text hover:bg-error/10 hover:text-error transition-colors duration-150"
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-text hover:bg-error/10 hover:text-error transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            <LogOut className="w-4 h-4" />
-            {t('profile.logout') || 'Cerrar sesión'}
+            {isLoggingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
+            {isLoggingOut
+              ? (t('profile.loggingOut') || 'Cerrando sesión…')
+              : (t('profile.logout') || 'Cerrar sesión')}
           </button>
         </div>
       )}

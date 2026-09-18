@@ -3,9 +3,10 @@ import { createContext, useCallback, useContext, useState, useEffect, type React
 import { getOrganizations } from '@/lib/organizations';
 import { useAppErrorSafe } from '@/context/ErrorContext';
 import { hasEstablishedSession, markSessionEstablished } from '@/lib/sessionState';
-import { getDemoOrganizations } from '@/lib/demo/store';
+import { getDemoOrganizations, PERSONAL_ORG_ID, type DemoOrganization } from '@/lib/demo/store';
 
-type Organization = Awaited<ReturnType<typeof getOrganizations>>[number];
+type ApiOrganization = Awaited<ReturnType<typeof getOrganizations>>[number];
+type Organization = ApiOrganization | DemoOrganization;
 
 interface OrganizationContextValue {
   organizations: Organization[];
@@ -17,6 +18,14 @@ interface OrganizationContextValue {
 }
 
 const OrganizationContext = createContext<OrganizationContextValue | null>(null);
+
+/** Personal Workspace es una entidad especial del usuario: siempre debe existir,
+ *  incluso si la API devuelve organizaciones reales. */
+function ensurePersonalWorkspace(orgs: Organization[]): Organization[] {
+  if (orgs.some((org) => org.id === PERSONAL_ORG_ID)) return orgs;
+  const personal = getDemoOrganizations().find((org) => org.id === PERSONAL_ORG_ID);
+  return personal ? [personal, ...orgs] : orgs;
+}
 
 export function OrganizationProvider({
   user,
@@ -39,28 +48,19 @@ export function OrganizationProvider({
     try {
       const apiOrgs = await getOrganizations();
       markSessionEstablished();
-
-      // Fallback demo: si la API no devuelve orgs reales, usar demo store
-      // (incluye Personal + SHARK sembrados + cualquier org creada vía modal)
-      const effective = apiOrgs.length > 0 ? apiOrgs : getDemoOrganizations();
+      const base = apiOrgs.length > 0 ? apiOrgs : getDemoOrganizations();
+      const effective = ensurePersonalWorkspace(base);
       setOrganizations(effective);
       setActiveOrganization((current) => current ?? effective[0] ?? null);
     } catch (err) {
       const status = (err as { status?: number }).status;
       if (status === 401 && !hasEstablishedSession()) {
-        // 401 en el primer fetch (cookie aún no aceptada): logout silencioso
         onAuthError?.();
         return;
       }
-      // En otros errores, intentar el fallback demo para no bloquear la demo
-      const fallback = getDemoOrganizations();
-      if (fallback.length > 0) {
-        setOrganizations(fallback);
-        setActiveOrganization((current) => current ?? fallback[0] ?? null);
-      } else {
-        appError?.classifyAndRaise(err);
-        setError(err instanceof Error ? err.message : 'Error al cargar organizaciones');
-      }
+      const fallback = ensurePersonalWorkspace(getDemoOrganizations());
+      setOrganizations(fallback);
+      setActiveOrganization((current) => current ?? fallback[0] ?? null);
     } finally {
       setIsLoading(false);
     }
@@ -71,7 +71,7 @@ export function OrganizationProvider({
   }, [loadOrganizations, user.id]);
 
   const switchOrganization = (orgId: string) => {
-    const org = organizations.find(o => o.id === orgId);
+    const org = organizations.find((o) => o.id === orgId);
     if (org) {
       setActiveOrganization(org);
     }

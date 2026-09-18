@@ -1,102 +1,50 @@
 /* oxlint-disable react/only-export-components */
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import {
-  VIEW_CATALOG,
-  firstSubcategoryId,
-  subcategoryLabel,
-  viewLabel,
-  type ViewId,
-} from '@/lib/navigation';
+import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 
 export interface TabRoute {
-  categoryId: ViewId;
+  categoryId: string;
   subcategoryId: string | null;
 }
 
 export interface Tab {
   id: string;
-  viewId: ViewId; // === route.categoryId, compat con ViewRenderer
   route: TabRoute;
-  params?: Record<string, unknown>;
-  isPersistent: boolean;
 }
 
 interface TabsContextValue {
   tabs: Tab[];
   activeTab: Tab | null;
-  navigate: (categoryId: ViewId, subcategoryId?: string | null) => void;
+  navigate: (categoryId: string, subcategoryId?: string | null) => void;
   openNewTab: () => void;
   closeTab: (tabId: string) => void;
   setActiveTab: (tabId: string) => void;
 }
 
 const TabsContext = createContext<TabsContextValue | null>(null);
-const STORAGE_KEY = 'north-open-tabs-v2';
-
-function defaultRoute(): TabRoute {
-  const categoryId = VIEW_CATALOG[0]?.id ?? 'dashboards';
-  return { categoryId, subcategoryId: firstSubcategoryId(categoryId) };
-}
-
-function createTab(route: TabRoute): Tab {
-  return { id: crypto.randomUUID(), viewId: route.categoryId, route, isPersistent: true };
-}
-
-/** Migra tabs persistidas en formatos anteriores */
-function sanitizeTabs(raw: unknown): Tab[] {
-  if (!Array.isArray(raw)) return [];
-  const valid = raw
-    .filter((t): t is Record<string, unknown> => typeof t === 'object' && t !== null)
-    .map((t) => {
-      const categoryId = (typeof t.viewId === 'string' && VIEW_CATALOG.some((v) => v.id === t.viewId)
-        ? t.viewId
-        : null) as ViewId | null;
-      if (!categoryId) return null;
-      const route = (t.route as TabRoute | undefined) ?? {
-        categoryId,
-        subcategoryId: firstSubcategoryId(categoryId),
-      };
-      return createTab({ categoryId: route.categoryId ?? categoryId, subcategoryId: route.subcategoryId ?? null });
-    })
-    .filter((t): t is Tab => t !== null);
-  return valid;
-}
-
-export function tabTitle(tab: Tab): string {
-  return subcategoryLabel(tab.route.categoryId, tab.route.subcategoryId) ?? viewLabel(tab.route.categoryId);
-}
 
 export function TabsProvider({ children }: { children: ReactNode }) {
-  const [tabs, setTabs] = useState<Tab[]>(() => {
-    try {
-      const stored = sanitizeTabs(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null'));
-      return stored.length > 0 ? stored : [createTab(defaultRoute())];
-    } catch {
-      return [createTab(defaultRoute())];
-    }
-  });
-  const [activeId, setActiveId] = useState<string>(() => tabs[0]?.id ?? '');
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tabs));
-  }, [tabs]);
+  const [tabs, setTabs] = useState<Tab[]>([]);
+  const [activeId, setActiveId] = useState<string>('');
 
   const activeTab = tabs.find((t) => t.id === activeId) ?? tabs[0] ?? null;
 
-  /** Navegar = mutar la ruta de la tab activa. Nunca crea tabs. */
-  const navigate = useCallback((categoryId: ViewId, subcategoryId?: string | null) => {
+  /** Navegar = mutar la ruta de la tab activa, o crear una nueva si no hay tabs. */
+  const navigate = useCallback((categoryId: string, subcategoryId?: string | null) => {
     setTabs((prev) => {
       const current = prev.find((t) => t.id === activeId) ?? prev[0];
-      if (!current) return prev;
-      const nextSub =
-        subcategoryId === undefined
-          ? current.route.categoryId === categoryId
-            ? current.route.subcategoryId
-            : firstSubcategoryId(categoryId)
-          : subcategoryId;
+      if (!current) {
+        // No hay tabs: crear una nueva
+        const newTab: Tab = {
+          id: crypto.randomUUID(),
+          route: { categoryId, subcategoryId: subcategoryId ?? null },
+        };
+        setActiveId(newTab.id);
+        return [newTab];
+      }
+      // Mutar la tab activa
       return prev.map((t) =>
         t.id === current.id
-          ? { ...t, viewId: categoryId, route: { categoryId, subcategoryId: nextSub } }
+          ? { ...t, route: { categoryId, subcategoryId: subcategoryId ?? null } }
           : t
       );
     });
@@ -105,10 +53,13 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   const openNewTab = useCallback(() => {
     setTabs((prev) => {
       const current = prev.find((t) => t.id === activeId) ?? prev[0];
-      const categoryId = current?.route.categoryId ?? VIEW_CATALOG[0].id;
-      const tab = createTab({ categoryId, subcategoryId: firstSubcategoryId(categoryId) });
-      setActiveId(tab.id);
-      return [...prev, tab];
+      const categoryId = current?.route.categoryId ?? 'home';
+      const newTab: Tab = {
+        id: crypto.randomUUID(),
+        route: { categoryId, subcategoryId: null },
+      };
+      setActiveId(newTab.id);
+      return [...prev, newTab];
     });
   }, [activeId]);
 
@@ -117,15 +68,9 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       const index = prev.findIndex((t) => t.id === tabId);
       if (index === -1) return prev;
       const next = prev.filter((t) => t.id !== tabId);
-      if (next.length === 0) {
-        // Nunca dejar el shell sin tabs
-        const fallback = createTab(defaultRoute());
-        setActiveId(fallback.id);
-        return [fallback];
-      }
       setActiveId((currentActive) => {
         if (currentActive !== tabId) return currentActive;
-        return (next[index] ?? next[index - 1] ?? next[0]).id;
+        return (next[index] ?? next[index - 1] ?? next[0] ?? null)?.id ?? '';
       });
       return next;
     });

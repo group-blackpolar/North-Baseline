@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Building2 } from 'lucide-react';
 import { Login } from '@/views/Login';
 import { OrganizationRail } from '@/components/organization/OrganizationRail';
 import { CategoryRail } from '@/components/organization/CategoryRail';
 import { ContextSidebar } from '@/views/Sidebar';
 import { TabBar } from '@/components/tabs/TabBar';
-import { CurrentPath } from '@/components/tabs/CurrentPath';
+import { CurrentPath } from '@/components/tabs/CurrenPath';
 import { SplitContent } from '@/components/layout/SplitContent';
 import { LayoutSwitcher } from '@/components/layout/LayoutSwitcher';
 import { LayoutProvider } from '@/context/LayoutContext';
@@ -20,6 +20,7 @@ import { ErrorProvider } from '@/context/ErrorContext';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
+import { clearSessionKilled, isSessionKilled } from '@/lib/sessionCleanup';
 
 import {
   acceptTerms,
@@ -33,10 +34,9 @@ import {
 } from '@/lib/auth';
 import { isTauri } from '@/lib/tauri';
 
-const PERSONAL_CATEGORIES = new Set(['home', 'profile', 'billing', 'preferences']);
-const SHARK_CATEGORIES = new Set(['shark-home', 'master-house']);
-
-export { PERSONAL_CATEGORIES, SHARK_CATEGORIES };
+// ---------------------------------------------------------------------------
+// Shell Skeleton
+// ---------------------------------------------------------------------------
 
 function ShellSkeleton() {
   return (
@@ -72,29 +72,56 @@ function NoOrganizationState() {
   );
 }
 
-function CatalogSync({ children }: { children: React.ReactNode }) {
+// ---------------------------------------------------------------------------
+// CatalogSync — re-rutea la tab cuando el catálogo cambia
+// ---------------------------------------------------------------------------
+
+/** Wrapper que escucha cambios del catálogo y re-rutea la tab activa a una categoría válida.
+ *  Cuando cambia la org, el catálogo cambia, y la tab vieja puede apuntar a categorías inexistentes. */
+function CatalogSync({ children }: { children: ReactNode }) {
   const { categories, isLoading } = useCatalog();
   const { activeTab, navigate } = useTabs();
+  const { activeWorkspace } = useWorkspace();
+  const workspaceId = activeWorkspace?.id ?? null;
 
   useEffect(() => {
-    if (isLoading || !activeTab || categories.length === 0) return;
-    const hasCategory = categories.some((category) => category.id === activeTab.route.categoryId);
-    if (!hasCategory) {
+    // Esperar a que el catálogo termine de cargar y haya workspace
+    if (isLoading || categories.length === 0 || !workspaceId) return;
+
+    // Si no hay tab activa, navegar a la primera categoría
+    if (!activeTab) {
       const firstCategory = categories[0];
       if (firstCategory) {
-        navigate(firstCategory.id as Parameters<typeof navigate>[0], firstCategory.subcategories[0]?.id ?? null);
+        navigate(firstCategory.id, firstCategory.subcategories[0]?.id ?? null);
+      }
+      return;
+    }
+
+    // Verificar si la tab actual apunta a una categoría que existe en el catálogo
+    const hasCategory = categories.some((category) => category.id === activeTab.route.categoryId);
+    if (!hasCategory) {
+      // La tab apunta a una categoría inexistente → re-rutear a la primera categoría
+      const firstCategory = categories[0];
+      if (firstCategory) {
+        navigate(firstCategory.id, firstCategory.subcategories[0]?.id ?? null);
       }
     }
-  }, [categories, isLoading, activeTab, navigate]);
+  }, [categories, isLoading, activeTab, navigate, workspaceId]);
 
   return <>{children}</>;
 }
 
+// ---------------------------------------------------------------------------
+// WorkspaceGate — ensambla providers internos
+// ---------------------------------------------------------------------------
+
 function WorkspaceGate({
   organizationId,
+  role,
   user,
 }: {
   organizationId: string;
+  role: string;
   user: SessionUser;
 }) {
   const { activeWorkspace } = useWorkspace();
@@ -105,7 +132,7 @@ function WorkspaceGate({
       <PermissionProvider
         organizationId={organizationId}
         workspaceId={activeWorkspaceId ?? undefined}
-        role={user.role}
+        role={role}
       >
         <TabsProvider>
           <LayoutProvider>
@@ -133,6 +160,10 @@ function WorkspaceGate({
   );
 }
 
+// ---------------------------------------------------------------------------
+// AppShell — renderiza WorkspaceProvider con key para forzar re-mount
+// ---------------------------------------------------------------------------
+
 function AppShell({
   user,
   onAuthError,
@@ -146,14 +177,27 @@ function AppShell({
   if (!activeOrganization) return <NoOrganizationState />;
 
   return (
-    <WorkspaceProvider organizationId={activeOrganization.id} onAuthError={onAuthError}>
+    // FIX CLAVE: key={activeOrganization.id} fuerza re-mount completo del subtree
+    // cuando cambia la org. Esto reinicia workspaces, tabs y catálogo desde cero,
+    // exactamente igual que un full reload. Sin el key, React solo re-renderiza
+    // y el estado viejo persiste (que era el bug original).
+    <WorkspaceProvider
+      key={activeOrganization.id}
+      organizationId={activeOrganization.id}
+      onAuthError={onAuthError}
+    >
       <WorkspaceGate
         organizationId={activeOrganization.id}
+        role={user.role}
         user={user}
       />
     </WorkspaceProvider>
   );
 }
+
+// ---------------------------------------------------------------------------
+// AppInner — maneja sesión, términos y providers globales
+// ---------------------------------------------------------------------------
 
 function AppInner() {
   const { t } = useI18n();
@@ -176,7 +220,8 @@ function AppInner() {
     }
     getSession()
       .then(async (sessionUser) => {
-        if (!sessionUser) return;
+        // Kill-switch: sesión invalidada localmente → ignorar cookie zombi
+        if (!sessionUser || isSessionKilled()) return;
         try {
           const onboarding = await completePendingOnboarding(sessionUser);
           setUser(onboarding?.user ?? sessionUser);
@@ -206,7 +251,10 @@ function AppInner() {
   if (!user) {
     return (
       <Login
-        onSuccess={setUser}
+        onSuccess={(loggedUser) => {
+          clearSessionKilled(); // login exitoso levanta el kill-switch
+          setUser(loggedUser);
+        }}
         onOnboardingIssue={(message) => {
           setOnboardingIssue(message);
         }}
@@ -251,6 +299,10 @@ export default function App() {
     </I18nProvider>
   );
 }
+
+// ---------------------------------------------------------------------------
+// TermsAcceptance
+// ---------------------------------------------------------------------------
 
 function TermsAcceptance({
   version,

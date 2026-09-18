@@ -1,6 +1,6 @@
 import { useLayout } from '@/context/LayoutContext';
-import { tabTitle, useTabs, type Tab } from '@/context/TabsContext';
-import { ViewRenderer } from '@/views/ViewRenderer';
+import { useTabs, type Tab } from '@/context/TabsContext';
+import { ViewRenderer } from '@/views/ViewsRenderer';
 import { ResizeHandle } from '@/components/layout/ResizeHandle';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -16,16 +16,16 @@ function Pane({ index, user }: { index: number; user: SessionUser }) {
   return (
     <div className="flex-1 flex flex-col min-w-0 min-h-0">
       <div className="h-8 shrink-0 flex items-center gap-2 px-2 border-b border-border/60 bg-surface-hover/50">
-        <span className="ui-label shrink-0">{t('panel.label', { n: index + 1 })}</span>
+        <span className="ui-label shrink-0">{t('panel.label', { n: index + 1 }) || `Panel ${index + 1}`}</span>
         <select
           className="flex-1 min-w-0 h-6 rounded-md border border-border bg-surface px-1.5 text-xs text-text outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/25"
           value={selectedId ?? ''}
           onChange={(event) => setPaneTabId(index, event.target.value || null)}
         >
-          <option value="">{t('panel.select')}</option>
+          <option value="">{t('panel.select') || 'Seleccionar vista...'}</option>
           {tabs.map((item) => (
             <option key={item.id} value={item.id}>
-              {tabTitle(item)}
+              {item.route.categoryId}/{item.route.subcategoryId ?? ''}
             </option>
           ))}
         </select>
@@ -34,7 +34,9 @@ function Pane({ index, user }: { index: number; user: SessionUser }) {
         {tab ? (
           <ViewRenderer user={user} tab={tab} />
         ) : (
-          <div className="h-full flex items-center justify-center text-xs text-text-muted">{t('panel.empty')}</div>
+          <div className="h-full flex items-center justify-center text-xs text-text-muted">
+            {t('panel.empty') || 'Selecciona una vista para este panel'}
+          </div>
         )}
       </div>
     </div>

@@ -1,40 +1,128 @@
-import { SHARK_RECORDS } from './mocks';
-import type { PortFilters, PortReport } from './type';
+import { CARRIERS, CONSIGNEES, COUNTRIES, MONTH_LABELS, PORTS, SHARK_RECORDS, YEARS } from './mocks';
+import type {
+  AggEntry,
+  ConsigneeReport,
+  PortReport,
+  SeriesRow,
+  SharkFilters,
+  SharkRecord,
+  YearComparisonReport,
+} from './types';
 
-/** Única puerta de datos SHARK. Hoy mock; mañana BigQuery/CoreCrow sin tocar la UI. */
-export const sharkService = {
-  portReport(filters: PortFilters): PortReport {
-    const rows = SHARK_RECORDS.filter((record) =>
+/** Única puerta de datos SHARK. Sustituible por sharkBigQueryService() o CoreCrow
+ *  sin tocar ninguna vista: las páginas solo consumen estos reportes. */
+
+function applyFilters(records: SharkRecord[], filters: SharkFilters): SharkRecord[] {
+  return records.filter(
+    (record) =>
       (filters.port === 'all' || record.port === filters.port) &&
-      (filters.year === 'all' || record.year === Number(filters.year)) &&
       (filters.carrier === 'all' || record.carrier === filters.carrier) &&
+      (filters.consignee === 'all' || record.consignee === filters.consignee) &&
+      (filters.country === 'all' || record.country === filters.country) &&
+      (filters.year === 'all' || record.year === Number(filters.year)) &&
       (filters.month === 'all' || record.month === Number(filters.month))
-    );
-    const aggregate = (key: (row: (typeof rows)[number]) => string) => {
-      const map = new Map<string, { containers: number; teus: number }>();
-      for (const row of rows) {
-        const bucket = map.get(key(row)) ?? { containers: 0, teus: 0 };
-        bucket.containers += row.containers;
-        bucket.teus += row.teus;
-        map.set(key(row), bucket);
-      }
-      return [...map.entries()].map(([label, value]) => ({ label, ...value }));
-    };
-    const monthly = aggregate((row) => `${row.year}-${String(row.month).padStart(2, '0')}`)
-      .sort((a, b) => a.label.localeCompare(b.label))
-      .slice(-12)
-      .map((entry) => ({ label: entry.label, containers: entry.containers }));
-    const byPort = aggregate((row) => row.port).sort((a, b) => b.containers - a.containers);
-    const byCarrier = aggregate((row) => row.carrier).sort((a, b) => b.containers - a.containers);
-    const consignees = aggregate((row) => row.consignee).sort((a, b) => b.containers - a.containers);
-    const total = rows.reduce((sum, row) => sum + row.containers, 0) || 1;
+  );
+}
+
+function aggregate(records: SharkRecord[], key: (row: SharkRecord) => string): AggEntry[] {
+  const map = new Map<string, AggEntry>();
+  for (const row of records) {
+    const label = key(row);
+    const bucket = map.get(label) ?? { label, containers: 0, teus: 0 };
+    bucket.containers += row.containers;
+    bucket.teus += row.teus;
+    map.set(label, bucket);
+  }
+  return [...map.values()].sort((a, b) => b.containers - a.containers);
+}
+
+function totals(records: SharkRecord[]) {
+  return records.reduce(
+    (acc, row) => ({ containers: acc.containers + row.containers, teus: acc.teus + row.teus }),
+    { containers: 0, teus: 0 }
+  );
+}
+
+/** Serie mensual con una columna por año: { label: 'Jan', 2024: n, 2025: n, 2026: n } */
+function monthlyByYear(records: SharkRecord[]): SeriesRow[] {
+  return MONTH_LABELS.map((label, index) => {
+    const row: SeriesRow = { label };
+    for (const year of YEARS) {
+      row[String(year)] = records
+        .filter((r) => r.month === index + 1 && r.year === year)
+        .reduce((sum, r) => sum + r.containers, 0);
+    }
+    return row;
+  });
+}
+
+function withShare(entries: AggEntry[], total: number) {
+  return entries.map((entry) => ({ ...entry, share: total > 0 ? entry.containers / total : 0 }));
+}
+
+export const sharkService = {
+  /** Opciones para los FilterSelect de todas las vistas. */
+  options: { ports: PORTS, carriers: CARRIERS, countries: COUNTRIES, consignees: CONSIGNEES, years: YEARS },
+
+  portReport(filters: SharkFilters): PortReport {
+    const rows = applyFilters(SHARK_RECORDS, filters);
+    const sum = totals(rows);
+    const consignees = aggregate(rows, (r) => r.consignee);
     return {
-      containers: rows.reduce((sum, row) => sum + row.containers, 0),
-      teus: rows.reduce((sum, row) => sum + row.teus, 0),
-      monthly,
-      byPort,
-      byCarrier,
-      topConsignees: consignees.slice(0, 6).map((entry) => ({ label: entry.label, containers: entry.containers, teus: entry.teus, share: entry.containers / total })),
+      containers: sum.containers,
+      teus: sum.teus,
+      monthlyByYear: monthlyByYear(rows),
+      byPort: aggregate(rows, (r) => r.port),
+      byCarrier: aggregate(rows, (r) => r.carrier),
+      byCountry: aggregate(rows, (r) => r.country).slice(0, 8),
+      topConsignees: withShare(consignees.slice(0, 8), sum.containers),
+    };
+  },
+
+  yearComparison(filters: SharkFilters): YearComparisonReport {
+    const rows = applyFilters(SHARK_RECORDS, filters);
+
+    const byYear = YEARS.map((year) => ({
+      label: String(year),
+      containers: rows.filter((r) => r.year === year).reduce((sum, r) => sum + r.containers, 0),
+    }));
+
+    const byYearPort: SeriesRow[] = YEARS.map((year) => {
+      const row: SeriesRow = { label: String(year) };
+      for (const port of PORTS) {
+        row[port] = rows
+          .filter((r) => r.year === year && r.port === port)
+          .reduce((sum, r) => sum + r.containers, 0);
+      }
+      return row;
+    });
+
+    const byMonthYear = monthlyByYear(rows);
+
+    const topCountries = aggregate(rows, (r) => r.country).slice(0, 8);
+    const byRegionYear: SeriesRow[] = topCountries.map((entry) => {
+      const row: SeriesRow = { label: entry.label };
+      for (const year of YEARS) {
+        row[String(year)] = rows
+          .filter((r) => r.country === entry.label && r.year === year)
+          .reduce((sum, r) => sum + r.containers, 0);
+      }
+      return row;
+    });
+
+    return { byYear, byYearPort, byMonthYear, byRegionYear };
+  },
+
+  consigneeReport(filters: SharkFilters): ConsigneeReport {
+    const rows = applyFilters(SHARK_RECORDS, filters);
+    const sum = totals(rows);
+    return {
+      containers: sum.containers,
+      teus: sum.teus,
+      byEntryPort: aggregate(rows, (r) => r.port),
+      byLine: aggregate(rows, (r) => r.carrier),
+      byMonth: monthlyByYear(rows),
+      byCountry: withShare(aggregate(rows, (r) => r.country).slice(0, 10), sum.containers),
     };
   },
 };

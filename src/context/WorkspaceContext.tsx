@@ -3,8 +3,10 @@ import { createContext, useCallback, useContext, useState, useEffect, type React
 import { getWorkspaces } from '@/lib/organizations';
 import { useAppErrorSafe } from '@/context/ErrorContext';
 import { hasEstablishedSession, markSessionEstablished } from '@/lib/sessionState';
+import { getDemoWorkspaces, isDemoOrganization, type DemoWorkspace } from '@/lib/demo/store';
 
-type Workspace = Awaited<ReturnType<typeof getWorkspaces>>[number];
+type ApiWorkspace = Awaited<ReturnType<typeof getWorkspaces>>[number];
+type Workspace = ApiWorkspace | DemoWorkspace;
 
 interface WorkspaceContextValue {
   workspaces: Workspace[];
@@ -36,39 +38,20 @@ export function WorkspaceProvider({
     setIsLoading(true);
     setError(null);
     try {
-      // MOCK: workspaces hardcodeados para orgs demo
-      if (organizationId === 'shark') {
-        const sharkWs = {
-          id: 'shark-ws',
-          organizationId: 'shark',
-          name: 'SHARK Workspace',
-          slug: 'shark',
-          description: 'Panama maritime import intelligence',
-        };
+      // Shortcut para orgs demo: no llamar a la API
+      if (isDemoOrganization(organizationId)) {
+        const demoWorkspaces = getDemoWorkspaces(organizationId);
         markSessionEstablished();
-        setWorkspaces([sharkWs]);
-        setActiveWorkspace(sharkWs);
-        return;
-      }
-      if (organizationId === 'personal') {
-        const personalWs = {
-          id: 'personal-ws',
-          organizationId: 'personal',
-          name: 'Personal Workspace',
-          slug: 'personal',
-          description: 'Tu espacio personal',
-        };
-        markSessionEstablished();
-        setWorkspaces([personalWs]);
-        setActiveWorkspace(personalWs);
+        setWorkspaces(demoWorkspaces);
+        setActiveWorkspace(demoWorkspaces[0] ?? null);
         return;
       }
 
-      // Para orgs reales, llamar a la API
+      // Orgs reales: llamar a la API
       const wss = await getWorkspaces(organizationId);
       markSessionEstablished();
       setWorkspaces(wss);
-      if (wss.length > 0) setActiveWorkspace((current) => current ?? wss[0]);
+      setActiveWorkspace(wss[0] ?? null);
     } catch (err) {
       const status = (err as { status?: number }).status;
       if (status === 401 && !hasEstablishedSession()) {
@@ -87,7 +70,7 @@ export function WorkspaceProvider({
   }, [loadWorkspaces]);
 
   const switchWorkspace = (wsId: string) => {
-    const ws = workspaces.find(w => w.id === wsId);
+    const ws = workspaces.find((w) => w.id === wsId);
     if (ws) {
       setActiveWorkspace(ws);
     }

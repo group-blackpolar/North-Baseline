@@ -1,78 +1,99 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Lock } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCatalog } from '@/context/CatalogContext';
-import { usePermissions } from '@/context/PermissionContext';
 import { useTabs } from '@/context/TabsContext';
+import { usePermissions } from '@/context/PermissionContext';
+import { resolveIcon } from '@/lib/iconMap';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { useI18n } from '@/lib/i18n';
-import { resolveIcon } from '@/lib/iconRegistry';
+
+const EXPANDED_KEY = 'north-category-rail-expanded';
 
 export function CategoryRail() {
+  const { categories, isLoading } = useCatalog();
   const { activeTab, navigate } = useTabs();
-  const { categories } = useCatalog();
   const { can } = usePermissions();
-  const { t } = useI18n();
-  const [expanded, setExpanded] = useState(false);
-  const activeCategory = activeTab?.route.categoryId ?? null;
+  const [expanded, setExpanded] = useState(() => {
+    try {
+      return localStorage.getItem(EXPANDED_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+
+  const activeCategoryId = activeTab?.route.categoryId;
+
+  const toggleExpanded = () => {
+    setExpanded((current) => {
+      const next = !current;
+      try {
+        localStorage.setItem(EXPANDED_KEY, next ? '1' : '0');
+      } catch {
+        /* storage no disponible */
+      }
+      return next;
+    });
+  };
 
   return (
     <nav
-      aria-label={t('rail.categories')}
       className={cn(
-        'h-full shrink-0 border-r border-border bg-surface flex flex-col overflow-hidden',
-        'transition-[width] duration-200 ease-out',
-        expanded ? 'w-44' : 'w-14'
+        'shrink-0 h-full bg-surface border-r border-border flex flex-col py-3 gap-1 transition-[width] duration-200 ease-out',
+        expanded ? 'w-44 px-2' : 'w-14 px-0 items-center'
       )}
     >
-      <div className="flex-1 flex flex-col gap-1 px-2 py-2">
-        {categories.map((category) => {
+      {/* Toggle expandir/colapsar */}
+      <button
+        type="button"
+        title={expanded ? 'Collapse categories' : 'Expand categories'}
+        aria-label={expanded ? 'Collapse categories' : 'Expand categories'}
+        className={cn(
+          'h-7 rounded-lg flex items-center justify-center text-text-muted hover:bg-surface-hover hover:text-text transition-colors duration-150 mb-1',
+          expanded ? 'w-full' : 'w-10'
+        )}
+        onClick={toggleExpanded}
+      >
+        {expanded ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+      </button>
+
+      {isLoading && (
+        <>
+          <Skeleton className="h-10 w-10 rounded-xl" />
+          <Skeleton className="h-10 w-10 rounded-xl" />
+        </>
+      )}
+
+      {!isLoading &&
+        categories.map((category) => {
           const Icon = resolveIcon(category.icon);
-          const active = category.id === activeCategory;
-          const allowed = !category.requiredPermission || can(category.requiredPermission);
+          const active = category.id === activeCategoryId;
+          const disabled = Boolean(category.requiredPermission && !can(category.requiredPermission));
+
           return (
             <button
               key={category.id}
               type="button"
-              disabled={!allowed}
-              title={allowed ? category.name : t('category.locked')}
-              aria-current={active ? 'page' : undefined}
+              title={category.name}
+              disabled={disabled}
+              aria-current={active ? 'true' : undefined}
               className={cn(
-                'flex items-center h-9 rounded-lg transition-colors duration-150 shrink-0',
-                expanded ? 'gap-2.5 px-2.5 w-full' : 'justify-center w-full',
-                active
-                  ? 'bg-surface-active text-text font-medium'
-                  : 'text-text-secondary hover:bg-surface-hover hover:text-text',
-                !allowed && 'opacity-40 cursor-not-allowed hover:bg-transparent'
+                'h-10 rounded-xl flex items-center gap-2.5 transition-colors duration-150',
+                expanded ? 'w-full px-2.5' : 'w-10 justify-center',
+                disabled
+                  ? 'text-text-muted opacity-40 cursor-not-allowed'
+                  : active
+                  ? 'bg-surface-active text-text shadow-soft ring-1 ring-border'
+                  : 'text-text-secondary hover:bg-surface-hover hover:text-text'
               )}
-              onClick={() => allowed && navigate(category.id as Parameters<typeof navigate>[0])}
+              onClick={() => {
+                if (!disabled) navigate(category.id, category.subcategories[0]?.id ?? null);
+              }}
             >
-              <Icon className={cn('shrink-0', active ? 'w-4 h-4 text-accent' : 'w-4 h-4')} />
-              <span className={cn('truncate text-sm transition-opacity duration-150', expanded ? 'opacity-100' : 'opacity-0 w-0')}>
-                {category.name}
-              </span>
-              {!allowed && <Lock className="w-3 h-3 shrink-0 text-text-muted" />}
+              <Icon className="w-4 h-4 shrink-0" />
+              {expanded && <span className="text-xs font-medium truncate">{category.name}</span>}
             </button>
           );
         })}
-      </div>
-
-      <div className="px-2 pb-2 pt-1 border-t border-border/60">
-        <button
-          type="button"
-          aria-label={expanded ? t('rail.collapse') : t('rail.expand')}
-          title={expanded ? t('rail.collapse') : t('rail.expand')}
-          className={cn(
-            'flex items-center h-8 rounded-lg text-text-muted hover:bg-surface-hover hover:text-text transition-colors duration-150 w-full',
-            expanded ? 'gap-2 px-2.5' : 'justify-center'
-          )}
-          onClick={() => setExpanded((e) => !e)}
-        >
-          {expanded ? <ChevronLeft className="w-4 h-4 shrink-0" /> : <ChevronRight className="w-4 h-4 shrink-0" />}
-          <span className={cn('text-xs font-medium transition-opacity duration-150', expanded ? 'opacity-100' : 'opacity-0 w-0')}>
-            {expanded ? t('rail.collapse') : t('rail.expand')}
-          </span>
-        </button>
-      </div>
     </nav>
   );
 }
