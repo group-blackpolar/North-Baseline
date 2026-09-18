@@ -9,7 +9,8 @@ import {
 
 export type ViewId =
   | 'dashboards' | 'notas-tareas' | 'usuarios' | 'logs' | 'api-health'
-  | 'api-keys' | 'cicd' | 'auditoria' | 'db-backups' | 'config' | 'perfil' | 'settings';
+  | 'api-keys' | 'cicd' | 'auditoria' | 'db-backups' | 'config' | 'perfil' | 'settings'
+  | 'home' | 'profile' | 'billing' | 'preferences' | 'shark-home' | 'master-house';
 
 export interface NavLeaf { id: string; label: string; icon: LucideIcon; children?: NavLeaf[] }
 export interface NavGroup { id: string; label: string; items: NavLeaf[] }
@@ -41,6 +42,43 @@ export const GROUP_ICONS: Record<string, LucideIcon> = {
 export const viewLabel = (id: ViewId): string => VIEW_CATALOG.find((v) => v.id === id)?.label ?? id;
 
 export const VIEW_SECTIONS: Record<ViewId, NavGroup[]> = {
+  home: [
+    { id: 'general', label: 'General', items: [
+      { id: 'overview', label: 'Overview', icon: Eye },
+      { id: 'recent', label: 'Actividad reciente', icon: FileClock },
+      { id: 'quick-actions', label: 'Acciones rápidas', icon: Rocket },
+    ] },
+  ],
+  profile: [
+    { id: 'account', label: 'Cuenta', items: [
+      { id: 'info', label: 'Información', icon: UserRound },
+      { id: 'verification', label: 'Verificación', icon: CheckCircle2 },
+    ] },
+  ],
+  billing: [
+    { id: 'billing', label: 'Facturación', items: [
+      { id: 'plans', label: 'Planes', icon: Wallet },
+      { id: 'invoices', label: 'Facturas', icon: FileText },
+    ] },
+  ],
+  preferences: [
+    { id: 'preferences', label: 'Preferencias', items: [
+      { id: 'appearance', label: 'Apariencia', icon: Palette },
+      { id: 'language', label: 'Idioma', icon: LayoutDashboard },
+    ] },
+  ],
+  'shark-home': [
+    { id: 'overview', label: 'Overview', items: [
+      { id: 'overview', label: 'Overview', icon: Eye },
+      { id: 'intel', label: 'Inteligencia', icon: Brain },
+    ] },
+  ],
+  'master-house': [
+    { id: 'overview', label: 'Overview', items: [
+      { id: 'overview', label: 'Overview', icon: Eye },
+      { id: 'operations', label: 'Operaciones', icon: Server },
+    ] },
+  ],
   dashboards: [
     { id: 'types', label: 'Tipos de Panel', items: [
       { id: 'overview', label: 'Overview', icon: Eye },

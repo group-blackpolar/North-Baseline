@@ -11,7 +11,12 @@ import { AuditoriaView } from '@/views/AuditoriaView';
 import { DbBackupsView } from '@/views/DbBackupsView';
 import { ProfileView } from '@/views/ProfileView';
 import { SettingsView } from './SettingsView';
+import { HomeView } from './HomeView';
+import { PersonalView } from '@/features/personal/PersonalView';
+import { SharkView } from '@/features/shark/SharkView';
 
+const PERSONAL_CATEGORIES = new Set(['home', 'profile', 'billing', 'preferences']);
+const SHARK_CATEGORIES = new Set(['shark-home', 'master-house']);
 
 export function ViewRenderer({ user, tab }: { user: SessionUser; tab: Tab | null }) {
   if (!tab) {
@@ -21,7 +26,12 @@ export function ViewRenderer({ user, tab }: { user: SessionUser; tab: Tab | null
       </div>
     );
   }
-  switch (tab.viewId) {
+  if (tab && PERSONAL_CATEGORIES.has(tab.route.categoryId)) return <PersonalView route={tab.route} user={user} />;
+  if (tab && SHARK_CATEGORIES.has(tab.route.categoryId)) return <SharkView route={tab.route} />;
+
+  switch (tab.viewId as string) {
+    case 'home': return <HomeView />;
+    case 'billing': return <div className="p-6 text-text-secondary">Billing en construcción</div>;
     case 'notas-tareas': return <NotesTasksView />;
     case 'usuarios': return <UsersAdminView />;
     case 'dashboards': return <DashboardsView />;
@@ -33,6 +43,7 @@ export function ViewRenderer({ user, tab }: { user: SessionUser; tab: Tab | null
     case 'db-backups': return <DbBackupsView />;
     case 'perfil': return <ProfileView user={user} />;
     case 'settings': return <SettingsView />;
+    
     default:
       return <div className="p-6 text-text-dim text-sm">Vista en construcción: {tabTitle(tab)}</div>;
   }

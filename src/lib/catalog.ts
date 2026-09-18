@@ -1,6 +1,8 @@
 import { VIEW_CATALOG, VIEW_SECTIONS, type ViewId } from '@/lib/navigation';
 import type { CategoryModel } from '@/lib/models';
 import { PERM } from '@/lib/permissions';
+import { buildPersonalCatalog, PERSONAL_WORKSPACE_ID } from '@/lib/personalCatalog';
+import { demoCatalogFor } from '@/lib/demo/catalogs';
 
 const PERMISSION_BY_VIEW: Record<string, string> = {
   usuarios: PERM.membersManage,
@@ -48,6 +50,14 @@ function buildStaticCatalog(workspaceId: string | null): CategoryModel[] {
 }
 
 /** ÚNICO punto a sustituir cuando CoreCrow exponga el catálogo por workspace */
+
 export async function fetchCatalog(workspaceId: string | null): Promise<CategoryModel[]> {
+  if (workspaceId === PERSONAL_WORKSPACE_ID) {
+    return buildPersonalCatalog();
+  }
+
+  const demo = demoCatalogFor(workspaceId);
+  if (demo) return demo;
+
   return buildStaticCatalog(workspaceId);
 }

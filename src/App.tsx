@@ -11,14 +11,15 @@ import { LayoutSwitcher } from '@/components/layout/LayoutSwitcher';
 import { LayoutProvider } from '@/context/LayoutContext';
 import { OrganizationProvider, useOrganization } from '@/context/OrganizationContext';
 import { WorkspaceProvider, useWorkspace } from '@/context/WorkspaceContext';
-import { TabsProvider } from '@/context/TabsContext';
-import { CatalogProvider } from '@/context/CatalogContext';
+import { TabsProvider, useTabs } from '@/context/TabsContext';
+import { CatalogProvider, useCatalog } from '@/context/CatalogContext';
+import type { ViewId } from '@/lib/navigation';
 import { PermissionProvider } from '@/context/PermissionContext';
 import { I18nProvider, useI18n } from '@/lib/i18n';
 import { SessionGuard } from '@/components/session/SessionGuard';
 import { ErrorProvider } from '@/context/ErrorContext';
 import { NotificationProvider } from '@/context/NotificationContext';
-import { EmptyState } from '@/components/ui/empty-state'
+import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 
 import {
@@ -32,6 +33,14 @@ import {
   type SessionUser,
 } from '@/lib/auth';
 import { isTauri } from '@/lib/tauri';
+
+/** IDs de categorías de los workspaces especiales (Personal y SHARK demo).
+ *  Usados por ViewRenderer para renderizar las vistas correctas. */
+const PERSONAL_CATEGORIES = new Set(['home', 'profile', 'billing', 'preferences']);
+const SHARK_CATEGORIES = new Set(['shark-home', 'master-house']);
+
+// Exports para uso en ViewRenderer (archivo externo)
+export { PERSONAL_CATEGORIES, SHARK_CATEGORIES };
 
 function ShellSkeleton() {
   return (
@@ -57,34 +66,82 @@ function NoOrganizationState() {
   const { t } = useI18n();
   return (
     <div className="h-screen w-screen flex items-center justify-center bg-background p-6">
-      <EmptyState icon={Building2} title={t('empty.org.title')} body={t('empty.org.body')} className="w-full max-w-sm" />
+      <EmptyState
+        icon={Building2}
+        title={t('empty.org.title')}
+        body={t('empty.org.body')}
+        className="w-full max-w-sm"
+      />
     </div>
   );
 }
 
-function WorkspaceGate({ organizationId, role, user }: { organizationId: string; role: string; user: SessionUser }) {
+/**
+ * CatalogSync — wrapper que escucha cambios del catálogo y re-rutea
+ * la tab activa a una categoría/subcategoría válida del workspace actual.
+ * Necesario cuando el usuario cambia de organización (las tabs legacy
+ * podrían referir categorías que ya no existen).
+ */
+function CatalogSync({ children }: { children: React.ReactNode }) {
+  const { categories, isLoading } = useCatalog();
+  const { activeTab, navigate } = useTabs();
+
+  useEffect(() => {
+    if (isLoading || !activeTab || categories.length === 0) return;
+    const hasCategory = categories.some((category) => category.id === activeTab.route.categoryId);
+    if (!hasCategory) {
+      const firstCategory = categories[0];
+      if (firstCategory) {
+        navigate(firstCategory.id as ViewId, firstCategory.subcategories[0]?.id ?? null);
+      }
+    }
+  }, [categories, isLoading, activeTab, navigate]);
+
+  return <>{children}</>;
+}
+
+/**
+ * WorkspaceGate — wrapper que vive dentro de WorkspaceProvider para
+ * poder leer el workspaceId activo y pasarlo a CatalogProvider/PermissionProvider.
+ * Evita acoplamiento directo entre providers.
+ */
+function WorkspaceGate({
+  organizationId,
+  role,
+  user,
+}: {
+  organizationId: string;
+  role: string;
+  user: SessionUser;
+}) {
   const { activeWorkspace } = useWorkspace();
   const activeWorkspaceId = activeWorkspace?.id ?? null;
 
   return (
     <CatalogProvider workspaceId={activeWorkspaceId}>
-      <PermissionProvider organizationId={organizationId} workspaceId={activeWorkspaceId} role={role}>
+      <PermissionProvider
+        organizationId={organizationId}
+        workspaceId={activeWorkspaceId}
+        role={role}
+      >
         <TabsProvider>
           <LayoutProvider>
             <NotificationProvider>
-              <div className="h-screen w-screen flex bg-background text-text">
-                <OrganizationRail />
-                <CategoryRail />
-                <ContextSidebar />
-                <div className="flex-1 flex flex-col min-w-0">
-                  <CurrentPath />
-                  <TabBar />
-                  <div className="flex-1 flex flex-col min-h-0">
-                    <SplitContent user={user} />
+              <CatalogSync>
+                <div className="h-screen w-screen flex bg-background text-text">
+                  <OrganizationRail />
+                  <CategoryRail />
+                  <ContextSidebar />
+                  <div className="flex-1 flex flex-col min-w-0">
+                    <CurrentPath />
+                    <TabBar />
+                    <div className="flex-1 flex flex-col min-h-0">
+                      <SplitContent user={user} />
+                    </div>
                   </div>
+                  <LayoutSwitcher />
                 </div>
-                <LayoutSwitcher />
-              </div>
+              </CatalogSync>
             </NotificationProvider>
           </LayoutProvider>
         </TabsProvider>
@@ -93,13 +150,27 @@ function WorkspaceGate({ organizationId, role, user }: { organizationId: string;
   );
 }
 
-function AppShell({ user }: { user: SessionUser }) {
+function AppShell({
+  user,
+  onAuthError,
+}: {
+  user: SessionUser;
+  onAuthError: () => void;
+}) {
   const { activeOrganization, isLoading } = useOrganization();
+
   if (isLoading) return <ShellSkeleton />;
+  // Fallback defensivo: el flujo normal garantiza activeOrganization (demo fallback),
+  // pero si algo falla mostramos empty state en lugar de romper el shell.
   if (!activeOrganization) return <NoOrganizationState />;
+
   return (
-    <WorkspaceProvider organizationId={activeOrganization.id}>
-      <WorkspaceGate organizationId={activeOrganization.id} role={user.role} user={user} />
+    <WorkspaceProvider organizationId={activeOrganization.id} onAuthError={onAuthError}>
+      <WorkspaceGate
+        organizationId={activeOrganization.id}
+        role={user.role}
+        user={user}
+      />
     </WorkspaceProvider>
   );
 }
@@ -185,8 +256,8 @@ function AppInner() {
   return (
     <ErrorProvider onLogout={handleLogout}>
       <SessionGuard onLogout={handleLogout}>
-        <OrganizationProvider user={user}>
-          <AppShell user={user} />
+        <OrganizationProvider user={user} onAuthError={handleLogout}>
+          <AppShell user={user} onAuthError={handleLogout} />
         </OrganizationProvider>
       </SessionGuard>
     </ErrorProvider>
@@ -201,6 +272,10 @@ export default function App() {
   );
 }
 
+/**
+ * Pantalla de aceptación de términos legales (términos + privacidad).
+ * Se muestra cuando el usuario no ha aceptado la versión vigente.
+ */
 function TermsAcceptance({
   version,
   onAccept,
@@ -210,17 +285,35 @@ function TermsAcceptance({
   onAccept: () => Promise<void>;
   error: string;
 }) {
+  const { t } = useI18n();
+  const [loading, setLoading] = useState(false);
+
+  const handleAccept = async () => {
+    setLoading(true);
+    try {
+      await onAccept();
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-background p-6 text-text">
       <div className="np-card w-full max-w-md space-y-4 p-6">
-        <h1 className="font-display text-xl font-semibold">Acepta los términos</h1>
-        <p className="text-sm text-text-secondary">Versión vigente: {version}</p>
+        <h1 className="font-display text-xl font-semibold">
+          {t('terms.title') || 'Acepta los términos'}
+        </h1>
+        <p className="text-sm text-text-secondary">
+          {t('terms.version') || 'Versión vigente:'} {version}
+        </p>
         {error && <p className="text-sm text-error">{error}</p>}
         <button
-          onClick={() => void onAccept()}
-          className="north-primary rounded-md bg-text px-4 py-2 text-sm font-medium text-background transition-opacity duration-150 hover:opacity-90"
+          type="button"
+          onClick={() => void handleAccept()}
+          disabled={loading}
+          className="w-full h-10 rounded-lg bg-accent hover:bg-accent-hover text-white font-medium text-sm transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          Aceptar y continuar
+          {loading ? '…' : (t('terms.accept') || 'Aceptar y continuar')}
         </button>
       </div>
     </div>

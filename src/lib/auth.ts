@@ -1,8 +1,13 @@
 import { isTauri } from './tauri'
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'https://api.blackpolar.org'
+const API_URL = (import.meta.env.DEV && !isTauri())
+  ? ''
+  : (import.meta.env.VITE_API_URL ?? 'https://api.blackpolar.org')
+
 const NORTH_WEB_URL = import.meta.env.VITE_NORTH_WEB_URL ?? 'https://north.blackpolar.org'
 export const FALLBACK_TERMS_VERSION = '2026-09-16'
+
+const AUID_SESSION_KEY = 'north-auid-session-v1'
 
 export interface SessionUser {
   id: string
@@ -71,10 +76,49 @@ async function responseError(res: Response, fallback: string) {
   return errorMessage(await res.json().catch(() => null), fallback)
 }
 
+/** Restaura memorySession desde localStorage si existe (web). Tauri ya la mantiene en memoria. */
+function ensureSessionRestored() {
+  if (isTauri() || memorySession) return
+  try {
+    const raw = localStorage.getItem(AUID_SESSION_KEY)
+    if (!raw) return
+    const parsed = JSON.parse(raw) as { token?: string; user?: SessionUser }
+    if (parsed.token && parsed.user) {
+      memorySession = { token: parsed.token, user: parsed.user }
+    }
+  } catch {
+    /* localStorage no disponible */
+  }
+}
+
+function persistMemorySession() {
+  if (!memorySession) return
+  try {
+    localStorage.setItem(AUID_SESSION_KEY, JSON.stringify(memorySession))
+  } catch {
+    /* localStorage no disponible - ignorar silenciosamente */
+  }
+}
+
+function clearMemorySession() {
+  memorySession = null
+  try {
+    localStorage.removeItem(AUID_SESSION_KEY)
+  } catch {
+    /* localStorage no disponible - ignorar silenciosamente */
+  }
+}
+
+/** Headers de autenticación: Bearer cuando existe sesión por token. Útil para fetch externos. */
+export function authHeaders(): Record<string, string> {
+  ensureSessionRestored()
+  return memorySession ? { Authorization: `Bearer ${memorySession.token}` } : {}
+}
+
 function sessionHeaders() {
   return {
     'Content-Type': 'application/json',
-    ...(memorySession ? { Authorization: `Bearer ${memorySession.token}` } : {}),
+    ...authHeaders(),
   }
 }
 
@@ -204,6 +248,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
 }
 
 export async function getSession(): Promise<SessionUser | null> {
+  ensureSessionRestored()
   if (isTauri()) return memorySession?.user ?? null
   try {
     const res = await betterAuthFetch('/get-session')
@@ -221,10 +266,11 @@ export async function logout(): Promise<void> {
   } else {
     await betterAuthFetch('/sign-out', { method: 'POST' }).catch(() => {})
   }
-  memorySession = null
+  clearMemorySession()
 }
 
 export function currentToken() {
+  ensureSessionRestored()
   return memorySession?.token ?? null
 }
 
@@ -292,6 +338,7 @@ async function exchangeDesktopCode(urlValue: string): Promise<SessionUser> {
   const data = await res.json()
   const user = parseUser(data.user)
   memorySession = { token: data.token, user }
+  persistMemorySession()
   return user
 }
 
@@ -354,21 +401,29 @@ export async function completePendingOnboarding(user: SessionUser): Promise<Onbo
   clearPendingOnboarding()
   return { invitationAccepted: Boolean(pending.invitationCode), user: updatedUser }
 }
+
 export async function loginWithAUID(email: string, adminUniqueId: string): Promise<SessionUser> {
-  const response = await fetch('https://api.blackpolar.org/api/admin/login', {
+  const response = await fetch(`${API_URL}/v1/admin/sign-in`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, adminUniqueId }),
     credentials: 'include',
-  });
+  })
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Credenciales de administrador inválidas' }));
-    throw new Error(error.message || 'AUID inválido');
+    const body = await response.json().catch(() => null)
+    throw new Error(body?.error?.message ?? 'Credenciales de administrador inválidas')
   }
 
-  const data = await response.json();
-  return data.user;
+  const data = (await response.json().catch(() => null)) as
+    | { token?: string; user?: Record<string, unknown> }
+    | null
+
+  // El endpoint (commit 56a4f3c) ya devuelve el user y setea la cookie de Better Auth.
+  if (data?.user) return parseUser(data.user)
+
+  // Fallback defensivo: la cookie quedó establecida; pedimos la sesión canónica.
+  const user = await getSession()
+  if (!user) throw new Error('No se pudo establecer la sesión de administrador')
+  return user
 }

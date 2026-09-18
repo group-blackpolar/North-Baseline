@@ -2,6 +2,9 @@
 import { createContext, useCallback, useContext, useState, useEffect, type ReactNode } from 'react';
 import { getOrganizations } from '@/lib/organizations';
 import { useAppErrorSafe } from '@/context/ErrorContext';
+import { hasEstablishedSession, markSessionEstablished } from '@/lib/sessionState';
+import { PERSONAL_ORG_ID } from '@/lib/personalCatalog';
+import { getDemoOrganizations } from '@/lib/demo/store';
 
 
 type Organization = Awaited<ReturnType<typeof getOrganizations>>[number];
@@ -17,28 +20,58 @@ interface OrganizationContextValue {
 
 const OrganizationContext = createContext<OrganizationContextValue | null>(null);
 
-export function OrganizationProvider({ user, children }: { user: { id: string }; children: ReactNode }) {
+export function OrganizationProvider({
+  user,
+  onAuthError,
+  children,
+}: {
+  user: { id: string };
+  onAuthError?: () => void;
+  children: ReactNode;
+}) {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [activeOrganization, setActiveOrganization] = useState<Organization | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const appError = useAppErrorSafe();
 
-
   const loadOrganizations = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
+
       const orgs = await getOrganizations();
-      setOrganizations(orgs);
-      if (orgs.length > 0) setActiveOrganization((current) => current ?? orgs[0]);
+      markSessionEstablished();
+      const effective = orgs.length > 0 ? orgs : getDemoOrganizations();
+      setOrganizations(effective);
+      setActiveOrganization((current) => current ?? effective[0] ?? null);
+
+      if (orgs.length === 0) {
+        // Usuario sin organizaciones: crear workspace personal virtual
+        const personalOrg: Organization = {
+          id: PERSONAL_ORG_ID,
+          name: 'Personal',
+          slug: 'personal',
+          avatarUrl: null,
+        };
+        setOrganizations([personalOrg]);
+        setActiveOrganization(personalOrg);
+      } else {
+        setOrganizations(orgs);
+        setActiveOrganization((current) => current ?? orgs[0]);
+      }
     } catch (err) {
+      const status = (err as { status?: number }).status;
+      if (status === 401 && !hasEstablishedSession()) {
+        onAuthError?.();
+        return;
+      }
       appError?.classifyAndRaise(err);
       setError(err instanceof Error ? err.message : 'Error al cargar organizaciones');
     } finally {
       setIsLoading(false);
     }
-  }, [appError]);
+  }, [appError, onAuthError]);
 
   useEffect(() => {
     void loadOrganizations();
