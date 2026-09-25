@@ -1,12 +1,10 @@
 /* oxlint-disable react/only-export-components */
 import { createContext, useCallback, useContext, useState, useEffect, type ReactNode } from 'react';
-import { getWorkspaces } from '@/lib/organizations';
 import { useAppErrorSafe } from '@/context/ErrorContext';
-import { hasEstablishedSession, markSessionEstablished } from '@/lib/sessionState';
+import { markSessionEstablished } from '@/lib/sessionState';
 import { getDemoWorkspaces, isDemoOrganization, type DemoWorkspace } from '@/lib/demo/store';
 
-type ApiWorkspace = Awaited<ReturnType<typeof getWorkspaces>>[number];
-type Workspace = ApiWorkspace | DemoWorkspace;
+type Workspace = DemoWorkspace;
 
 interface WorkspaceContextValue {
   workspaces: Workspace[];
@@ -21,7 +19,7 @@ const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 
 export function WorkspaceProvider({
   organizationId,
-  onAuthError,
+  onAuthError: _onAuthError,
   children,
 }: {
   organizationId: string;
@@ -47,23 +45,20 @@ export function WorkspaceProvider({
         return;
       }
 
-      // Orgs reales: llamar a la API
-      const wss = await getWorkspaces(organizationId);
+      // Real organizations are organization-scoped in the current CORECROW
+      // contract. The former /workspaces route was removed, so keep this
+      // compatibility provider empty while CatalogProvider loads authoritative
+      // organization navigation directly.
       markSessionEstablished();
-      setWorkspaces(wss);
-      setActiveWorkspace(wss[0] ?? null);
+      setWorkspaces([]);
+      setActiveWorkspace(null);
     } catch (err) {
-      const status = (err as { status?: number }).status;
-      if (status === 401 && !hasEstablishedSession()) {
-        onAuthError?.();
-        return;
-      }
       appError?.classifyAndRaise(err);
       setError(err instanceof Error ? err.message : 'Error al cargar workspaces');
     } finally {
       setIsLoading(false);
     }
-  }, [appError, organizationId, onAuthError]);
+  }, [appError, organizationId]);
 
   useEffect(() => {
     void loadWorkspaces();
