@@ -1,18 +1,33 @@
-import { useState } from 'react';
-import { resendVerification, type SessionUser } from '@/lib/auth';
+import { useEffect, useState } from 'react';
+import { sendEmailVerification, type SessionUser } from '@/lib/auth';
+import { useI18n } from '@/lib/i18n';
 
 export function ProfileView({ user }: { user: SessionUser }) {
+  const { t } = useI18n();
   const [isSending, setIsSending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [resendIn, setResendIn] = useState(0);
+
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const timer = window.setTimeout(
+      () => setResendIn((seconds) => Math.max(0, seconds - 1)),
+      1_000
+    );
+    return () => window.clearTimeout(timer);
+  }, [resendIn]);
 
   const handleResendVerification = async () => {
     setIsSending(true);
     setMessage(null);
+    setError(null);
     try {
-      await resendVerification(user.email);
-      setMessage('Email de verificación enviado. Revisa tu bandeja de entrada.');
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Error al enviar verificación');
+      await sendEmailVerification(user.email);
+      setMessage(t('auth.profileVerificationCodeSent'));
+      setResendIn(60);
+    } catch {
+      setError(t('auth.profileVerificationCodeSendError'));
     } finally {
       setIsSending(false);
     }
@@ -33,7 +48,7 @@ export function ProfileView({ user }: { user: SessionUser }) {
           </div>
 
           <div>
-            <label className="text-xs font-mono text-text-dim">Estado de Verificación</label>
+            <label className="text-xs font-mono text-text-dim">{t('auth.profileVerificationStatus')}</label>
             <div className="flex items-center gap-2 mt-1">
               <span
                 className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
@@ -42,7 +57,7 @@ export function ProfileView({ user }: { user: SessionUser }) {
                     : 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400'
                 }`}
               >
-                {user?.emailVerified ? '✓ Verificado' : '⏳ Pendiente'}
+                {user?.emailVerified ? `✓ ${t('auth.profileVerified')}` : `⏳ ${t('auth.profilePendingVerification')}`}
               </span>
             </div>
           </div>
@@ -51,13 +66,20 @@ export function ProfileView({ user }: { user: SessionUser }) {
             <div className="pt-2">
               <button
                 onClick={handleResendVerification}
-                disabled={isSending}
+                disabled={isSending || resendIn > 0}
                 className="north-primary px-4 py-2 rounded-md bg-black text-white text-sm font-medium disabled:opacity-40"
               >
-                {isSending ? 'Enviando...' : 'Reenviar email de verificación'}
+                {isSending
+                  ? t('auth.profileSendingVerification')
+                  : resendIn > 0
+                    ? t('auth.resendCooldown', { seconds: resendIn })
+                    : t('auth.profileResendVerificationCode')}
               </button>
               {message && (
-                <p className="mt-2 text-sm text-text-dim">{message}</p>
+                <p role="status" aria-live="polite" className="mt-2 text-sm text-text-dim">{message}</p>
+              )}
+              {error && (
+                <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>
               )}
             </div>
           )}

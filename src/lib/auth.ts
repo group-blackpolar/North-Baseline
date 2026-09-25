@@ -7,14 +7,13 @@ const API_URL = (import.meta.env.DEV && !isTauri())
 const NORTH_WEB_URL = import.meta.env.VITE_NORTH_WEB_URL ?? 'https://north.blackpolar.org'
 export const FALLBACK_TERMS_VERSION = '2026-09-16'
 
-const AUID_SESSION_KEY = 'north-auid-session-v1'
-
 export interface SessionUser {
   id: string
   email: string
   name: string | null
   role: 'USER' | 'DEVELOPER' | 'ADMIN' | 'SUPERADMIN'
   emailVerified: boolean
+  passwordChangeRequired: boolean
   termsAcceptedAt: string | null
   termsVersion: string | null
   createdAt?: string
@@ -54,6 +53,8 @@ function parseUser(data: Record<string, unknown>): SessionUser {
     name: typeof data.name === 'string' ? data.name : null,
     role: (data.role as SessionUser['role']) ?? 'USER',
     emailVerified: Boolean(data.emailVerified),
+    // Fail closed if an older or malformed response omits the forced-change flag.
+    passwordChangeRequired: data.passwordChangeRequired !== false,
     termsAcceptedAt: typeof data.termsAcceptedAt === 'string' ? data.termsAcceptedAt : null,
     termsVersion: typeof data.termsVersion === 'string' ? data.termsVersion : null,
     createdAt: typeof data.createdAt === 'string' ? data.createdAt : undefined,
@@ -76,42 +77,12 @@ async function responseError(res: Response, fallback: string) {
   return errorMessage(await res.json().catch(() => null), fallback)
 }
 
-/** Restaura memorySession desde localStorage si existe (web). Tauri ya la mantiene en memoria. */
-function ensureSessionRestored() {
-  if (isTauri() || memorySession) return
-  try {
-    const raw = localStorage.getItem(AUID_SESSION_KEY)
-    if (!raw) return
-    const parsed = JSON.parse(raw) as { token?: string; user?: SessionUser }
-    if (parsed.token && parsed.user) {
-      memorySession = { token: parsed.token, user: parsed.user }
-    }
-  } catch {
-    /* localStorage no disponible */
-  }
-}
-
-function persistMemorySession() {
-  if (!memorySession) return
-  try {
-    localStorage.setItem(AUID_SESSION_KEY, JSON.stringify(memorySession))
-  } catch {
-    /* localStorage no disponible - ignorar silenciosamente */
-  }
-}
-
 function clearMemorySession() {
   memorySession = null
-  try {
-    localStorage.removeItem(AUID_SESSION_KEY)
-  } catch {
-    /* localStorage no disponible - ignorar silenciosamente */
-  }
 }
 
 /** Headers de autenticación: Bearer cuando existe sesión por token. Útil para fetch externos. */
 export function authHeaders(): Record<string, string> {
-  ensureSessionRestored()
   return memorySession ? { Authorization: `Bearer ${memorySession.token}` } : {}
 }
 
@@ -221,13 +192,28 @@ export async function signUpWithEmail(input: {
   if (!res.ok) throw new Error(await responseError(res, 'No fue posible crear la cuenta'))
 }
 
-export async function resendVerification(email: string): Promise<void> {
-  const callbackURL = isTauri() ? NORTH_WEB_URL : window.location.origin
-  const res = await betterAuthFetch('/send-verification-email', {
+/**
+ * The verification flow is deliberately separate from Better Auth's link-based
+ * endpoints. The code only lives in the caller's component state; it is never
+ * persisted with pending onboarding data or desktop session state.
+ */
+async function verificationRequest(path: string, body: Record<string, string>) {
+  const res = await authorizedFetch(`/v1/identity/verification${path}`, {
     method: 'POST',
-    body: JSON.stringify({ email: email.trim().toLowerCase(), callbackURL }),
+    body: JSON.stringify(body),
   })
-  if (!res.ok) throw new Error(await responseError(res, 'No fue posible reenviar la verificación'))
+  if (!res.ok) throw new Error('VERIFICATION_REQUEST_FAILED')
+}
+
+export async function sendEmailVerification(email: string): Promise<void> {
+  await verificationRequest('/send', { email: email.trim().toLowerCase() })
+}
+
+export async function confirmEmailVerification(email: string, code: string): Promise<void> {
+  await verificationRequest('/confirm', {
+    email: email.trim().toLowerCase(),
+    code,
+  })
 }
 
 export async function requestPasswordReset(email: string): Promise<void> {
@@ -247,8 +233,28 @@ export async function resetPassword(token: string, newPassword: string): Promise
   if (!res.ok) throw new Error(await responseError(res, 'No fue posible cambiar la contraseña'))
 }
 
+export async function changeTemporaryPassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<SessionUser> {
+  if (isTauri()) {
+    throw new Error('Temporary password changes require a browser session')
+  }
+
+  const res = await authorizedFetch('/v1/me/change-temporary-password', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword, newPassword }),
+  })
+  if (!res.ok) {
+    throw new Error(await responseError(res, 'No fue posible cambiar la contraseña temporal'))
+  }
+
+  const updated = parseUser(await res.json())
+  if (memorySession) memorySession.user = updated
+  return updated
+}
+
 export async function getSession(): Promise<SessionUser | null> {
-  ensureSessionRestored()
   if (isTauri()) return memorySession?.user ?? null
   try {
     const res = await betterAuthFetch('/get-session')
@@ -270,7 +276,6 @@ export async function logout(): Promise<void> {
 }
 
 export function currentToken() {
-  ensureSessionRestored()
   return memorySession?.token ?? null
 }
 
@@ -338,7 +343,6 @@ async function exchangeDesktopCode(urlValue: string): Promise<SessionUser> {
   const data = await res.json()
   const user = parseUser(data.user)
   memorySession = { token: data.token, user }
-  persistMemorySession()
   return user
 }
 
@@ -402,11 +406,15 @@ export async function completePendingOnboarding(user: SessionUser): Promise<Onbo
   return { invitationAccepted: Boolean(pending.invitationCode), user: updatedUser }
 }
 
-export async function loginWithAUID(email: string, adminUniqueId: string): Promise<SessionUser> {
+export async function loginWithAdminSecret(email: string, secret: string): Promise<SessionUser> {
+  if (isTauri()) {
+    throw new Error('Admin secret sign-in requires a browser session')
+  }
+
   const response = await fetch(`${API_URL}/v1/admin/sign-in`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, adminUniqueId }),
+    body: JSON.stringify({ email, secret }),
     credentials: 'include',
   })
 
@@ -415,11 +423,9 @@ export async function loginWithAUID(email: string, adminUniqueId: string): Promi
     throw new Error(body?.error?.message ?? 'Credenciales de administrador inválidas')
   }
 
-  const data = (await response.json().catch(() => null)) as
-    | { token?: string; user?: Record<string, unknown> }
-    | null
+  const data = (await response.json().catch(() => null)) as { user?: Record<string, unknown> } | null
 
-  // El endpoint (commit 56a4f3c) ya devuelve el user y setea la cookie de Better Auth.
+  // El endpoint devuelve el usuario y establece una cookie HttpOnly de Better Auth.
   if (data?.user) return parseUser(data.user)
 
   // Fallback defensivo: la cookie quedó establecida; pedimos la sesión canónica.

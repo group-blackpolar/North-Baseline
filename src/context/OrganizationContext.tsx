@@ -1,7 +1,6 @@
 /* oxlint-disable react/only-export-components */
 import { createContext, useCallback, useContext, useState, useEffect, type ReactNode } from 'react';
 import { getOrganizations } from '@/lib/organizations';
-import { useAppErrorSafe } from '@/context/ErrorContext';
 import { hasEstablishedSession, markSessionEstablished } from '@/lib/sessionState';
 import { getDemoOrganizations, PERSONAL_ORG_ID, type DemoOrganization } from '@/lib/demo/store';
 
@@ -14,7 +13,7 @@ interface OrganizationContextValue {
   isLoading: boolean;
   error: string | null;
   switchOrganization: (orgId: string) => void;
-  refresh: () => Promise<void>;
+  refresh: () => Promise<Organization[]>;
 }
 
 const OrganizationContext = createContext<OrganizationContextValue | null>(null);
@@ -40,7 +39,6 @@ export function OrganizationProvider({
   const [activeOrganization, setActiveOrganization] = useState<Organization | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const appError = useAppErrorSafe();
 
   const loadOrganizations = useCallback(async () => {
     setIsLoading(true);
@@ -48,23 +46,27 @@ export function OrganizationProvider({
     try {
       const apiOrgs = await getOrganizations();
       markSessionEstablished();
-      const base = apiOrgs.length > 0 ? apiOrgs : getDemoOrganizations();
-      const effective = ensurePersonalWorkspace(base);
+      // Demo organizations must never stand in for an authoritative tenant list.
+      const effective = ensurePersonalWorkspace(apiOrgs);
       setOrganizations(effective);
       setActiveOrganization((current) => current ?? effective[0] ?? null);
+      return effective;
     } catch (err) {
       const status = (err as { status?: number }).status;
       if (status === 401 && !hasEstablishedSession()) {
         onAuthError?.();
-        return;
+        return [];
       }
-      const fallback = ensurePersonalWorkspace(getDemoOrganizations());
-      setOrganizations(fallback);
-      setActiveOrganization((current) => current ?? fallback[0] ?? null);
+      // The isolated personal workspace remains available offline. Do not invent
+      // organization membership or organization data after an API failure.
+      const personalOnly = ensurePersonalWorkspace([]);
+      setOrganizations(personalOnly);
+      setActiveOrganization((current) => current?.id === PERSONAL_ORG_ID ? current : personalOnly[0] ?? null);
+      return personalOnly;
     } finally {
       setIsLoading(false);
     }
-  }, [appError, onAuthError]);
+  }, [onAuthError]);
 
   useEffect(() => {
     void loadOrganizations();

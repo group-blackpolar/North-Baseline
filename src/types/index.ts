@@ -44,7 +44,7 @@ export interface LogEntry {
   timestamp: string
 }
 
-// ── Estado de API (parcialmente real: /api/health sí existe) ───────────
+// ── Estado de API (parcialmente real: /health sí existe) ───────────
 export interface EndpointHealth {
   path: string
   label: string

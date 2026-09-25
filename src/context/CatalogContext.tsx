@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { fetchCatalog } from '@/lib/catalog';
 import type { CategoryModel, SubcategoryModel } from '@/lib/models';
+import { getOrganizationNavigation, type NavigationCategory } from '@/lib/organizations';
+import { PERSONAL_ORG_ID } from '@/lib/demo/store';
 
 interface CatalogContextValue {
   categories: CategoryModel[];
@@ -13,9 +15,11 @@ const CatalogContext = createContext<CatalogContextValue | null>(null);
 
 export function CatalogProvider({
   workspaceId,
+  organizationId,
   children,
 }: {
   workspaceId: string | null;
+  organizationId: string;
   children: ReactNode;
 }) {
   const [categories, setCategories] = useState<CategoryModel[]>([]);
@@ -24,7 +28,10 @@ export function CatalogProvider({
   useEffect(() => {
     let alive = true;
     setIsLoading(true);
-    fetchCatalog(workspaceId)
+    const catalog = organizationId === PERSONAL_ORG_ID
+      ? fetchCatalog(workspaceId)
+      : getOrganizationNavigation(organizationId).then(navigationToCatalog);
+    catalog
       .then((catalog) => {
         if (alive) setCategories(catalog);
       })
@@ -34,7 +41,7 @@ export function CatalogProvider({
     return () => {
       alive = false;
     };
-  }, [workspaceId]);
+  }, [organizationId, workspaceId]);
 
   const getCategory = useCallback(
     (categoryId: string) => categories.find((c) => c.id === categoryId),
@@ -58,4 +65,26 @@ export function useCatalog() {
   const context = useContext(CatalogContext);
   if (!context) throw new Error('useCatalog must be used within CatalogProvider');
   return context;
+}
+
+function localizedName(value: Record<string, string>) {
+  return value.es ?? value.en ?? Object.values(value)[0] ?? '';
+}
+
+function navigationToCatalog(navigation: NavigationCategory[]): CategoryModel[] {
+  return navigation.map((category) => ({
+    id: category.id,
+    workspaceId: null,
+    name: localizedName(category.name),
+    icon: category.icon ?? 'Folder',
+    order: 0,
+    subcategories: category.subcategories.map((subcategory, index): SubcategoryModel => ({
+      id: subcategory.id,
+      categoryId: category.id,
+      name: localizedName(subcategory.name),
+      icon: subcategory.icon ?? 'FileText',
+      route: subcategory.slug,
+      order: index,
+    })),
+  }));
 }

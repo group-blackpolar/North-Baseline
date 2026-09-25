@@ -37,7 +37,7 @@ export const NOTES_TASKS: NoteOrTask[] = [
 export const LOGS: LogEntry[] = [
   { id: 'l-1', nivel: 'info', origen: 'north', mensaje: 'Login exitoso', timestamp: 'hace 2m' },
   { id: 'l-2', nivel: 'warn', origen: 'api', mensaje: 'Rate limit cerca del límite (92/100)', timestamp: 'hace 14m' },
-  { id: 'l-3', nivel: 'error', origen: 'api', mensaje: 'GET /api/users → 500 (timeout de DB)', timestamp: 'hace 1h' },
+  { id: 'l-3', nivel: 'error', origen: 'api', mensaje: 'GET /v1/users → 500 (timeout de DB)', timestamp: 'hace 1h' },
   { id: 'l-4', nivel: 'info', origen: 'mainsite', mensaje: 'Deploy de blackpolar.org completado', timestamp: 'hace 3h' },
 ]
 

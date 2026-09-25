@@ -6,6 +6,12 @@ import { OrganizationModal } from '@/components/organization/OrganizationModal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { NorthIcon } from '@/components/brand/NorthLogo';
+import { pushPath } from '@/lib/routes';
+
+function navigateToOrganization(id: string, slug?: string) {
+  const path = id === PERSONAL_ORG_ID ? '/workspace' : (slug ? `/${encodeURIComponent(slug)}` : null);
+  if (path) pushPath(path);
+}
 
 export function OrganizationRail() {
   const { organizations, activeOrganization, switchOrganization, isLoading } = useOrganization();
@@ -33,7 +39,7 @@ export function OrganizationRail() {
             ? 'bg-surface-active text-text shadow-soft ring-1 ring-border'
             : 'bg-surface-hover text-text-secondary hover:bg-surface-active hover:text-text'
         )}
-        onClick={() => switchOrganization(PERSONAL_ORG_ID)}
+        onClick={() => { switchOrganization(PERSONAL_ORG_ID); navigateToOrganization(PERSONAL_ORG_ID); }}
       >
         <Home className="w-4 h-4" />
       </button>
@@ -65,7 +71,7 @@ export function OrganizationRail() {
                     ? 'bg-surface-active text-text font-semibold shadow-soft ring-1 ring-border'
                     : 'bg-surface-hover text-text-secondary hover:bg-surface-active hover:text-text'
                 )}
-                onClick={() => switchOrganization(org.id)}
+                onClick={() => { switchOrganization(org.id); navigateToOrganization(org.id, org.slug); }}
               >
                 {avatar ? <img src={avatar} alt="" className="size-full object-cover" /> : initials}
               </button>

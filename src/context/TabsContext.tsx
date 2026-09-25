@@ -6,15 +6,23 @@ export interface TabRoute {
   subcategoryId: string | null;
 }
 
+export interface PublishedPanelTab {
+  id: string;
+  title: string;
+  document: import('@/lib/organizations').PublishedPanelDocument | null;
+  localeOrder: string[];
+}
+
 export interface Tab {
   id: string;
   route: TabRoute;
+  publishedPanel?: PublishedPanelTab;
 }
 
 interface TabsContextValue {
   tabs: Tab[];
   activeTab: Tab | null;
-  navigate: (categoryId: string, subcategoryId?: string | null) => void;
+  navigate: (categoryId: string, subcategoryId?: string | null, publishedPanel?: PublishedPanelTab) => void;
   openNewTab: () => void;
   closeTab: (tabId: string) => void;
   setActiveTab: (tabId: string) => void;
@@ -29,14 +37,14 @@ export function TabsProvider({ children }: { children: ReactNode }) {
   const activeTab = tabs.find((t) => t.id === activeId) ?? tabs[0] ?? null;
 
   /** Navegar = mutar la ruta de la tab activa, o crear una nueva si no hay tabs. */
-  const navigate = useCallback((categoryId: string, subcategoryId?: string | null) => {
+  const navigate = useCallback((categoryId: string, subcategoryId?: string | null, publishedPanel?: PublishedPanelTab) => {
     setTabs((prev) => {
       const current = prev.find((t) => t.id === activeId) ?? prev[0];
       if (!current) {
         // No hay tabs: crear una nueva
         const newTab: Tab = {
           id: crypto.randomUUID(),
-          route: { categoryId, subcategoryId: subcategoryId ?? null },
+          route: { categoryId, subcategoryId: subcategoryId ?? null }, publishedPanel,
         };
         setActiveId(newTab.id);
         return [newTab];
@@ -44,7 +52,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       // Mutar la tab activa
       return prev.map((t) =>
         t.id === current.id
-          ? { ...t, route: { categoryId, subcategoryId: subcategoryId ?? null } }
+          ? { ...t, route: { categoryId, subcategoryId: subcategoryId ?? null }, ...(publishedPanel ? { publishedPanel } : {}) }
           : t
       );
     });

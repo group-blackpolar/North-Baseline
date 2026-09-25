@@ -4,18 +4,19 @@ import { Button } from '@/components/ui/button'
 import { NorthIcon } from '@/components/brand/NorthLogo'
 import { LanguageSelector } from '@/components/LanguageSelector'
 import { ThemeToggle } from '@/components/ThemeToggle'
-import { expandWindow } from '@/lib/tauri'
+import { expandWindow, isTauri } from '@/lib/tauri'
 import { useI18n, type Locale } from '@/lib/i18n'
 import {
   completePendingOnboarding,
+  confirmEmailVerification,
   FALLBACK_TERMS_VERSION,
   getIdentityConfig,
   listenForDesktopAuth,
   login,
-  loginWithAUID,
+  loginWithAdminSecret,
   loginWithGoogle,
   requestPasswordReset,
-  resendVerification,
+  sendEmailVerification,
   resetPassword,
   savePendingOnboarding,
   signUpWithEmail,
@@ -23,7 +24,7 @@ import {
 } from '@/lib/auth'
 
 type Stage = 'boot' | 'ready'
-type Mode = 'login' | 'auid' | 'signup' | 'signup-success' | 'forgot' | 'forgot-success' | 'reset' | 'reset-success'
+type Mode = 'login' | 'admin-secret' | 'signup' | 'verification' | 'verification-success' | 'forgot' | 'forgot-success' | 'reset' | 'reset-success'
 function GoogleIcon() {
   return <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.52 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.47c-.28 1.5-1.13 2.77-2.4 3.62v3h3.87c2.27-2.09 3.58-5.17 3.58-8.81z" /><path fill="#34A853" d="M12 24c3.24 0 5.95-1.07 7.94-2.92l-3.87-3c-1.08.72-2.45 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.28v3.11C3.26 21.3 7.31 24 12 24z" /><path fill="#FBBC05" d="M5.27 14.27A7.2 7.2 0 0 1 4.9 12c0-.79.14-1.56.37-2.27V6.62H1.28A11.97 11.97 0 0 0 0 12c0 1.93.46 3.76 1.28 5.38l3.99-3.11z" /><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.94 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.28 6.62l3.99 3.11C6.22 6.86 8.87 4.75 12 4.75z" /></svg>
 }
@@ -54,12 +55,13 @@ function passwordScore(password: string, email: string, firstName: string, lastN
 interface LoginProps {
   onSuccess: (user: SessionUser) => void
   onOnboardingIssue: (message: string) => void
+  initialMode?: 'login' | 'signup'
 }
 
-export function Login({ onSuccess, onOnboardingIssue }: LoginProps) {
+export function Login({ onSuccess, onOnboardingIssue, initialMode = 'login' }: LoginProps) {
   const [expanded, setExpanded] = useState(false)
   const [stage, setStage] = useState<Stage>('boot')
-  const [mode, setMode] = useState<Mode>('login')
+  const [mode, setMode] = useState<Mode>(initialMode)
   const { t, locale: lang, setLocale: setLang } = useI18n();
   const [showPass, setShowPass] = useState(false)
   const [firstName, setFirstName] = useState('')
@@ -67,27 +69,34 @@ export function Login({ onSuccess, onOnboardingIssue }: LoginProps) {
   const [email, setEmail] = useState('')
   const [pass, setPass] = useState('')
   const [confirmPass, setConfirmPass] = useState('')
-  const [auid, setAuid] = useState('')
+  const [adminSecret, setAdminSecret] = useState('')
   const [hasOrganization, setHasOrganization] = useState(false)
   const [invitationCode, setInvitationCode] = useState('')
   const [acceptedLegal, setAcceptedLegal] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [verificationCode, setVerificationCode] = useState('')
+  const [resendIn, setResendIn] = useState(0)
   const [termsVersion, setTermsVersion] = useState(FALLBACK_TERMS_VERSION)
   const [googleEnabled, setGoogleEnabled] = useState(false)
   const [resetToken] = useState(() => new URLSearchParams(window.location.search).get('token') ?? '')
+  const adminSecretAvailable = !isTauri()
   const localePath = lang === 'es' ? 'es-lat' : 'en-us'
   const strength = useMemo(() => passwordScore(pass, email, firstName, lastName), [pass, email, firstName, lastName])
   const strengthLabels = ['', t('auth.weak'), t('auth.fair'), t('auth.good'), t('auth.strong')]
 
   const finish = useCallback(async (user: SessionUser) => {
     let finalUser = user
-    try {
-      const onboarding = await completePendingOnboarding(user)
-      finalUser = onboarding?.user ?? user
-    } catch (onboardingError) {
-      onOnboardingIssue(onboardingError instanceof Error ? onboardingError.message : 'No fue posible completar el registro')
+    // CoreCrow permits only the password-change endpoint while this flag is set.
+    // Defer onboarding until the mandatory password change has completed.
+    if (!user.passwordChangeRequired) {
+      try {
+        const onboarding = await completePendingOnboarding(user)
+        finalUser = onboarding?.user ?? user
+      } catch (onboardingError) {
+        onOnboardingIssue(onboardingError instanceof Error ? onboardingError.message : 'No fue posible completar el registro')
+      }
     }
     setLoading(false)
     setExpanded(true)
@@ -111,6 +120,12 @@ export function Login({ onSuccess, onOnboardingIssue }: LoginProps) {
     ).then((dispose) => { unlisten = dispose }).catch(() => {})
     return () => { clearTimeout(timer); unlisten() }
   }, [finish, resetToken])
+
+  useEffect(() => {
+    if (resendIn <= 0) return
+    const timer = window.setTimeout(() => setResendIn((seconds) => Math.max(0, seconds - 1)), 1_000)
+    return () => window.clearTimeout(timer)
+  }, [resendIn])
 
   const validEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
   const validInvitation = (value: string) => /^[a-f0-9]{64}$/.test(value.trim().toLowerCase())
@@ -137,19 +152,20 @@ export function Login({ onSuccess, onOnboardingIssue }: LoginProps) {
     catch { setLoading(false); setError(t('auth.signInError')) }
   }
 
-  async function handleAuidLogin(event: React.FormEvent) {
+  async function handleAdminSecretLogin(event: React.FormEvent) {
     event.preventDefault()
     setError('')
     const normalizedEmail = email.trim()
-    if (!normalizedEmail) return setError(t('auth.requiredCredentials'))
+    if (!adminSecretAvailable) return setError(t('auth.adminSecretWebOnly'))
+    if (!normalizedEmail || !adminSecret) return setError(t('auth.adminSecretRequired'))
     if (!validEmail(normalizedEmail)) return setError(t('auth.invalidEmail'))
-    if (auid.trim().length < 8) return setError(t('auth.auidError'))
     setLoading(true)
     try {
-      await finish(await loginWithAUID(normalizedEmail, auid.trim()))
-    } catch (auidError) {
+      await finish(await loginWithAdminSecret(normalizedEmail, adminSecret))
+      setAdminSecret('')
+    } catch (adminSecretError) {
       setLoading(false)
-      setError(auidError instanceof Error ? auidError.message : t('auth.auidError'))
+      setError(adminSecretError instanceof Error ? adminSecretError.message : t('auth.adminSecretError'))
     }
   }
 
@@ -172,9 +188,12 @@ export function Login({ onSuccess, onOnboardingIssue }: LoginProps) {
     try {
       await signUpWithEmail({ firstName, lastName, email, password: pass })
       savePendingOnboarding({ firstName, lastName, email, termsVersion, ...(hasOrganization ? { invitationCode } : {}) })
-      setMode('signup-success')
       setPass('')
       setConfirmPass('')
+      setMode('verification')
+      // CoreCrow's email signup sends the first code. /send is resend-only.
+      setNotice(t('auth.verificationSent'))
+      setResendIn(60)
     } catch (signupError) {
       setError(signupError instanceof Error ? signupError.message : t('auth.signupError'))
     } finally {
@@ -227,9 +246,29 @@ export function Login({ onSuccess, onOnboardingIssue }: LoginProps) {
     setNotice('')
     if (!validEmail(email)) return setError(t('auth.invalidEmail'))
     setLoading(true)
-    try { await resendVerification(email); setNotice(t('auth.resent')) }
-    catch (resendError) { setError(resendError instanceof Error ? resendError.message : t('auth.signupError')) }
-    finally { setLoading(false) }
+    try {
+      await sendEmailVerification(email)
+      setNotice(t('auth.resent'))
+      setResendIn(60)
+    } catch {
+      setError(t('auth.verificationSendError'))
+    } finally { setLoading(false) }
+  }
+
+  async function handleVerification(event: React.FormEvent) {
+    event.preventDefault()
+    setError('')
+    setNotice('')
+    const code = verificationCode.replace(/\D/g, '')
+    if (code.length !== 6) return setError(t('auth.verificationInvalidCode'))
+    setLoading(true)
+    try {
+      await confirmEmailVerification(email, code)
+      setVerificationCode('')
+      setMode('verification-success')
+    } catch {
+      setError(t('auth.verificationConfirmError'))
+    } finally { setLoading(false) }
   }
 
   function switchMode(next: Mode) {
@@ -238,7 +277,8 @@ export function Login({ onSuccess, onOnboardingIssue }: LoginProps) {
     setNotice('')
     setPass('')
     setConfirmPass('')
-    setAuid('')
+    setAdminSecret('')
+    setVerificationCode('')
   }
 
   return (
@@ -257,7 +297,7 @@ export function Login({ onSuccess, onOnboardingIssue }: LoginProps) {
             {stage === 'ready' && mode === 'login' && <>
               <h1 className="font-display text-2xl font-bold text-text mb-6">{t('auth.signInTitle')}</h1>
               <button type="button" onClick={handleGoogleLogin} disabled={loading || !googleEnabled} title={!googleEnabled ? t('auth.googleUnavailable') : undefined} className="w-full h-10 rounded-md border border-line flex items-center justify-center gap-2 text-sm font-medium text-text hover:bg-panel-2 transition-colors mb-3 disabled:opacity-50"><GoogleIcon />{t('auth.googleLogin')}</button>
-              <button type="button" onClick={() => switchMode('auid')} disabled={loading} className="w-full h-10 rounded-md border border-line flex items-center justify-center gap-2 text-sm font-medium text-text hover:bg-panel-2 transition-colors mb-5 disabled:opacity-50"><ShieldIcon />{t('auth.auidLogin')}</button>
+              <button type="button" onClick={() => switchMode('admin-secret')} disabled={loading || !adminSecretAvailable} title={!adminSecretAvailable ? t('auth.adminSecretWebOnly') : undefined} className="w-full h-10 rounded-md border border-line flex items-center justify-center gap-2 text-sm font-medium text-text hover:bg-panel-2 transition-colors mb-5 disabled:opacity-50"><ShieldIcon />{adminSecretAvailable ? t('auth.adminSecretLogin') : t('auth.adminSecretWebOnly')}</button>
               <div className="w-full flex items-center gap-3 mb-5"><div className="flex-1 h-px bg-line" /><span className="text-xs text-text-dim">{t('auth.or')}</span><div className="flex-1 h-px bg-line" /></div>
               <form onSubmit={handleEmailLogin} className="w-full space-y-4">
                 <Field label={t('auth.email')}><Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" /></Field>
@@ -270,17 +310,17 @@ export function Login({ onSuccess, onOnboardingIssue }: LoginProps) {
               <div className="text-center text-sm text-text-dim mt-6 space-y-1"><div>{t('auth.noAccount')} <button type="button" onClick={() => switchMode('signup')} className="text-accent hover:underline">{t('auth.createLink')}</button></div><div>{t('auth.help')} <a href={`https://blackpolar.org/${localePath}/contact`} className="text-accent hover:underline">{t('auth.contact')}</a></div></div>
             </>}
 
-            {stage === 'ready' && mode === 'auid' && <>
+            {stage === 'ready' && mode === 'admin-secret' && <>
               <div className="flex items-center gap-2 mb-4">
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent/10 text-accent"><ShieldIcon /></div>
-                <h1 className="font-display text-xl font-bold text-text">{t('auth.auidTitle')}</h1>
+                <h1 className="font-display text-xl font-bold text-text">{t('auth.adminSecretTitle')}</h1>
               </div>
-              <p className="text-sm text-text-dim mb-6">{t('auth.auidBody')}</p>
-              <form onSubmit={handleAuidLogin} className="space-y-4">
+              <p className="text-sm text-text-dim mb-6">{t('auth.adminSecretBody')}</p>
+              <form onSubmit={handleAdminSecretLogin} className="space-y-4">
                 <Field label={t('auth.email')}><Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></Field>
-                <Field label={t('auth.auidLabel')} hint={t('auth.auidHint')}><Input value={auid} onChange={(event) => setAuid(event.target.value)} autoComplete="off" className="font-mono tracking-wide" minLength={8} maxLength={256} /></Field>
+                <Field label={t('auth.adminSecretLabel')} hint={t('auth.adminSecretHint')}><Input type="password" value={adminSecret} onChange={(event) => setAdminSecret(event.target.value)} autoComplete="current-password" minLength={12} maxLength={256} /></Field>
                 {error && <div role="alert" className="text-xs text-red-600 dark:text-red-400 font-mono">{error}</div>}
-                <Button type="submit" variant="dark" disabled={loading} className="north-primary w-full h-10">{loading ? t('auth.signingIn') : t('auth.auidSubmit')}</Button>
+                <Button type="submit" variant="dark" disabled={loading} className="north-primary w-full h-10">{loading ? t('auth.signingIn') : t('auth.adminSecretSubmit')}</Button>
                 <button type="button" onClick={() => switchMode('login')} className="w-full text-sm text-text-dim hover:text-text">{t('auth.backToLogin')}</button>
               </form>
             </>}
@@ -318,14 +358,46 @@ export function Login({ onSuccess, onOnboardingIssue }: LoginProps) {
               </form>
             </>}
 
-            {stage === 'ready' && mode === 'signup-success' && <div className="text-center py-8">
-              <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent text-xl">✓</div>
-              <h1 className="font-display text-2xl font-bold text-text">{t('auth.verifyTitle')}</h1>
-              <p className="mt-3 text-sm leading-relaxed text-text-dim">{t('auth.verifyBody')}</p>
-              {notice && <p role="status" className="mt-3 text-xs text-accent">{notice}</p>}
-              {error && <p role="alert" className="mt-3 text-xs text-red-600 dark:text-red-400">{error}</p>}
-              <button type="button" onClick={handleResend} disabled={loading} className="mt-5 text-sm text-accent hover:underline disabled:opacity-50">{t('auth.resend')}</button>
-              <Button type="button" variant="dark" onClick={() => switchMode('login')} className="north-primary w-full h-10 mt-7">{t('auth.backToLogin')}</Button>
+            {stage === 'ready' && mode === 'verification' && <div className="py-4">
+              <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent text-xl" aria-hidden="true">✉</div>
+              <h1 className="text-center font-display text-2xl font-bold text-text">{t('auth.verifyCodeTitle')}</h1>
+              <p className="mt-3 text-center text-sm leading-relaxed text-text-dim">{t('auth.verifyCodeBody')}</p>
+              <p className="mt-2 truncate text-center text-xs font-mono text-text-muted" title={email}>{email}</p>
+              <form onSubmit={handleVerification} className="mt-7 space-y-4">
+                <label className="block">
+                  <span className="sr-only">{t('auth.verificationCodeLabel')}</span>
+                  <Input
+                    value={verificationCode}
+                    onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    aria-describedby="verification-code-hint"
+                    className="h-12 text-center font-mono text-2xl tracking-[0.45em]"
+                    placeholder="000000"
+                    autoFocus
+                  />
+                  <span id="verification-code-hint" className="mt-2 block text-center text-xs text-text-dim">{t('auth.verificationCodeHint')}</span>
+                </label>
+                {notice && <p role="status" className="text-center text-xs text-accent">{notice}</p>}
+                {error && <p role="alert" className="text-center text-xs text-red-600 dark:text-red-400">{error}</p>}
+                <Button type="submit" variant="dark" disabled={loading || verificationCode.length !== 6} className="north-primary h-10 w-full">{loading ? t('auth.verifyingCode') : t('auth.verifyCodeSubmit')}</Button>
+              </form>
+              <div className="mt-5 text-center text-sm text-text-dim">
+                <span>{t('auth.noVerificationCode')} </span>
+                <button type="button" onClick={handleResend} disabled={loading || resendIn > 0} className="text-accent hover:underline disabled:cursor-not-allowed disabled:opacity-50">
+                  {resendIn > 0 ? t('auth.resendCooldown', { seconds: resendIn }) : t('auth.resend')}
+                </button>
+              </div>
+              <button type="button" onClick={() => switchMode('login')} disabled={loading} className="mt-5 w-full text-sm text-text-dim hover:text-text disabled:opacity-50">{t('auth.backToLogin')}</button>
+            </div>}
+
+            {stage === 'ready' && mode === 'verification-success' && <div className="text-center py-8">
+              <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent text-xl" aria-hidden="true">✓</div>
+              <h1 className="font-display text-2xl font-bold text-text">{t('auth.verificationCompleteTitle')}</h1>
+              <p className="mt-3 text-sm leading-relaxed text-text-dim">{t('auth.verificationCompleteBody')}</p>
+              <Button type="button" variant="dark" onClick={() => switchMode('login')} className="north-primary mt-7 h-10 w-full">{t('auth.continueToSignIn')}</Button>
             </div>}
 
             {stage === 'ready' && mode === 'forgot' && <>
@@ -344,7 +416,7 @@ export function Login({ onSuccess, onOnboardingIssue }: LoginProps) {
             {stage === 'ready' && mode === 'reset-success' && <div className="text-center py-8"><div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent text-xl">✓</div><h1 className="font-display text-2xl font-bold text-text">{t('auth.resetDone')}</h1><p className="mt-3 text-sm text-text-dim">{t('auth.resetDoneBody')}</p><Button type="button" variant="dark" onClick={() => switchMode('login')} className="north-primary w-full h-10 mt-7">{t('auth.signIn')}</Button></div>}
           </div>}
         </div>
-        {!expanded && mode !== 'signup' && mode !== 'auid' && <p className="max-w-[440px] w-full text-center text-xs text-text-dim mt-6 leading-relaxed">{t('auth.agreement')} <a href={`https://blackpolar.org/${localePath}/legal/terms`} className="underline hover:text-text">{t('auth.terms')}</a> {t('auth.and')} <a href={`https://blackpolar.org/${localePath}/legal/privacy`} className="underline hover:text-text">{t('auth.privacy')}</a>.</p>}
+        {!expanded && mode !== 'signup' && mode !== 'admin-secret' && <p className="max-w-[440px] w-full text-center text-xs text-text-dim mt-6 leading-relaxed">{t('auth.agreement')} <a href={`https://blackpolar.org/${localePath}/legal/terms`} className="underline hover:text-text">{t('auth.terms')}</a> {t('auth.and')} <a href={`https://blackpolar.org/${localePath}/legal/privacy`} className="underline hover:text-text">{t('auth.privacy')}</a>.</p>}
       </main>
 
       {!expanded && <footer className="flex flex-wrap items-end justify-center gap-6 px-8 py-7 text-[11px] font-mono text-text-dim"><a href={`https://blackpolar.org/${localePath}/contact`} className="hover:text-text">{t('auth.support')}</a><a href="https://api.blackpolar.org" className="hover:text-text">{t('auth.status')}</a><a href={`https://blackpolar.org/${localePath}/legal/terms`} className="hover:text-text">{t('auth.terms')}</a><a href={`https://blackpolar.org/${localePath}/legal/privacy`} className="hover:text-text">{t('auth.privacy')}</a></footer>}

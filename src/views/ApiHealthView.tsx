@@ -49,7 +49,7 @@ export function ApiHealthView() {
     <div className="p-6 max-w-4xl space-y-6">
       <PendingNote>
         p50/p95 por endpoint y alertas requieren instrumentar cada ruta en CoreCrow-API — hoy solo hacemos ping real a
-        GET /api/health cada 15s
+        GET /health cada 15s
       </PendingNote>
 
       <div className="grid grid-cols-3 gap-4">
@@ -71,7 +71,7 @@ export function ApiHealthView() {
         <Card>
           <CardContent className="pt-5">
             <div className="text-[10px] font-mono text-text-dim uppercase">Endpoint</div>
-            <div className="font-mono text-xs mt-1 text-text-dim">GET /api/health</div>
+            <div className="font-mono text-xs mt-1 text-text-dim">GET /health</div>
           </CardContent>
         </Card>
       </div>
