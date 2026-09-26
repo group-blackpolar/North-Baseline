@@ -42,6 +42,7 @@ import { isTauri } from '@/lib/tauri';
 import { acceptInvitation, resolvePublicOrganization, resolvePublishedPanel, type PublicOrganization } from '@/lib/organizations';
 import { currentNorthRoute, replacePath, type NorthRoute } from '@/lib/routes';
 import { GenericNotFound, OrganizationAccessGate } from '@/components/organization/OrganizationAccessGate';
+import { PlatformAdminView } from '@/features/platform-admin/PlatformAdminView';
 
 const PENDING_ROUTE_INVITATION_KEY = 'north-pending-route-invitation-v1';
 type PendingRouteInvitation = { token: string; path: string; userId?: string };
@@ -491,6 +492,9 @@ function AuthenticatedRouter({ user, onAuthError, route, pendingInvitation, onIn
     if (member && activeOrganization?.id !== member.id) switchOrganization(member.id);
   }, [activeOrganization?.id, member, switchOrganization]);
 
+  // Platform Administration is global: it must render before the organization
+  // shell so it never depends on activeOrganization or its remount boundary (§9).
+  if (route.kind === 'platform-admin') return <PlatformAdminView user={user} route={route} />;
   if (!isOrganizationRoute) return <AppShell user={user} onAuthError={onAuthError} route={route} />;
   if (missing) return <GenericNotFound />;
   if (isLoading || !publicOrganization) return <ShellSkeleton />;
