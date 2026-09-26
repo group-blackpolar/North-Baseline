@@ -3,8 +3,11 @@ import type { Tab } from '@/context/TabsContext';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Construction } from 'lucide-react';
 import { SharkView } from '@/features/shark/SharkView';
+import { OrganizationAdminView } from '@/features/admin/OrganizationAdminView';
 import { PersonalView } from '@/features/personal/PersonalView';
 import type { PublishedPanelDocument } from '@/lib/organizations';
+import { useCatalog } from '@/context/CatalogContext';
+import { useOrganization } from '@/context/OrganizationContext';
 
 const localized = (value: unknown, locales: string[]) => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return '';
@@ -52,12 +55,19 @@ const SHARK_CATEGORIES = new Set(['shark-home', 'master-house']);
 
 /** ViewRenderer principal: rutea según categoryId. */
 export function ViewRenderer({ user, tab }: { user: SessionUser; tab: Tab | null }) {
+  const { getCategory, getSubcategory } = useCatalog();
+  const { activeOrganization } = useOrganization();
   if (!tab) {
     return (
       <div className="flex-1 flex items-center justify-center text-text-muted text-sm">
         Selecciona una categoría para comenzar
       </div>
     );
+  }
+  const category = getCategory(tab.route.categoryId);
+  const subcategory = getSubcategory(tab.route.categoryId, tab.route.subcategoryId);
+  if (activeOrganization && category?.slug === 'admin' && subcategory?.slug === 'settings') {
+    return <OrganizationAdminView key={activeOrganization.id} organizationId={activeOrganization.id} />;
   }
   if (tab.publishedPanel) return <PublishedPanel title={tab.publishedPanel.title} document={tab.publishedPanel.document} locales={tab.publishedPanel.localeOrder} />;
     if (PERSONAL_CATEGORIES.has(tab.route.categoryId)) {

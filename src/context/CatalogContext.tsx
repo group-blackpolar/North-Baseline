@@ -9,6 +9,7 @@ interface CatalogContextValue {
   isLoading: boolean;
   getCategory: (categoryId: string) => CategoryModel | undefined;
   getSubcategory: (categoryId: string, subcategoryId: string | null) => SubcategoryModel | undefined;
+  refresh: () => Promise<void>;
 }
 
 const CatalogContext = createContext<CatalogContextValue | null>(null);
@@ -24,6 +25,18 @@ export function CatalogProvider({
 }) {
   const [categories, setCategories] = useState<CategoryModel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
+    const catalog = organizationId === PERSONAL_ORG_ID
+      ? fetchCatalog(workspaceId)
+      : getOrganizationNavigation(organizationId).then(navigationToCatalog);
+    try {
+      setCategories(await catalog);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [organizationId, workspaceId]);
 
   useEffect(() => {
     let alive = true;
@@ -55,7 +68,7 @@ export function CatalogProvider({
   );
 
   return (
-    <CatalogContext.Provider value={{ categories, isLoading, getCategory, getSubcategory }}>
+    <CatalogContext.Provider value={{ categories, isLoading, getCategory, getSubcategory, refresh }}>
       {children}
     </CatalogContext.Provider>
   );
@@ -77,6 +90,7 @@ function navigationToCatalog(navigation: NavigationCategory[]): CategoryModel[] 
     workspaceId: null,
     name: localizedName(category.name),
     icon: category.icon ?? 'Folder',
+    slug: category.slug,
     order: 0,
     subcategories: category.subcategories.map((subcategory, index): SubcategoryModel => ({
       id: subcategory.id,
@@ -84,6 +98,7 @@ function navigationToCatalog(navigation: NavigationCategory[]): CategoryModel[] 
       name: localizedName(subcategory.name),
       icon: subcategory.icon ?? 'FileText',
       route: subcategory.slug,
+      slug: subcategory.slug,
       order: index,
     })),
   }));
