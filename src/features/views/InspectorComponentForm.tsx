@@ -2,13 +2,10 @@ import { useViewsEditor } from './ViewsEditorContext';
 import { useI18n } from '@/lib/i18n';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-
-const getText = (value: unknown, locale: string) => {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return '';
-  const record = value as Record<string, unknown>;
-  const entry = record[locale] ?? record.es ?? record.en ?? Object.values(record)[0];
-  return typeof entry === 'string' ? entry : '';
-};
+import { getText } from './inspectorText';
+import { RichTextFields } from './InspectorRichTextFields';
+import { TableFields } from './InspectorTableFields';
+import { ListFields } from './InspectorListFields';
 
 export function InspectorComponentForm() {
   const { selection, activeDocument, updateComponentProps, touchDocument } = useViewsEditor();
@@ -126,7 +123,66 @@ export function InspectorComponentForm() {
         </label>
       )}
 
-      {['image', 'video', 'file', 'embed'].includes(component.type) && (
+      {component.type === 'heading' && (
+        <div className="grid grid-cols-2 gap-2">
+          <label className="block text-xs font-medium text-text-secondary">
+            {t('views.props.level')}
+            <select
+              value={String(component.props.level ?? 2)}
+              onChange={(e) => setProp('level', Number(e.target.value))}
+              className="mt-1 h-9 w-full rounded-md border border-border bg-background px-2 text-sm"
+            >
+              <option value={1}>H1</option>
+              <option value={2}>H2</option>
+              <option value={3}>H3</option>
+            </select>
+          </label>
+          <label className="block text-xs font-medium text-text-secondary">
+            {t('views.props.align')}
+            <select
+              value={String(component.props.align ?? 'left')}
+              onChange={(e) => setProp('align', e.target.value)}
+              className="mt-1 h-9 w-full rounded-md border border-border bg-background px-2 text-sm"
+            >
+              <option value="left">left</option>
+              <option value="center">center</option>
+              <option value="right">right</option>
+            </select>
+          </label>
+        </div>
+      )}
+
+      {component.type === 'rich_text' && (
+        <RichTextFields component={component} sectionId={section.id} locale={locale} />
+      )}
+
+      {component.type === 'table' && <TableFields component={component} sectionId={section.id} />}
+
+      {component.type === 'list' && <ListFields component={component} sectionId={section.id} locale={locale} />}
+
+      {component.type === 'embed' && (
+        <>
+          <label className="block text-xs font-medium text-text-secondary">
+            {t('views.embed.url')}
+            <Input
+              value={String(component.props.url ?? '')}
+              onChange={(e) => setProp('url', e.target.value)}
+              placeholder="https://"
+              className="mt-1"
+            />
+          </label>
+          <label className="block text-xs font-medium text-text-secondary">
+            {t('views.embed.title')}
+            <Input
+              value={getText(component.props.title, locale)}
+              onChange={(e) => setLocalizedProp('title', e.target.value)}
+              className="mt-1"
+            />
+          </label>
+        </>
+      )}
+
+      {['image', 'video', 'file'].includes(component.type) && (
         <p className="rounded-lg bg-surface-hover/60 p-3 text-[11px] leading-relaxed text-text-muted">
           {t('views.props.assetNote')}
         </p>

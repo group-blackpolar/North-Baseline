@@ -1,7 +1,9 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, type ReactNode } from 'react';
 import type { ComponentType, ManagementCategory, TaxonomyPanel, PanelDocument } from '@/lib/northAdmin';
-import { componentProps } from '@/features/admin/contentDocument';
+import { componentProps, hasUnsafeContent } from '@/features/admin/contentDocument';
 import { newId } from '@/features/admin/contentDocument';
+import { ApiError } from '@/lib/api';
+import { getDraft, saveDraft } from '@/lib/northAdmin';
 
 export type ActiveTabMode = 'editor' | 'settings' | 'revisions' | 'preview';
 
@@ -19,7 +21,10 @@ export type ModalState =
   | { type: 'create_view'; categoryId: string; subcategoryId: string }
   | { type: 'rename'; resourceType: 'category' | 'subcategory' | 'panel'; id: string; currentName: string; currentSlug: string }
   | { type: 'component_library'; sectionId: string | null }
+  | { type: 'dev_json' }
   | null;
+
+export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 interface ViewsEditorContextValue {
   organizationId: string;
@@ -51,6 +56,16 @@ interface ViewsEditorContextValue {
   removeSection: (sectionId: string) => void;
   moveComponent: (sectionId: string, componentId: string, direction: -1 | 1) => void;
   duplicateComponent: (sectionId: string, componentId: string) => void;
+  // Fase 5: etag + autosave status shared between canvas and toolbar
+  etag: string;
+  setEtag: (tag: string) => void;
+  saveStatus: SaveStatus;
+  setSaveStatus: (status: SaveStatus) => void;
+  saveError: string | null;
+  setSaveError: (error: string | null) => void;
+  saveNow: () => Promise<boolean>;
+  conflict: boolean;
+  reloadDraft: () => Promise<void>;
 }
 
 const ViewsEditorContext = createContext<ViewsEditorContextValue | null>(null);
@@ -73,6 +88,14 @@ export function ViewsEditorProvider({
   const [activeDocument, setActiveDocument] = useState<PanelDocument | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [modal, setModal] = useState<ModalState>(null);
+  // Fase 5 state: shared etag + autosave feedback.
+  const [etag, setEtag] = useState('');
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [conflict, setConflict] = useState(false);
+  // Refs evitan escrituras cruzadas cuando el usuario cambia de vista en pleno autosave.
+  const latest = useRef({ organizationId, panelId: selection.panelId, document: activeDocument, etag });
+  latest.current = { organizationId, panelId: selection.panelId, document: activeDocument, etag };
 
   const selectCategory = useCallback((categoryId: string) => {
     setSelection({ categoryId });
@@ -269,6 +292,66 @@ export function ViewsEditorProvider({
     [touchDocument],
   );
 
+  // Fase 5: guardado explícito reutilizado por toolbar y autosave.
+  const saveNow = useCallback(async () => {
+    const snapshot = latest.current;
+    if (!snapshot.panelId || !snapshot.document) return false;
+    // Validación previa: nunca se envía contenido ejecutable al backend.
+    if (hasUnsafeContent(snapshot.document)) {
+      setSaveError('unsafe');
+      setSaveStatus('error');
+      setConflict(false);
+      return false;
+    }
+    setSaveStatus('saving');
+    setSaveError(null);
+    try {
+      const saved = await saveDraft(
+        snapshot.organizationId,
+        snapshot.panelId,
+        snapshot.document,
+        snapshot.etag || undefined,
+      );
+      // Si el usuario cambió de vista durante el save, el etag ya no aplica aquí.
+      if (latest.current.panelId !== snapshot.panelId) return true;
+      setEtag(saved.etag);
+      setIsDirty(false);
+      setConflict(false);
+      setSaveStatus('saved');
+      return true;
+    } catch (error) {
+      if (latest.current.panelId !== snapshot.panelId) return false;
+      // 409/412 = otra sesión publicó o guardó primero: no se sobrescribe.
+      if (error instanceof ApiError && (error.status === 409 || error.status === 412)) {
+        setConflict(true);
+        setSaveStatus('error');
+        setSaveError('conflict');
+      } else {
+        setSaveStatus('error');
+        setSaveError(error instanceof Error ? error.message : 'Request failed');
+      }
+      return false;
+    }
+  }, []);
+
+  const reloadDraft = useCallback(async () => {
+    const panelId = latest.current.panelId;
+    if (!panelId) return;
+    try {
+      const draft = await getDraft(organizationId, panelId);
+      if (latest.current.panelId !== panelId) return;
+      setActiveDocument(draft.document);
+      setEtag(draft.etag);
+      setIsDirty(false);
+      setConflict(false);
+      setSaveError(null);
+      setSaveStatus('idle');
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Request failed');
+      setSaveStatus('error');
+    }
+  }, [organizationId]);
+
   // Compute active panel object from taxonomy
   const activePanel = (selection.categoryId && selection.subcategoryId && selection.panelId && taxonomy)
     ? taxonomy
@@ -308,6 +391,15 @@ export function ViewsEditorProvider({
         removeSection,
         moveComponent,
         duplicateComponent,
+        etag,
+        setEtag,
+        saveStatus,
+        setSaveStatus,
+        saveError,
+        setSaveError,
+        saveNow,
+        conflict,
+        reloadDraft,
       }}
     >
       {children}
