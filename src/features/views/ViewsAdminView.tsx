@@ -12,6 +12,7 @@ import { ViewsStructurePane } from './ViewsStructurePane';
 import { ViewsEditorCanvas } from './ViewsEditorCanvas';
 import { ViewsInspectorPane } from './ViewsInspectorPane';
 import { ViewsDialogs } from './ViewsDialogs';
+import { ComponentLibraryModal } from './ComponentLibraryModal';
 
 export function ViewsAdminView({ organizationId }: { organizationId: string }) {
   const { t } = useI18n();
@@ -93,6 +94,7 @@ export function ViewsAdminView({ organizationId }: { organizationId: string }) {
         <ViewsEditorCanvas />
         <ViewsInspectorPane />
         <ViewsDialogs />
+        <ComponentLibraryModal />
       </div>
     </ViewsEditorProvider>
   );

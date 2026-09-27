@@ -1,13 +1,28 @@
 import { useViewsEditor } from './ViewsEditorContext';
 import { useI18n } from '@/lib/i18n';
-import { Sliders } from 'lucide-react';
+import { Sliders, Plus, Trash2, Copy, ArrowUp, ArrowDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { InspectorComponentForm } from './InspectorComponentForm';
 
 export function ViewsInspectorPane() {
-  const { selection, activePanel } = useViewsEditor();
+  const {
+    selection,
+    activePanel,
+    activeDocument,
+    setModal,
+    addSection,
+    removeSection,
+    duplicateComponent,
+    removeComponent,
+    moveComponent,
+  } = useViewsEditor();
   const { locale, t } = useI18n();
 
   const localName = (nameObj?: Record<string, string>) =>
     nameObj ? nameObj[locale] ?? nameObj.es ?? nameObj.en ?? Object.values(nameObj)[0] ?? '' : '';
+
+  const section = activeDocument?.sections.find((item) => item.id === selection.sectionId);
+  const hasComponent = Boolean(section && selection.componentId);
 
   return (
     <aside className="w-80 shrink-0 border-l border-border bg-surface flex flex-col h-full select-none">
@@ -17,58 +32,116 @@ export function ViewsInspectorPane() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {activePanel ? (
+        {!activePanel && (
+          <div className="text-center py-12 text-xs text-text-muted">
+            {t('views.inspector.noSelection')}
+          </div>
+        )}
+
+        {activePanel && (
           <div className="space-y-4">
+            {hasComponent && section && selection.componentId && (
+              <div className="rounded-xl border border-accent/30 bg-accent/5 p-3 space-y-3">
+                <InspectorComponentForm />
+                <div className="flex flex-wrap gap-1.5 border-t border-border pt-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    title={t('views.inspector.moveUp')}
+                    onClick={() => moveComponent(section.id, selection.componentId!, -1)}
+                    className="h-7 px-2"
+                  >
+                    <ArrowUp className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    title={t('views.inspector.moveDown')}
+                    onClick={() => moveComponent(section.id, selection.componentId!, 1)}
+                    className="h-7 px-2"
+                  >
+                    <ArrowDown className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    title={t('views.inspector.duplicateBlock')}
+                    onClick={() => duplicateComponent(section.id, selection.componentId!)}
+                    className="h-7 px-2"
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    title={t('views.inspector.removeBlock')}
+                    onClick={() => removeComponent(section.id, selection.componentId!)}
+                    className="h-7 px-2 text-red-500 hover:text-red-600"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {section && !selection.componentId && (
+              <div className="rounded-xl border border-border p-3 space-y-2">
+                <div className="text-xs font-medium text-text">
+                  {t('views.inspector.section')} #{section.order + 1}
+                </div>
+                <div className="flex gap-1.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setModal({ type: 'component_library', sectionId: section.id })}
+                    className="h-7 flex-1 text-[11px]"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    {t('views.inspector.addBlock')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    title={t('views.inspector.removeSection')}
+                    onClick={() => removeSection(section.id)}
+                    className="h-7 px-2 text-red-500"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <div>
-              <label className="text-[11px] font-medium text-text-muted uppercase tracking-wider">{t('views.nameLabel')}</label>
+              <span className="text-[11px] font-medium text-text-muted uppercase tracking-wider">{t('views.nameLabel')}</span>
               <div className="mt-1 text-sm font-medium text-text">{localName(activePanel.name)}</div>
             </div>
 
             <div>
-              <label className="text-[11px] font-medium text-text-muted uppercase tracking-wider">{t('views.slugLabel')}</label>
+              <span className="text-[11px] font-medium text-text-muted uppercase tracking-wider">{t('views.slugLabel')}</span>
               <div className="mt-1 font-mono text-xs text-text-secondary bg-surface-hover/70 px-2 py-1 rounded">
                 /{activePanel.slug}
               </div>
             </div>
 
-            <div>
-              <label className="text-[11px] font-medium text-text-muted uppercase tracking-wider">Estado</label>
-              <div className="mt-1">
-                <span
-                  className={`inline-block text-[11px] px-2 py-0.5 rounded font-medium ${
-                    activePanel.status === 'PUBLISHED'
-                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                      : activePanel.status === 'DRAFT'
-                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                      : 'bg-surface-hover text-text-muted line-through'
-                  }`}
-                >
-                  {activePanel.status}
-                </span>
-              </div>
-            </div>
-
             <div className="border-t border-border pt-3">
-              <label className="text-[11px] font-medium text-text-muted uppercase tracking-wider">{t('views.audience.title')}</label>
-              <div className="mt-1 text-xs text-text-secondary">
-                {activePanel.audienceType === 'ALL_MEMBERS'
-                  ? t('views.audience.all')
-                  : activePanel.audienceType === 'ROLES'
-                  ? t('views.audience.roles')
-                  : t('views.audience.groups')}
-              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addSection}
+                className="h-7 w-full text-[11px]"
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                {t('views.inspector.addSection')}
+              </Button>
             </div>
-
-            {selection.componentId && (
-              <div className="border-t border-border pt-3">
-                <label className="text-[11px] font-medium text-text-muted uppercase tracking-wider">Bloque seleccionado</label>
-                <div className="mt-1 text-xs font-mono text-accent">ID: {selection.componentId.slice(0, 8)}…</div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="text-center py-12 text-xs text-text-muted">
-            {t('views.inspector.noSelection')}
           </div>
         )}
       </div>

@@ -1,9 +1,11 @@
-import { Loader2 } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react';
 import { useViewsEditor } from './ViewsEditorContext';
 import { useI18n } from '@/lib/i18n';
+import { Button } from '@/components/ui/button';
+import { ViewsSectionCard } from './ViewsSectionCard';
 
 export function ViewsCanvasBody({ loading, error }: { loading: boolean; error: string | null }) {
-  const { activePanel, selection, activeMode, activeDocument, selectComponent } = useViewsEditor();
+  const { activePanel, selection, activeMode, activeDocument, addSection } = useViewsEditor();
   const { locale, t } = useI18n();
 
   const localName = (nameObj?: Record<string, string>) =>
@@ -39,29 +41,14 @@ export function ViewsCanvasBody({ loading, error }: { loading: boolean; error: s
       {activeDocument && activeMode === 'editor' && (
         <div className="max-w-4xl mx-auto space-y-6">
           {activeDocument.sections.map((section) => (
-            <section key={section.id} className="rounded-2xl border border-dashed border-border p-4 bg-surface/30 space-y-3">
-              <div className="grid grid-cols-12 gap-3">
-                {section.components.map((comp) => {
-                  const isSelected = selection.componentId === comp.id;
-                  return (
-                    <div
-                      key={comp.id}
-                      onClick={() => selectComponent(section.id, comp.id)}
-                      className={`col-span-12 rounded-xl border p-4 cursor-pointer ${
-                        isSelected ? 'border-accent bg-surface shadow-md ring-1 ring-accent' : 'border-border bg-surface'
-                      }`}
-                    >
-                      <div className="text-[10px] uppercase font-semibold text-text-muted">{comp.type}</div>
-                      {comp.type === 'heading' && <h2 className="text-lg font-bold">{localName(comp.props.text as Record<string, string>)}</h2>}
-                      {comp.type === 'metric' && <div className="text-2xl font-semibold">{String(comp.props.value ?? '')}</div>}
-                      {comp.type === 'card' && <div className="text-sm font-medium">{localName(comp.props.title as Record<string, string>)}</div>}
-                      {comp.type === 'divider' && <hr className="border-border my-1" />}
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
+            <ViewsSectionCard key={section.id} section={section} localName={localName} />
           ))}
+          <div className="flex justify-center pt-2">
+            <Button type="button" variant="outline" size="sm" onClick={addSection} className="text-xs">
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              {t('views.inspector.addSection')}
+            </Button>
+          </div>
         </div>
       )}
       {activeDocument && activeMode === 'preview' && (
