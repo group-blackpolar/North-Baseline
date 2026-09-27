@@ -78,6 +78,10 @@ export function updatePanel(organizationId: string, id: string, input: MetadataI
 export function archiveResource(organizationId: string, type: 'categories' | 'subcategories' | 'panels', id: string) { return apiRequest(`${orgPath(organizationId)}/${type}/${encodeURIComponent(id)}/archive`, { method: 'POST' }); }
 export function reorderResources(organizationId: string, kind: 'CATEGORY' | 'SUBCATEGORY' | 'PANEL', ids: string[], parentId?: string) { return apiRequest<{ updated: number }>(`${orgPath(organizationId)}/north/reorder`, { method: 'POST', body: JSON.stringify({ kind, ids, ...(parentId ? { parentId } : {}) }) }); }
 export function setOrganizationHome(organizationId: string, panelId: string | null) { return apiRequest(`${orgPath(organizationId)}/home-panel`, { method: 'PUT', body: JSON.stringify({ panelId }) }); }
+export function cloneTaxonomyResource(organizationId: string, input: { kind: 'CATEGORY' | 'SUBCATEGORY' | 'PANEL'; sourceId: string; destinationParentId?: string; slug: string }) {
+  return apiRequest(`${orgPath(organizationId)}/north/clone`, { method: 'POST', body: JSON.stringify(input) });
+}
+
 export function getDraft(organizationId: string, panelId: string) { return apiRequest<PanelRevision>(`${orgPath(organizationId)}/panels/${encodeURIComponent(panelId)}/draft`); }
 export function saveDraft(organizationId: string, panelId: string, document: PanelDocument, etag?: string, message?: string) { return apiRequest<PanelRevision>(`${orgPath(organizationId)}/panels/${encodeURIComponent(panelId)}/draft`, { method: 'PATCH', headers: etag ? { 'If-Match': etag } : undefined, body: JSON.stringify({ document, ...(message ? { message } : {}) }) }); }
 export function publishDraft(organizationId: string, panelId: string, etag: string) { return apiRequest<PanelRevision>(`${orgPath(organizationId)}/panels/${encodeURIComponent(panelId)}/publish`, { method: 'POST', headers: { 'If-Match': etag } }); }
