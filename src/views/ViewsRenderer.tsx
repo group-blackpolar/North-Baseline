@@ -3,7 +3,7 @@ import type { Tab } from '@/context/TabsContext';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Construction } from 'lucide-react';
 import { SharkView } from '@/features/shark/SharkView';
-import { OrganizationAdminView } from '@/features/admin/OrganizationAdminView';
+import { ViewsAdminView } from '@/features/views/ViewsAdminView';
 import { PersonalView } from '@/features/personal/PersonalView';
 import type { PublishedPanelDocument } from '@/lib/organizations';
 import { useCatalog } from '@/context/CatalogContext';
@@ -67,7 +67,7 @@ export function ViewRenderer({ user, tab }: { user: SessionUser; tab: Tab | null
   const category = getCategory(tab.route.categoryId);
   const subcategory = getSubcategory(tab.route.categoryId, tab.route.subcategoryId);
   if (activeOrganization && category?.slug === 'admin' && subcategory?.slug === 'settings') {
-    return <OrganizationAdminView key={activeOrganization.id} organizationId={activeOrganization.id} />;
+    return <ViewsAdminView key={activeOrganization.id} organizationId={activeOrganization.id} />;
   }
   if (tab.publishedPanel) return <PublishedPanel title={tab.publishedPanel.title} document={tab.publishedPanel.document} locales={tab.publishedPanel.localeOrder} />;
     if (PERSONAL_CATEGORIES.has(tab.route.categoryId)) {
