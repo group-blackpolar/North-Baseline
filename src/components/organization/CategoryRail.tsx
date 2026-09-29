@@ -1,99 +1,159 @@
-import { useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, type FocusEvent, type KeyboardEvent } from 'react';
+import { PanelLeftOpen, Pin, PinOff } from 'lucide-react';
 import { useCatalog } from '@/context/CatalogContext';
 import { useTabs } from '@/context/TabsContext';
 import { usePermissions } from '@/context/PermissionContext';
 import { resolveIcon } from '@/lib/iconMap';
+import { pushPath } from '@/lib/routes';
+import { useI18n } from '@/lib/i18n';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
-const EXPANDED_KEY = 'north-category-rail-expanded';
+const PINNED_KEY = 'north-category-rail-pinned';
+const LEGACY_EXPANDED_KEY = 'north-category-rail-expanded';
+
+function readPinnedPreference() {
+  try {
+    const stored = localStorage.getItem(PINNED_KEY);
+    if (stored !== null) return stored === '1';
+    return localStorage.getItem(LEGACY_EXPANDED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
 
 export function CategoryRail() {
+  const { t } = useI18n();
   const { categories, isLoading } = useCatalog();
   const { activeTab, navigate } = useTabs();
   const { can } = usePermissions();
-  const [expanded, setExpanded] = useState(() => {
-    try {
-      return localStorage.getItem(EXPANDED_KEY) === '1';
-    } catch {
-      return false;
-    }
-  });
-
+  const [pinned, setPinned] = useState(readPinnedPreference);
+  const [temporaryOpen, setTemporaryOpen] = useState(false);
+  const expanded = pinned || temporaryOpen;
   const activeCategoryId = activeTab?.route.categoryId;
 
-  const toggleExpanded = () => {
-    setExpanded((current) => {
+  const togglePinned = () => {
+    setPinned((current) => {
       const next = !current;
       try {
-        localStorage.setItem(EXPANDED_KEY, next ? '1' : '0');
+        localStorage.setItem(PINNED_KEY, next ? '1' : '0');
+        localStorage.removeItem(LEGACY_EXPANDED_KEY);
       } catch {
-        /* storage no disponible */
+        /* storage unavailable */
       }
       return next;
     });
   };
 
+  const closeAfterFocusLeaves = (event: FocusEvent<HTMLElement>) => {
+    if (!event.currentTarget.contains(event.relatedTarget)) setTemporaryOpen(false);
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key === 'Escape' && !pinned) {
+      setTemporaryOpen(false);
+    }
+  };
+
   return (
-    <nav
-      className={cn(
-        'shrink-0 h-full bg-surface border-r border-border flex flex-col py-3 gap-1 transition-[width] duration-200 ease-out',
-        expanded ? 'w-44 px-2' : 'w-14 px-0 items-center'
-      )}
+    <div
+      className="relative shrink-0 h-full transition-[width] duration-[var(--shell-motion)] ease-out"
+      style={{ width: pinned ? 'var(--shell-category-rail-open)' : 'var(--shell-category-rail)' }}
     >
-      {/* Toggle expandir/colapsar */}
-      <button
-        type="button"
-        title={expanded ? 'Collapse categories' : 'Expand categories'}
-        aria-label={expanded ? 'Collapse categories' : 'Expand categories'}
+      <nav
+        aria-label={t('shell.categories')}
         className={cn(
-          'h-7 rounded-lg flex items-center justify-center text-text-muted hover:bg-surface-hover hover:text-text transition-colors duration-150 mb-1',
-          expanded ? 'w-full' : 'w-10'
+          'absolute inset-y-0 left-0 z-30 bg-surface border-r border-border flex flex-col py-2 gap-1 overflow-hidden',
+          'transition-[width,box-shadow] duration-[var(--shell-motion)] ease-out',
+          expanded && !pinned && 'shadow-pop'
         )}
-        onClick={toggleExpanded}
+        style={{ width: expanded ? 'var(--shell-category-rail-open)' : 'var(--shell-category-rail)' }}
+        onPointerEnter={() => setTemporaryOpen(true)}
+        onPointerLeave={(event) => {
+          if (!pinned && !event.currentTarget.contains(document.activeElement)) setTemporaryOpen(false);
+        }}
+        onFocus={() => setTemporaryOpen(true)}
+        onBlur={closeAfterFocusLeaves}
+        onKeyDown={handleKeyDown}
       >
-        {expanded ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-      </button>
+        {expanded && (
+          <div className="flex h-8 shrink-0 items-center px-3">
+            <span className="ui-label truncate">{t('shell.categories')}</span>
+          </div>
+        )}
 
-      {isLoading && (
-        <>
-          <Skeleton className="h-10 w-10 rounded-xl" />
-          <Skeleton className="h-10 w-10 rounded-xl" />
-        </>
-      )}
+        {isLoading && (
+          <div className="flex flex-col items-center gap-1 px-2">
+            <Skeleton className="size-9 rounded-lg" />
+            <Skeleton className="size-9 rounded-lg" />
+          </div>
+        )}
 
-      {!isLoading &&
-        categories.map((category) => {
+        {!isLoading && categories.map((category) => {
           const Icon = resolveIcon(category.icon);
           const active = category.id === activeCategoryId;
           const disabled = Boolean(category.requiredPermission && !can(category.requiredPermission));
+          const label = category.id === 'platform-administration'
+            ? t('personal.administration')
+            : category.id === 'home'
+              ? t('personal.home')
+              : category.id === 'profile'
+                ? t('personal.profile')
+                : category.id === 'settings'
+                  ? t('home.settings')
+                  : category.name;
 
           return (
             <button
               key={category.id}
               type="button"
-              title={category.name}
+              title={label}
+              aria-label={label}
               disabled={disabled}
-              aria-current={active ? 'true' : undefined}
+              aria-current={active ? 'page' : undefined}
               className={cn(
-                'h-10 rounded-xl flex items-center gap-2.5 transition-colors duration-150',
-                expanded ? 'w-full px-2.5' : 'w-10 justify-center',
+                'mx-2 h-9 shrink-0 rounded-lg flex items-center gap-2.5 transition-colors duration-[var(--shell-motion-fast)]',
+                expanded ? 'w-[calc(100%_-_1rem)] px-2.5' : 'w-9 justify-center px-0',
                 disabled
                   ? 'text-text-muted opacity-40 cursor-not-allowed'
                   : active
-                  ? 'bg-surface-active text-text shadow-soft ring-1 ring-border'
-                  : 'text-text-secondary hover:bg-surface-hover hover:text-text'
+                    ? 'bg-surface-active text-text shadow-soft ring-1 ring-border'
+                    : 'text-text-secondary hover:bg-surface-hover hover:text-text'
               )}
               onClick={() => {
-                if (!disabled) navigate(category.id, category.subcategories[0]?.id ?? null);
+                if (disabled) return;
+                if (category.id === 'platform-administration') {
+                  pushPath('/workspace/admin/dashboard');
+                  return;
+                }
+                navigate(category.id, category.subcategories[0]?.id ?? null);
               }}
             >
-              <Icon className="w-4 h-4 shrink-0" />
-              {expanded && <span className="text-xs font-medium truncate">{category.name}</span>}
+              <Icon className="size-4 shrink-0" />
+              {expanded && <span className="text-xs font-medium truncate">{label}</span>}
             </button>
           );
         })}
-    </nav>
+
+        <div className={cn('mt-auto flex shrink-0 items-center py-1.5', expanded ? 'gap-1.5 px-2' : 'justify-center')}>
+          <button
+            type="button"
+            title={pinned ? t('shell.unpinCategories') : t('shell.pinCategories')}
+            aria-label={pinned ? t('shell.unpinCategories') : t('shell.pinCategories')}
+            aria-pressed={pinned}
+            className="size-8 shrink-0 rounded-lg flex items-center justify-center text-text-muted hover:bg-surface-hover hover:text-text transition-colors duration-[var(--shell-motion-fast)]"
+            onClick={togglePinned}
+          >
+            {pinned ? <PinOff className="size-4" /> : expanded ? <Pin className="size-4" /> : <PanelLeftOpen className="size-4" />}
+          </button>
+          {expanded && !pinned && (
+            <span className="min-w-0 truncate text-[10px] text-text-muted">{t('shell.overlayHint')}</span>
+          )}
+          {expanded && pinned && (
+            <span className="min-w-0 truncate text-[10px] text-text-muted">{t('shell.pinned')}</span>
+          )}
+        </div>
+      </nav>
+    </div>
   );
 }

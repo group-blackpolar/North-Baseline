@@ -3,6 +3,7 @@ import { fetchCatalog } from '@/lib/catalog';
 import type { CategoryModel, SubcategoryModel } from '@/lib/models';
 import { getOrganizationNavigation, type NavigationCategory } from '@/lib/organizations';
 import { PERSONAL_ORG_ID } from '@/lib/demo/store';
+import type { SessionUser } from '@/lib/auth';
 
 interface CatalogContextValue {
   categories: CategoryModel[];
@@ -17,10 +18,12 @@ const CatalogContext = createContext<CatalogContextValue | null>(null);
 export function CatalogProvider({
   workspaceId,
   organizationId,
+  platformRole,
   children,
 }: {
   workspaceId: string | null;
   organizationId: string;
+  platformRole?: SessionUser['role'];
   children: ReactNode;
 }) {
   const [categories, setCategories] = useState<CategoryModel[]>([]);
@@ -29,20 +32,20 @@ export function CatalogProvider({
   const refresh = useCallback(async () => {
     setIsLoading(true);
     const catalog = organizationId === PERSONAL_ORG_ID
-      ? fetchCatalog(workspaceId)
+      ? fetchCatalog(workspaceId, { includePlatformAdministration: platformRole === 'ADMIN' || platformRole === 'SUPERADMIN' })
       : getOrganizationNavigation(organizationId).then(navigationToCatalog);
     try {
       setCategories(await catalog);
     } finally {
       setIsLoading(false);
     }
-  }, [organizationId, workspaceId]);
+  }, [organizationId, platformRole, workspaceId]);
 
   useEffect(() => {
     let alive = true;
     setIsLoading(true);
     const catalog = organizationId === PERSONAL_ORG_ID
-      ? fetchCatalog(workspaceId)
+      ? fetchCatalog(workspaceId, { includePlatformAdministration: platformRole === 'ADMIN' || platformRole === 'SUPERADMIN' })
       : getOrganizationNavigation(organizationId).then(navigationToCatalog);
     catalog
       .then((catalog) => {
@@ -54,7 +57,7 @@ export function CatalogProvider({
     return () => {
       alive = false;
     };
-  }, [organizationId, workspaceId]);
+  }, [organizationId, platformRole, workspaceId]);
 
   const getCategory = useCallback(
     (categoryId: string) => categories.find((c) => c.id === categoryId),

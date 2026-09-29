@@ -42,8 +42,8 @@ export function ViewsStructurePane() {
   };
 
   return (
-    <aside className="w-80 shrink-0 border-r border-border bg-surface flex flex-col h-full select-none">
-      <div className="flex items-center justify-between p-3.5 border-b border-border">
+    <aside className="w-80 max-[1599px]:w-72 max-[1399px]:w-48 shrink-0 border-r border-border bg-surface flex flex-col h-full select-none">
+      <div className="flex items-center justify-between p-3 border-b border-border">
         <div className="flex items-center gap-2">
           <Layers3 className="w-4 h-4 text-accent" />
           <span className="text-xs font-semibold text-text uppercase tracking-wider">{t('views.structure')}</span>
@@ -51,11 +51,13 @@ export function ViewsStructurePane() {
         <Button
           variant="outline"
           size="sm"
+          aria-label={t('views.addCategory')}
+          title={t('views.addCategory')}
           onClick={() => setModal({ type: 'create_category' })}
           className="h-7 text-xs gap-1 px-2 text-text hover:text-accent"
         >
           <Plus className="w-3.5 h-3.5" />
-          <span>{t('views.addCategory')}</span>
+          <span className="max-[1399px]:sr-only">{t('views.addCategory')}</span>
         </Button>
       </div>
 

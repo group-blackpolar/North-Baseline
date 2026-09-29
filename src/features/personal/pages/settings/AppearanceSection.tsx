@@ -11,7 +11,7 @@ interface PreviewPalette {
   accent: string;
 }
 
-const PALETTES: Record<Exclude<ThemeName, 'system'>, PreviewPalette> = {
+const PALETTES: Record<ThemeName, PreviewPalette> = {
   light: { bg: '#ffffff', panel: '#f1f5f9', text: '#0f172a', accent: '#0fa396' },
   dark: { bg: '#101418', panel: '#1c232b', text: '#e6e8ea', accent: '#3ecfba' },
   midnight: { bg: '#0a1020', panel: '#131c33', text: '#e2e8f8', accent: '#3ecfba' },
@@ -21,28 +21,9 @@ const THEMES = [
   { id: 'light', nameKey: 'settings.theme.light', descKey: 'settings.theme.lightDesc' },
   { id: 'dark', nameKey: 'settings.theme.dark', descKey: 'settings.theme.darkDesc' },
   { id: 'midnight', nameKey: 'settings.theme.midnight', descKey: 'settings.theme.midnightDesc' },
-  { id: 'system', nameKey: 'settings.theme.system', descKey: 'settings.theme.systemDesc' },
 ] as const;
 
 function Preview({ id }: { id: ThemeName }) {
-  if (id === 'system') {
-    return (
-      <div className="h-20 rounded-lg border border-border overflow-hidden flex">
-        {(['light', 'dark'] as const).map((half) => (
-          <div key={half} className="flex-1 p-2 flex flex-col gap-1.5" style={{ background: PALETTES[half].bg }}>
-            <div className="h-4 rounded-md flex items-center px-1.5 gap-1" style={{ background: PALETTES[half].panel }}>
-              <span className="size-1.5 rounded-full" style={{ background: PALETTES[half].accent }} />
-              <span className="h-1 w-8 rounded opacity-60" style={{ background: PALETTES[half].text }} />
-            </div>
-            <div className="flex gap-1.5 flex-1">
-              <div className="flex-1 rounded-md" style={{ background: PALETTES[half].panel }} />
-              <div className="w-1/3 rounded-md" style={{ background: PALETTES[half].panel }} />
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
   const p = PALETTES[id];
   return (
     <div className="h-20 rounded-lg border border-border p-2 flex flex-col gap-1.5" style={{ background: p.bg }}>

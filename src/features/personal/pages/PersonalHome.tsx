@@ -1,216 +1,224 @@
-import { Building2, FileText, FileSpreadsheet, Presentation as FilePresentation, FileArchive, Laptop, Smartphone, Monitor, Plus, Zap } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
+import { ArrowRight, Building2, Clock3, Search, Settings, ShieldCheck, UserRound } from 'lucide-react';
 import { useOrganization } from '@/context/OrganizationContext';
+import { useCatalog } from '@/context/CatalogContext';
 import { useTabs } from '@/context/TabsContext';
-import { DashboardCard, MetricCard } from '@/components/dashboard/primitives';
-import { TrendLineChart } from '@/components/dashboard/charts';
-import { personalService } from '../data/service';
+import { useI18n } from '@/lib/i18n';
+import { pushPath } from '@/lib/routes';
+import { PERSONAL_ORG_ID } from '@/lib/demo/store';
 import type { SessionUser } from '@/lib/auth';
-import { cn } from '@/lib/utils';
 
-const FILE_ICONS = {
-  doc: FileText,
-  sheet: FileSpreadsheet,
-  deck: FilePresentation,
-  pdf: FileArchive,
-} as const;
-
-const DEVICE_ICONS = {
-  Desktop: Monitor,
-  Laptop: Laptop,
-  Mobile: Smartphone,
-} as const;
-
-function ProgressBar({ value, max }: { value: number; max: number }) {
-  const pct = Math.min(100, Math.round((value / max) * 100));
-  return (
-    <div className="h-1.5 w-full rounded-full bg-surface-active overflow-hidden">
-      <div className="h-full rounded-full bg-accent transition-[width] duration-300" style={{ width: `${pct}%` }} />
-    </div>
-  );
+interface Destination {
+  id: string;
+  label: string;
+  description: string;
+  icon: ComponentType<{ className?: string }>;
+  action: () => void;
 }
 
 export function PersonalHome({ user }: { user: SessionUser }) {
+  const { t } = useI18n();
   const { organizations, switchOrganization } = useOrganization();
-  const { navigate } = useTabs();
+  const { categories } = useCatalog();
+  const { tabs, activeTab, navigate, setActiveTab } = useTabs();
+  const [query, setQuery] = useState('');
+  const searchRef = useRef<HTMLInputElement>(null);
+  const canAdministerPlatform = user.role === 'ADMIN' || user.role === 'SUPERADMIN';
+  const orgs = organizations.filter((organization) => organization.id !== PERSONAL_ORG_ID);
 
-  const activity = personalService.activity();
-  const files = personalService.files();
-  const notifications = personalService.notifications();
-  const sessions = personalService.sessions();
-  const usage = personalService.usage();
-  const trend = personalService.usageTrend();
+  useEffect(() => {
+    const focusSearch = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', focusSearch);
+    return () => window.removeEventListener('keydown', focusSearch);
+  }, []);
 
-  const orgs = organizations.filter((org) => org.id !== 'personal');
+  const destinations = useMemo<Destination[]>(() => {
+    const items: Destination[] = [
+      {
+        id: 'profile',
+        label: t('personal.profile'),
+        description: t('home.profileHint'),
+        icon: UserRound,
+        action: () => navigate('profile', 'personal-information'),
+      },
+      {
+        id: 'settings',
+        label: t('home.settings'),
+        description: t('home.settingsHint'),
+        icon: Settings,
+        action: () => navigate('settings', 'appearance'),
+      },
+    ];
+    if (canAdministerPlatform) {
+      items.push({
+        id: 'administration',
+        label: t('personal.administration'),
+        description: t('home.administrationHint'),
+        icon: ShieldCheck,
+        action: () => pushPath('/workspace/admin/dashboard'),
+      });
+    }
+    return items;
+  }, [canAdministerPlatform, navigate, t]);
+
+  const searchResults = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase();
+    if (!normalized) return [];
+    const organizationResults: Destination[] = orgs.map((organization) => ({
+      id: `organization-${organization.id}`,
+      label: organization.name,
+      description: t('home.organizationResult'),
+      icon: Building2,
+      action: () => {
+        switchOrganization(organization.id);
+        if (organization.slug) pushPath(`/${encodeURIComponent(organization.slug)}`);
+      },
+    }));
+    return [...destinations, ...organizationResults]
+      .filter((item) => `${item.label} ${item.description}`.toLocaleLowerCase().includes(normalized))
+      .slice(0, 7);
+  }, [destinations, orgs, query, switchOrganization, t]);
+
+  const openTabs = tabs.filter((tab) => tab.id !== activeTab?.id);
 
   return (
-    <div className="p-6 space-y-4">
-      {/* Welcome */}
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-display font-bold text-text">{user.name ?? user.email}</h1>
-          <p className="text-sm text-text-secondary mt-0.5">
-            {/* TODO(i18n): TASK-09 */}
-            Tu espacio personal: actividad, archivos y sesiones en un solo lugar.
-          </p>
-        </div>
-        <button
-          type="button"
-          className="h-9 px-3 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-medium flex items-center gap-1.5 transition-colors duration-150"
-          onClick={() => navigate('home', 'quick-actions')}
-        >
-          <Zap className="w-4 h-4" />
-          Quick actions
-        </button>
+    <main className="mx-auto w-full max-w-6xl p-4 lg:p-5 space-y-5">
+      <header className="pt-2 text-center">
+        <p className="ui-label mb-2">{t('personal.workspace.name')}</p>
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-text">
+          {t('home.heading', { name: user.name?.split(' ')[0] ?? user.email })}
+        </h1>
+        <p className="mt-1 text-sm text-text-secondary">{t('home.subheading')}</p>
       </header>
 
-      {/* KPIs + Usage */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <MetricCard label="PROYECTOS ACTIVOS" value={String(usage.activeProjects)} />
-        <MetricCard label="ARCHIVOS RECIENTES" value={String(files.length)} />
-        <MetricCard label="SESIONES" value={String(sessions.length)} />
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        {/* Activity trend (mini chart) */}
-        <DashboardCard title="Actividad semanal" description="Acciones y sesiones de los últimos 7 días." className="xl:col-span-2">
-          <TrendLineChart
-            data={trend}
-            series={[{ key: 'actions', color: 'var(--color-accent)' }, { key: 'logins', color: '#60A5FA' }]}
-            height={180}
-          />
-        </DashboardCard>
-
-        {/* Usage */}
-        <DashboardCard title="Uso" description="Cuota del plan Free.">
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-text-secondary">Almacenamiento</span>
-                <span className="mono-data text-text">{usage.storageUsedGb} / {usage.storageQuotaGb} GB</span>
-              </div>
-              <ProgressBar value={usage.storageUsedGb} max={usage.storageQuotaGb} />
-            </div>
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-text-secondary">Llamadas API (mes)</span>
-                <span className="mono-data text-text">{usage.apiCallsMonth} / {usage.apiCallsQuota}</span>
-              </div>
-              <ProgressBar value={usage.apiCallsMonth} max={usage.apiCallsQuota} />
-            </div>
-          </div>
-        </DashboardCard>
-
-        {/* Recent activity (timeline) */}
-        <DashboardCard title="Actividad reciente" description="Tus últimos movimientos." className="xl:col-span-2">
-          <ol className="relative space-y-4 before:absolute before:left-[5px] before:top-1 before:bottom-1 before:w-px before:bg-border">
-            {activity.map((item) => (
-              <li key={item.id} className="relative pl-5">
-                <span className="absolute left-0 top-1.5 size-[11px] rounded-full border-2 border-surface bg-accent" />
-                <p className="text-sm text-text font-medium">{item.title}</p>
-                <p className="text-xs text-text-secondary">{item.detail} · {item.timestamp}</p>
-              </li>
-            ))}
-          </ol>
-        </DashboardCard>
-
-        {/* Notifications */}
-        <DashboardCard title="Notificaciones" description={`${notifications.filter((n) => !n.read).length} sin leer`}>
-          <ul className="space-y-3">
-            {notifications.map((item) => (
-              <li key={item.id} className="flex items-start gap-2.5">
-                <span className={cn('mt-1.5 size-2 rounded-full shrink-0', item.read ? 'bg-border-strong' : 'bg-accent')} />
-                <div className="min-w-0">
-                  <p className="text-sm text-text font-medium truncate">{item.title}</p>
-                  <p className="text-xs text-text-secondary truncate">{item.body}</p>
-                  <p className="text-[10px] text-text-muted mt-0.5">{item.timestamp}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </DashboardCard>
-
-        {/* Recent files */}
-        <DashboardCard title="Archivos recientes" description="Últimos documentos abiertos.">
-          <ul className="space-y-2">
-            {files.map((file) => {
-              const Icon = FILE_ICONS[file.kind];
-              return (
-                <li key={file.id} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-surface-hover transition-colors duration-150">
-                  <div className="size-8 rounded-lg bg-surface-active flex items-center justify-center shrink-0">
-                    <Icon className="w-4 h-4 text-text-secondary" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm text-text font-medium truncate">{file.name}</p>
-                    <p className="text-xs text-text-secondary truncate">{file.workspace} · {file.updatedAt}</p>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </DashboardCard>
-
-        {/* Organizations */}
-        <DashboardCard title="Organizaciones" description="Workspaces a los que perteneces.">
-          <ul className="space-y-2">
-            {orgs.map((org) => {
-              const initials = (org as { initials?: string }).initials ?? (org.name ?? '?').slice(0, 2).toUpperCase();
-              return (
-                <li key={org.id}>
-                  <button
-                    type="button"
-                    className="w-full flex items-center gap-2.5 p-2 rounded-lg hover:bg-surface-hover transition-colors duration-150 text-left"
-                    onClick={() => switchOrganization(org.id)}
-                  >
-                    <div className="size-8 rounded-lg bg-surface-active flex items-center justify-center font-display text-xs font-semibold text-text-secondary shrink-0">
-                      {initials}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm text-text font-medium truncate">{org.name}</p>
-                      <p className="text-xs text-text-secondary truncate">{(org as { description?: string }).description ?? 'Organization'}</p>
-                    </div>
-                    <Building2 className="w-4 h-4 text-text-muted shrink-0" />
-                  </button>
-                </li>
-              );
-            })}
-            <li>
+      <section aria-label={t('home.searchLabel')} className="relative mx-auto max-w-3xl">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-muted" />
+        <input
+          ref={searchRef}
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={t('home.searchPlaceholder')}
+          aria-label={t('home.searchLabel')}
+          className="h-11 w-full rounded-xl border border-border-strong bg-surface pl-10 pr-16 text-sm text-text shadow-soft outline-none placeholder:text-text-muted focus-visible:border-accent"
+        />
+        <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border bg-background px-1.5 py-0.5 text-[10px] text-text-muted">Ctrl K</kbd>
+        {query.trim() && (
+          <div className="absolute inset-x-0 top-[calc(100%+6px)] z-20 rounded-xl border border-border bg-surface p-1.5 shadow-pop">
+            {searchResults.length > 0 ? searchResults.map((item) => (
               <button
+                key={item.id}
                 type="button"
-                className="w-full flex items-center gap-2 p-2 rounded-lg border border-dashed border-border-strong text-text-muted hover:text-accent hover:border-accent transition-colors duration-150 text-sm"
-                onClick={() => switchOrganization(orgs[0]?.id ?? 'personal')}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-surface-hover"
+                onClick={() => { item.action(); setQuery(''); }}
               >
-                <Plus className="w-4 h-4" />
-                Explorar workspaces
+                <item.icon className="size-4 shrink-0 text-text-muted" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-text">{item.label}</span>
+                  <span className="block truncate text-xs text-text-secondary">{item.description}</span>
+                </span>
+                <ArrowRight className="size-3.5 text-text-muted" />
               </button>
-            </li>
-          </ul>
-        </DashboardCard>
+            )) : (
+              <p className="px-3 py-4 text-center text-xs text-text-muted">{t('home.noSearchResults')}</p>
+            )}
+          </div>
+        )}
+      </section>
 
-        {/* Recent sessions */}
-        <DashboardCard title="Sesiones recientes" description="Dispositivos con acceso activo.">
-          <ul className="space-y-2">
-            {sessions.map((session) => {
-              const Icon = DEVICE_ICONS[session.device as keyof typeof DEVICE_ICONS] ?? Monitor;
-              return (
-                <li key={session.id} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-surface-hover transition-colors duration-150">
-                  <div className="size-8 rounded-lg bg-surface-active flex items-center justify-center shrink-0">
-                    <Icon className="w-4 h-4 text-text-secondary" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm text-text font-medium truncate">
-                      {session.device} · {session.browser}
-                    </p>
-                    <p className="text-xs text-text-secondary truncate">{session.location} · {session.lastActive}</p>
-                  </div>
-                  {session.current && (
-                    <span className="rounded-full bg-accent-soft text-accent text-[10px] font-semibold px-2 py-0.5 shrink-0">Actual</span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </DashboardCard>
+      <section>
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-text">{t('home.quickAccess')}</h2>
+          <span className="text-xs text-text-muted">{t('home.safeDestinations')}</span>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {destinations.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={item.action}
+              className="group flex min-h-20 items-center gap-3 rounded-xl border border-border bg-surface p-3 text-left shadow-soft transition-[border-color,background-color] duration-[var(--shell-motion-fast)] hover:border-border-strong hover:bg-surface-hover"
+            >
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">
+                <item.icon className="size-4" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-text">{item.label}</span>
+                <span className="mt-0.5 block text-xs text-text-secondary">{item.description}</span>
+              </span>
+              <ArrowRight className="size-4 text-text-muted transition-transform group-hover:translate-x-0.5" />
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+        <section className="rounded-xl border border-border bg-surface p-3 shadow-soft">
+          <div className="mb-2 flex items-center gap-2">
+            <Clock3 className="size-4 text-text-muted" />
+            <h2 className="text-sm font-semibold text-text">{t('home.continueWorking')}</h2>
+          </div>
+          {openTabs.length > 0 ? (
+            <div className="space-y-1">
+              {openTabs.slice(0, 5).map((tab) => {
+                const category = categories.find((item) => item.id === tab.route.categoryId);
+                const subcategory = category?.subcategories.find((item) => item.id === tab.route.subcategoryId);
+                return (
+                  <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left hover:bg-surface-hover">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium text-text">{subcategory?.name ?? category?.name ?? t('home.untitledView')}</span>
+                      <span className="block truncate text-xs text-text-secondary">{category?.name ?? t('personal.workspace.name')}</span>
+                    </span>
+                    <ArrowRight className="size-3.5 text-text-muted" />
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed border-border-strong px-4 py-7 text-center">
+              <p className="text-sm font-medium text-text">{t('home.noOpenWork')}</p>
+              <p className="mt-1 text-xs text-text-secondary">{t('home.noOpenWorkHint')}</p>
+            </div>
+          )}
+        </section>
+
+        <section className="rounded-xl border border-border bg-surface p-3 shadow-soft">
+          <div className="mb-2 flex items-center gap-2">
+            <Building2 className="size-4 text-text-muted" />
+            <h2 className="text-sm font-semibold text-text">{t('home.organizations')}</h2>
+          </div>
+          {orgs.length > 0 ? (
+            <div className="space-y-1">
+              {orgs.slice(0, 5).map((organization) => (
+                <button
+                  key={organization.id}
+                  type="button"
+                  onClick={() => {
+                    switchOrganization(organization.id);
+                    if (organization.slug) pushPath(`/${encodeURIComponent(organization.slug)}`);
+                  }}
+                  className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left hover:bg-surface-hover"
+                >
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface-active text-xs font-semibold text-text-secondary">
+                    {organization.name.slice(0, 2).toUpperCase()}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-text">{organization.name}</span>
+                  <ArrowRight className="size-3.5 text-text-muted" />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed border-border-strong px-4 py-7 text-center">
+              <p className="text-sm font-medium text-text">{t('home.noOrganizations')}</p>
+              <p className="mt-1 text-xs text-text-secondary">{t('home.noOrganizationsHint')}</p>
+            </div>
+          )}
+        </section>
       </div>
-    </div>
+    </main>
   );
 }

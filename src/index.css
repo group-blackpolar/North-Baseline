@@ -41,6 +41,18 @@
   /* Elevación sutil */
   --shadow-soft: 0 1px 2px rgb(16 24 40 / 0.04), 0 1px 3px rgb(16 24 40 / 0.06);
   --shadow-pop: 0 4px 6px -2px rgb(16 24 40 / 0.05), 0 12px 16px -4px rgb(16 24 40 / 0.10);
+
+  /* Shell density — sized for 100% browser zoom. */
+  --shell-org-rail: 56px;
+  --shell-category-rail: 52px;
+  --shell-category-rail-open: 188px;
+  --shell-context-sidebar: 232px;
+  --shell-context-sidebar-collapsed: 40px;
+  --shell-breadcrumb-height: 28px;
+  --shell-tabs-height: 36px;
+  --shell-layout-switcher: 40px;
+  --shell-motion-fast: 160ms;
+  --shell-motion: 200ms;
 }
 
 @layer base {
@@ -148,4 +160,22 @@
 
 :is([data-theme='dark'], [data-theme='midnight']) .north-icon-light {
   display: none;
+}
+
+@media (max-width: 1440px) {
+  :root {
+    --shell-category-rail-open: 176px;
+    --shell-context-sidebar: 200px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

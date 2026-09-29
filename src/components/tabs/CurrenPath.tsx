@@ -12,7 +12,7 @@ export function CurrentPath() {
   const subcategory = getSubcategory(activeTab.route.categoryId, activeTab.route.subcategoryId);
 
   return (
-    <div className="h-7 shrink-0 flex items-center gap-1 px-3 border-b border-border/60 bg-surface-hover/30 text-xs text-text-muted">
+    <div className="shrink-0 flex items-center gap-1 px-3 border-b border-border/60 bg-surface-hover/30 text-xs text-text-muted" style={{ height: 'var(--shell-breadcrumb-height)' }}>
       <span className="font-medium text-text-secondary">{category?.name ?? activeTab.route.categoryId}</span>
       {subcategory && (
         <>

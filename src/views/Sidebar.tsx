@@ -11,13 +11,19 @@ import type { SessionUser } from '@/lib/auth';
 import type { SubcategoryModel } from '@/lib/models';
 import { ProfileMenu } from '@/components/sidebar/ProfileMenu';
 
+const COLLAPSED_KEY = 'north-context-sidebar-collapsed';
+
+function readCollapsedPreference() {
+  try { return localStorage.getItem(COLLAPSED_KEY) === '1'; } catch { return false; }
+}
+
 export function ContextSidebar({ user }: { user: SessionUser }) {
   const { t } = useI18n();
   const { categories } = useCatalog();
   const { workspaces, activeWorkspace, switchWorkspace } = useWorkspace();
   const { navigate, activeTab } = useTabs();
   const { can } = usePermissions();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(readCollapsedPreference);
   const [search, setSearch] = useState('');
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
@@ -43,12 +49,19 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
     setCollapsedGroups((current) => ({ ...current, [name]: !current[name] }));
   };
 
+  const setCollapsedPreference = (next: boolean) => {
+    setCollapsed(next);
+    try { localStorage.setItem(COLLAPSED_KEY, next ? '1' : '0'); } catch { /* storage unavailable */ }
+  };
+
   if (collapsed) {
     return (
-      <aside className="w-10 shrink-0 h-full bg-surface border-r border-border flex flex-col items-center py-3">
+      <aside aria-label={t('sidebar.context')} className="shrink-0 h-full bg-surface border-r border-border flex flex-col items-center py-2" style={{ width: 'var(--shell-context-sidebar-collapsed)' }}>
         <button
           type="button"
-          onClick={() => setCollapsed(false)}
+          aria-label={t('sidebar.expand')}
+          title={t('sidebar.expand')}
+          onClick={() => setCollapsedPreference(false)}
           className="h-8 w-8 rounded-lg hover:bg-surface-hover flex items-center justify-center text-text-muted hover:text-text transition-colors duration-150"
         >
           <ChevronRight className="w-4 h-4" />
@@ -58,12 +71,14 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
   }
 
   return (
-    <aside className="w-64 shrink-0 h-full bg-surface border-r border-border flex flex-col">
+    <aside aria-label={t('sidebar.context')} className="shrink-0 h-full bg-surface border-r border-border flex flex-col" style={{ width: 'var(--shell-context-sidebar)' }}>
       {/* Header */}
-      <header className="shrink-0 p-3 border-b border-border space-y-2">
+      <header className="shrink-0 p-2.5 border-b border-border space-y-2">
         <button
           type="button"
-          onClick={() => setCollapsed(true)}
+          aria-label={t('sidebar.collapse')}
+          title={t('sidebar.collapse')}
+          onClick={() => setCollapsedPreference(true)}
           className="w-full flex items-center justify-end text-text-muted hover:text-text transition-colors duration-150"
         >
           <ChevronDown className="w-4 h-4" />
@@ -128,7 +143,7 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
                       disabled={disabled}
                       onClick={() => navigate(activeCategory?.id ?? '', sub.id)}
                       className={cn(
-                        'w-full flex items-center gap-2 pl-6 pr-2 py-1.5 rounded-md text-sm transition-colors duration-150',
+                        'w-full flex items-center gap-2 pl-6 pr-2 py-1.5 rounded-md text-[13px] transition-colors duration-[var(--shell-motion-fast)]',
                         disabled
                           ? 'text-text-muted cursor-not-allowed opacity-50'
                           : active
