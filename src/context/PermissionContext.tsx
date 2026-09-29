@@ -1,5 +1,7 @@
 /* oxlint-disable react/only-export-components */
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { fetchPermissions } from '@/lib/permission';
+import { PERSONAL_ORG_ID } from '@/lib/demo/store';
 
 interface PermissionContextValue {
   can: (permission: string) => boolean;
@@ -9,47 +11,56 @@ interface PermissionContextValue {
 
 const PermissionContext = createContext<PermissionContextValue | null>(null);
 
-/** MOCK para demo: todos los permisos habilitados, sin llamadas a API.
- *  TODO: reemplazar con la versión real que llama a CoreCrow cuando esté listo. */
 export function PermissionProvider({
-  organizationId: _organizationId,
-  workspaceId: _workspaceId,
-  role: _role,
+  organizationId,
   children,
 }: {
   organizationId?: string;
-  workspaceId?: string;
-  role?: string;
   children: ReactNode;
 }) {
-  const allPermissions = [
-    'organization:read',
-    'organization:write',
-    'workspace:read',
-    'workspace:write',
-    'workspace:admin',
-    'billing:read',
-    'billing:write',
-    'settings:manage',
-    'members:read',
-    'members:write',
-    'members:admin',
-    'audit:read',
-    'categories:read',
-    'categories:write',
-    'catalog:manage',
-  ];
+  const [permissions, setPermissions] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    // Personal is a user-scoped surface, not a tenant. It has no organization
+    // permissions and must never be sent to CoreCrow as an organization id.
+    if (!organizationId || organizationId === PERSONAL_ORG_ID) {
+      setPermissions([]);
+      setIsLoading(false);
+      return;
+    }
+
+    let live = true;
+    setPermissions([]);
+    setIsLoading(true);
+    void fetchPermissions(organizationId)
+      .then((result) => {
+        if (live) setPermissions(result.permissions);
+      })
+      .catch(() => {
+        // Navigation is default-deny when capability discovery fails.
+        if (live) setPermissions([]);
+      })
+      .finally(() => {
+        if (live) setIsLoading(false);
+      });
+
+    return () => {
+      live = false;
+    };
+  }, [organizationId]);
+
+  const value = useMemo<PermissionContextValue>(() => {
+    const available = new Set(permissions);
+    return {
+      can: (permission) => available.has(permission),
+      permissions,
+      isLoading,
+    };
+  }, [isLoading, permissions]);
 
   return (
-    <PermissionContext.Provider
-      value={{
-        can: () => true,
-        permissions: allPermissions,
-        isLoading: false,
-      }}
-    >
-      {children}
-    </PermissionContext.Provider>
+    <PermissionContext.Provider value={value}>{children}</PermissionContext.Provider>
   );
 }
 
@@ -59,4 +70,4 @@ export function usePermissions() {
     throw new Error('usePermissions must be used within PermissionProvider');
   }
   return context;
-}   
+}

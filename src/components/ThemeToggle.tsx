@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { applyTheme, getStoredTheme } from '@/lib/theme'
 
 type Theme = 'light' | 'dark'
 
@@ -9,17 +10,16 @@ export function ThemeToggle({ language = 'es' }: { language?: 'es' | 'en' }) {
     : { control: 'Appearance', light: 'Light', dark: 'Dark' }
 
   useEffect(() => {
-    const stored = localStorage.getItem('bp-theme') as Theme | null
-    const initial = stored ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    const stored = getStoredTheme()
+    const initial: Theme = stored === 'dark' || stored === 'midnight' ? 'dark' : 'light'
     setTheme(initial)
-    document.documentElement.dataset.theme = initial
+    applyTheme(stored)
   }, [])
 
   const toggle = () => {
     const next = theme === 'light' ? 'dark' : 'light'
     setTheme(next)
-    document.documentElement.dataset.theme = next
-    localStorage.setItem('bp-theme', next)
+    applyTheme(next)
   }
 
   return (

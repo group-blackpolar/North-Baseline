@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { NorthIcon } from '@/components/brand/NorthLogo';
 import { pushPath } from '@/lib/routes';
+import { useI18n } from '@/lib/i18n';
 
 function navigateToOrganization(id: string, slug?: string) {
   const path = id === PERSONAL_ORG_ID ? '/workspace' : (slug ? `/${encodeURIComponent(slug)}` : null);
@@ -14,6 +15,7 @@ function navigateToOrganization(id: string, slug?: string) {
 }
 
 export function OrganizationRail() {
+  const { t } = useI18n();
   const { organizations, activeOrganization, switchOrganization, isLoading } = useOrganization();
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -22,7 +24,7 @@ export function OrganizationRail() {
   const personalActive = activeOrganization?.id === PERSONAL_ORG_ID;
 
   return (
-    <div className="w-14 shrink-0 h-full bg-surface border-r border-border flex flex-col items-center py-3 gap-1.5">
+    <nav aria-label={t('shell.organizations')} className="shrink-0 h-full bg-surface border-r border-border flex flex-col items-center py-2.5 gap-1.5" style={{ width: 'var(--shell-org-rail)' }}>
       {/* Branding NORTH */}
         <div className="h-9 w-9 flex items-center justify-center mb-1.5" title="NORTH">
         <NorthIcon className="size-8" />
@@ -31,7 +33,8 @@ export function OrganizationRail() {
       {/* Personal Workspace */}
       <button
         type="button"
-        title="Personal Workspace"
+        title={t('personal.workspace.name')}
+        aria-label={t('personal.workspace.name')}
         aria-current={personalActive ? 'true' : undefined}
         className={cn(
           'h-9 w-9 rounded-xl flex items-center justify-center transition-colors duration-150 shrink-0',
@@ -81,8 +84,8 @@ export function OrganizationRail() {
         {/* Crear / unirse */}
         <button
           type="button"
-          title="Create or join organization"
-          aria-label="Create or join organization"
+          title={t('org.add')}
+          aria-label={t('org.add')}
           className="h-9 w-9 rounded-xl border border-dashed border-border-strong text-text-muted hover:text-accent hover:border-accent hover:bg-accent-soft flex items-center justify-center transition-colors duration-150 shrink-0"
           onClick={() => setModalOpen(true)}
         >
@@ -91,6 +94,6 @@ export function OrganizationRail() {
       </div>
 
       <OrganizationModal open={modalOpen} onClose={() => setModalOpen(false)} />
-    </div>
+    </nav>
   );
 }

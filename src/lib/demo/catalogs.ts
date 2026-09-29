@@ -2,9 +2,9 @@ import type { CategoryModel } from '@/lib/models';
 import { PERSONAL_WS_ID, SHARK_WS_ID } from '@/lib/demo/store';
 
 
-/** Catálogo del workspace Personal: Home, Profile, Billing, Preferences. */
-function personalCatalog(): CategoryModel[] {
-  return [
+/** Catálogo del workspace Personal. Platform administration remains a global route. */
+function personalCatalog(includePlatformAdministration = false): CategoryModel[] {
+  const categories: CategoryModel[] = [
     {
       id: 'home',
       workspaceId: PERSONAL_WS_ID,
@@ -28,19 +28,6 @@ function personalCatalog(): CategoryModel[] {
         { id: 'account', categoryId: 'profile', name: 'Account', icon: 'settings', group: 'Personal', route: '/profile/account', order: 1 },
         { id: 'contact', categoryId: 'profile', name: 'Contact information', icon: 'note', group: 'Personal', route: '/profile/contact', order: 2 },
         { id: 'security', categoryId: 'profile', name: 'Security', icon: 'shield', group: 'Security', route: '/profile/security', order: 3 },
-        { id: 'sessions', categoryId: 'profile', name: 'Sessions', icon: 'pulse', group: 'Security', route: '/profile/sessions', order: 4 },
-        { id: 'connected-accounts', categoryId: 'profile', name: 'Connected accounts', icon: 'key', group: 'Security', route: '/profile/connected-accounts', order: 5 },
-      ],
-    },
-    {
-      id: 'billing',
-      workspaceId: PERSONAL_WS_ID,
-      name: 'Billing',
-      icon: 'chart',
-      order: 2,
-      subcategories: [
-        { id: 'plans', categoryId: 'billing', name: 'Plans', icon: 'chart', group: 'Billing', route: '/billing/plans', order: 0 },
-        { id: 'invoices', categoryId: 'billing', name: 'Invoices', icon: 'scroll', group: 'Billing', route: '/billing/invoices', order: 1 },
       ],
     },
    {
@@ -50,16 +37,24 @@ function personalCatalog(): CategoryModel[] {
       icon: 'settings',
       order: 3,
       subcategories: [
-        { id: 'general', categoryId: 'settings', name: 'General', icon: 'settings', group: 'General', route: '/settings/general', order: 0 },
-        { id: 'appearance', categoryId: 'settings', name: 'Appearance', icon: 'palette', group: 'General', route: '/settings/appearance', order: 1 },
-        { id: 'language-region', categoryId: 'settings', name: 'Language & Region', icon: 'languages', group: 'General', route: '/settings/language-region', order: 2 },
-        { id: 'notifications', categoryId: 'settings', name: 'Notifications', icon: 'bell', group: 'Preferences', route: '/settings/notifications', order: 3 },
-        { id: 'accessibility', categoryId: 'settings', name: 'Accessibility', icon: 'accessibility', group: 'Preferences', route: '/settings/accessibility', order: 4 },
-        { id: 'privacy', categoryId: 'settings', name: 'Privacy', icon: 'shield-check', group: 'Preferences', route: '/settings/privacy', order: 5 },
-        { id: 'advanced', categoryId: 'settings', name: 'Advanced', icon: 'wrench', group: 'Advanced', route: '/settings/advanced', order: 6 },
+        { id: 'appearance', categoryId: 'settings', name: 'Appearance', icon: 'palette', group: 'Local preferences', route: '/settings/appearance', order: 0 },
+        { id: 'language-region', categoryId: 'settings', name: 'Language & Region', icon: 'languages', group: 'Local preferences', route: '/settings/language-region', order: 1 },
       ],
     },
   ];
+
+  if (includePlatformAdministration) {
+    categories.splice(2, 0, {
+      id: 'platform-administration',
+      workspaceId: PERSONAL_WS_ID,
+      name: 'Administration',
+      icon: 'shield-check',
+      order: 2,
+      subcategories: [],
+    });
+  }
+
+  return categories;
 }
 
 /** Catálogo del workspace SHARK: Home + Master House con 7 subcategorías. */
@@ -183,9 +178,12 @@ function customCatalog(workspaceId: string): CategoryModel[] {
 }
 
 /** Router: decide qué catálogo servir según el workspaceId. */
-export function demoCatalogFor(workspaceId: string | null): CategoryModel[] | null {
+export function demoCatalogFor(
+  workspaceId: string | null,
+  options?: { includePlatformAdministration?: boolean }
+): CategoryModel[] | null {
   if (!workspaceId) return null;
-  if (workspaceId === PERSONAL_WS_ID) return personalCatalog();
+  if (workspaceId === PERSONAL_WS_ID) return personalCatalog(options?.includePlatformAdministration);
   if (workspaceId === SHARK_WS_ID) return sharkCatalog();
   if (workspaceId.startsWith('ws-')) return customCatalog(workspaceId);
   return null;

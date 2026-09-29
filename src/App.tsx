@@ -37,6 +37,7 @@ import {
   logout as authLogout,
   type IdentityConfig,
   type SessionUser,
+  SESSION_USER_UPDATED_EVENT,
 } from '@/lib/auth';
 import { isTauri } from '@/lib/tauri';
 import { acceptInvitation, resolvePublicOrganization, resolvePublishedPanel, type PublicOrganization } from '@/lib/organizations';
@@ -136,12 +137,10 @@ function CatalogSync({ children }: { children: ReactNode }) {
 
 function WorkspaceGate({
   organizationId,
-  role,
   user,
   route,
 }: {
   organizationId: string;
-  role: string;
   user: SessionUser;
   route: NorthRoute;
 }) {
@@ -149,11 +148,9 @@ function WorkspaceGate({
   const activeWorkspaceId = activeWorkspace?.id ?? null;
 
   return (
-    <CatalogProvider workspaceId={activeWorkspaceId} organizationId={organizationId}>
+    <CatalogProvider workspaceId={activeWorkspaceId} organizationId={organizationId} platformRole={user.role}>
       <PermissionProvider
         organizationId={organizationId}
-        workspaceId={activeWorkspaceId ?? undefined}
-        role={role}
       >
         <TabsProvider>
           <LayoutProvider>
@@ -212,7 +209,6 @@ function AppShell({
     >
       <WorkspaceGate
         organizationId={activeOrganization.id}
-        role={user.role}
         user={user}
         route={route}
       />
@@ -269,6 +265,12 @@ function AppInner() {
         }
       })
       .finally(() => setCheckingSession(false));
+  }, []);
+
+  useEffect(() => {
+    const updateUser = (event: Event) => setUser((event as CustomEvent<SessionUser>).detail);
+    window.addEventListener(SESSION_USER_UPDATED_EVENT, updateUser);
+    return () => window.removeEventListener(SESSION_USER_UPDATED_EVENT, updateUser);
   }, []);
 
   useEffect(() => {

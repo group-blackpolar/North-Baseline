@@ -66,7 +66,7 @@ export function ViewsEditorCanvas() {
 
   if (!selection.panelId || !activePanel) {
     return (
-      <main className="flex-1 flex flex-col items-center justify-center p-8 bg-background/50 text-center">
+      <main className="min-w-0 flex-1 flex flex-col items-center justify-center p-5 bg-background/50 text-center">
         <div className="max-w-sm space-y-2">
           <p className="text-sm font-medium text-text">{t('views.selectView')}</p>
           <p className="text-xs text-text-muted">{t('views.description')}</p>
@@ -76,7 +76,7 @@ export function ViewsEditorCanvas() {
   }
 
   return (
-    <main className="flex-1 flex flex-col h-full bg-background overflow-hidden">
+    <main className="min-w-0 flex-1 flex flex-col h-full bg-background overflow-hidden">
       <ViewsEditorToolbar />
       <ViewsCanvasBody loading={loading} error={error} />
     </main>

@@ -25,13 +25,13 @@ export function ViewsInspectorPane() {
   const hasComponent = Boolean(section && selection.componentId);
 
   return (
-    <aside className="w-80 shrink-0 border-l border-border bg-surface flex flex-col h-full select-none">
-      <div className="flex items-center gap-2 p-3.5 border-b border-border">
+    <aside className="w-80 max-[1599px]:w-72 max-[1399px]:w-48 shrink-0 border-l border-border bg-surface flex flex-col h-full select-none">
+      <div className="flex items-center gap-2 p-3 border-b border-border">
         <Sliders className="w-4 h-4 text-accent" />
         <span className="text-xs font-semibold text-text uppercase tracking-wider">{t('views.inspector.title')}</span>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {!activePanel && (
           <div className="text-center py-12 text-xs text-text-muted">
             {t('views.inspector.noSelection')}

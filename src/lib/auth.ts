@@ -40,6 +40,8 @@ export interface OnboardingResult {
   user: SessionUser
 }
 
+export const SESSION_USER_UPDATED_EVENT = 'north:session-user-updated'
+
 let memorySession: { token: string; user: SessionUser } | null = null
 let memoryOnboarding: PendingOnboarding | null = null
 let desktopOAuth: { nonce: string; verifier: string } | null = null
@@ -79,6 +81,11 @@ async function responseError(res: Response, fallback: string) {
 
 function clearMemorySession() {
   memorySession = null
+}
+
+function publishUserUpdate(user: SessionUser) {
+  if (memorySession) memorySession.user = user
+  window.dispatchEvent(new CustomEvent<SessionUser>(SESSION_USER_UPDATED_EVENT, { detail: user }))
 }
 
 /** Headers de autenticación: Bearer cuando existe sesión por token. Útil para fetch externos. */
@@ -264,6 +271,27 @@ export async function getSession(): Promise<SessionUser | null> {
   } catch {
     return null
   }
+}
+
+export async function getOwnProfile(): Promise<SessionUser> {
+  const response = await authorizedFetch('/v1/me')
+  if (!response.ok) throw new Error(await responseError(response, 'No fue posible cargar tu perfil'))
+  const profile = parseUser(await response.json())
+  publishUserUpdate(profile)
+  return profile
+}
+
+export async function updateOwnProfile(user: SessionUser, input: { name: string }): Promise<SessionUser> {
+  const name = input.name.trim()
+  if (name.length < 2) throw new Error('El nombre debe tener al menos 2 caracteres')
+  const response = await authorizedFetch(`/v1/users/${user.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ name }),
+  })
+  if (!response.ok) throw new Error(await responseError(response, 'No fue posible actualizar tu perfil'))
+  const updated = parseUser(await response.json())
+  publishUserUpdate(updated)
+  return updated
 }
 
 export async function logout(): Promise<void> {
