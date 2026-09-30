@@ -576,6 +576,12 @@ const es = {
   'pa.templates.title': 'Catálogo global de plantillas',
   'pa.templates.emptyTitle': 'Sin plantillas',
   'pa.templates.emptyBody': 'No hay plantillas globales publicadas en el catálogo.',
+  'analytics.loading': 'Cargando datos…',
+  'analytics.error': 'No fue posible cargar estos datos.',
+  'analytics.empty': 'No hay datos disponibles para esta vista.',
+  'analytics.noNumericValues': 'No hay valores numéricos para este gráfico.',
+  'analytics.filters': 'Filtros',
+  'analytics.all': 'Todos',
 } as const;
 
 export type Dictionary = { [K in keyof typeof es]: string };
