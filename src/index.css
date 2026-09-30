@@ -198,6 +198,15 @@
   }
 }
 
+/* Preserve readable touch targets on compact/tablet viewports. */
+@media (max-width: 1023px) {
+  :root {
+    --north-ui-density: 1;
+    --north-ui-density-compensated-width: 100vw;
+    --north-ui-density-compensated-height: 100vh;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
