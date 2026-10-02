@@ -94,8 +94,9 @@ function storedTableResult(props: Record<string, unknown>, locales: string[]): {
   return { columns, result: rows.length ? { state: 'ready', data: { columns, rows } } : { state: 'empty' } };
 }
 
-function datasetBinding(bindings: Record<string, PublishedPanelBinding>): PublishedPanelBinding | null {
-  return Object.keys(bindings).sort().map((key) => bindings[key]).find((binding) => binding?.sourceType === 'dataset') ?? null;
+function datasetBinding(bindings?: Record<string, PublishedPanelBinding>): PublishedPanelBinding | null {
+  const available = bindings ?? {};
+  return Object.keys(available).sort().map((key) => available[key]).find((binding) => binding?.sourceType === 'dataset') ?? null;
 }
 
 function localizedLabel(props: Record<string, unknown>, locales: string[], fallback: string): string {
@@ -123,8 +124,10 @@ function PublishedAnalyticsContent({
   // A malformed or future binding type does not fall back to a client query.
   if (!binding) return null;
   if (component.type === 'metric' || component.type === 'card') {
-    const field = response?.columns.find((column) => ['INTEGER', 'DECIMAL'].includes(column.type))?.key
-      ?? response?.columns[0]?.key;
+    const numericColumns = response?.columns.filter((column) => ['INTEGER', 'DECIMAL'].includes(column.type)) ?? [];
+    const field = numericColumns.length === 1
+      ? numericColumns[0]?.key
+      : response?.columns.length === 1 ? response.columns[0]?.key : undefined;
     if (field) return <AnalyticsKpi result={result} field={field} label={localizedLabel(component.props, locales, field)} />;
   }
 
