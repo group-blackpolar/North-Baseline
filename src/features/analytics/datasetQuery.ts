@@ -16,42 +16,41 @@ export type DatasetQueryRow = Record<string, DatasetQueryValue>;
 export type DatasetQueryColumn = {
   key: string;
   fieldId?: string;
-  label?: string;
   type: string;
 };
 
 export type DatasetQueryFilter = {
-  field: string;
-  operator: 'EQ' | 'NEQ' | 'IN' | 'NOT_IN' | 'GT' | 'GTE' | 'LT' | 'LTE' | 'IS_NULL' | 'IS_NOT_NULL';
-  value?: DatasetQueryValue | DatasetQueryValue[];
+  fieldId: string;
+  operator: 'EQ' | 'NE' | 'GT' | 'GTE' | 'LT' | 'LTE' | 'CONTAINS';
+  value: DatasetQueryValue;
 };
 
 export type DatasetQueryOrder = {
-  field: string;
+  fieldId: string;
   direction: 'ASC' | 'DESC';
 };
 
 export type DatasetAggregateMeasure = {
-  key: string;
+  alias: string;
   fieldId?: string;
-  aggregation: 'COUNT' | 'COUNT_DISTINCT' | 'SUM' | 'AVG' | 'MIN' | 'MAX';
+  operation: 'COUNT' | 'COUNT_DISTINCT' | 'SUM' | 'AVG' | 'MIN' | 'MAX';
 };
 
 type DatasetQueryBase = {
   filters?: DatasetQueryFilter[];
-  order?: DatasetQueryOrder[];
   limit?: number;
 };
 
 export type DatasetRowsQuery = DatasetQueryBase & {
-  kind: 'ROWS';
+  mode: 'ROWS';
   fields: string[];
-  cursor?: string;
+  orderBy?: DatasetQueryOrder[];
+  offset?: number;
 };
 
 export type DatasetAggregateQuery = DatasetQueryBase & {
-  kind: 'AGGREGATE';
-  dimensions: string[];
+  mode: 'AGGREGATE';
+  groupBy?: string[];
   measures: DatasetAggregateMeasure[];
 };
 
@@ -62,17 +61,17 @@ type DatasetQueryResponseBase = {
   activeRevisionId: string;
   schemaVersionId: string;
   columns: DatasetQueryColumn[];
-  rows: Record<string, unknown>[];
+  rows: DatasetQueryRow[];
+  rowCount: number;
   executedAt: string;
 };
 
 export type DatasetRowsQueryResponse = DatasetQueryResponseBase & {
-  kind: 'ROWS';
-  nextCursor?: string;
+  mode: 'ROWS';
 };
 
 export type DatasetAggregateQueryResponse = DatasetQueryResponseBase & {
-  kind: 'AGGREGATE';
+  mode: 'AGGREGATE';
 };
 
 export type DatasetQueryResponse = DatasetRowsQueryResponse | DatasetAggregateQueryResponse;

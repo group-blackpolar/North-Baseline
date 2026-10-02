@@ -12,7 +12,7 @@ function isNumeric(column: DatasetQueryColumn): boolean {
 function toAnalyticsColumn(column: DatasetQueryColumn): AnalyticsColumn {
   return {
     key: column.key,
-    label: column.label ?? column.key,
+    label: column.key,
     align: isNumeric(column) ? 'right' : 'left',
   };
 }
@@ -44,7 +44,7 @@ export function datasetQueryToAnalyticsSeries(
   const selected = keys ? new Set(keys) : undefined;
   return response.columns
     .filter((column) => isNumeric(column) && (!selected || selected.has(column.key)))
-    .map((column) => ({ key: column.key, label: column.label ?? column.key }));
+    .map((column) => ({ key: column.key, label: column.key }));
 }
 
 /** First categorical response column, useful only as a presentation default. */
