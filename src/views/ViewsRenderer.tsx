@@ -6,9 +6,10 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { SharkView } from '@/features/shark/SharkView';
 import { ViewsAdminView } from '@/features/views/ViewsAdminView';
 import { PersonalView } from '@/features/personal/PersonalView';
-import { AnalyticsDataGrid, AnalyticsKpi } from '@/features/analytics/AnalyticsVisuals';
+import { AnalyticsBarChart, AnalyticsDataGrid, AnalyticsDonutChart, AnalyticsKpi, AnalyticsLineAreaChart } from '@/features/analytics/AnalyticsVisuals';
 import type { AnalyticsColumn, AnalyticsResult, AnalyticsValue } from '@/features/analytics/types';
 import { usePanelBindingQuery } from '@/features/analytics/usePanelBindingQuery';
+import { publishedBarChartProps, publishedDonutChartProps, publishedLineChartProps, publishedMetricField } from '@/features/analytics/publishedVisualProps';
 import type { PublishedPanelBinding, PublishedPanelDocument } from '@/lib/organizations';
 import { useCatalog } from '@/context/CatalogContext';
 import { useOrganization } from '@/context/OrganizationContext';
@@ -123,16 +124,27 @@ function PublishedAnalyticsContent({
 
   // A malformed or future binding type does not fall back to a client query.
   if (!binding) return null;
-  if (component.type === 'metric' || component.type === 'card') {
-    const numericColumns = response?.columns.filter((column) => ['INTEGER', 'DECIMAL'].includes(column.type)) ?? [];
-    const field = numericColumns.length === 1
-      ? numericColumns[0]?.key
-      : response?.columns.length === 1 ? response.columns[0]?.key : undefined;
+  // A published document may choose fields only from the response supplied by
+  // its server-owned binding. Invalid/missing visual props deliberately fall
+  // back to the safe data grid; NORTH never guesses fields or runs a query.
+  const availableKeys = new Set(response?.columns.map((column) => column.key) ?? []);
+  if (component.type === 'metric') {
+    const field = publishedMetricField(component.props, availableKeys);
     if (field) return <AnalyticsKpi result={result} field={field} label={localizedLabel(component.props, locales, field)} />;
   }
+  if (component.type === 'bar_chart') {
+    const config = publishedBarChartProps(component.props, availableKeys);
+    if (config) return <AnalyticsBarChart result={result} {...config} />;
+  }
+  if (component.type === 'line_chart') {
+    const config = publishedLineChartProps(component.props, availableKeys);
+    if (config) return <AnalyticsLineAreaChart result={result} {...config} />;
+  }
+  if (component.type === 'donut_chart') {
+    const config = publishedDonutChartProps(component.props, availableKeys);
+    if (config) return <AnalyticsDonutChart result={result} {...config} />;
+  }
 
-  // Tables and all future visual component schemas receive the same typed
-  // result boundary until their presentation-specific props are registered.
   return <AnalyticsDataGrid result={result} />;
 }
 
