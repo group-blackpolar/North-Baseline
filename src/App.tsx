@@ -450,11 +450,29 @@ function TermsAcceptance({
  * CoreCrow returns 404 for both missing and unauthorized resources, so the
  * client deliberately presents the same generic state in both cases. */
 function PublishedRouteIntent({ route }: { route: NorthRoute }) {
-  const { navigate } = useTabs();
+  const { activeTab, navigate } = useTabs();
+  const { categories, isLoading } = useCatalog();
   const [missing, setMissing] = useState(false);
+
+  const knownPanelId = route.kind === 'panel'
+    ? categories
+      .find((category) => category.slug === route.categorySlug)
+      ?.subcategories.find((subcategory) => subcategory.slug === route.subcategorySlug)
+      ?.publishedPanels?.find((panel) => panel.slug === route.panelSlug)?.id
+    : undefined;
+  const alreadyResolved = Boolean(
+    knownPanelId
+    && activeTab?.publishedPanel?.id === knownPanelId,
+  );
 
   useEffect(() => {
     if (route.kind !== 'panel') { setMissing(false); return; }
+    // Catalog navigation resolves and opens the published panel before it
+    // updates the canonical URL. Do not immediately resolve the same route a
+    // second time: a late duplicate failure would otherwise cover valid,
+    // already-authorized content with the generic not-found overlay.
+    if (alreadyResolved) { setMissing(false); return; }
+    if (isLoading) return;
     let live = true;
     setMissing(false);
     void resolvePublishedPanel(route)
@@ -472,7 +490,7 @@ function PublishedRouteIntent({ route }: { route: NorthRoute }) {
       })
       .catch(() => { if (live) setMissing(true); });
     return () => { live = false; };
-  }, [navigate, route]);
+  }, [alreadyResolved, isLoading, navigate, route]);
 
   if (!missing) return null;
   return <div className="fixed inset-0 z-[100] bg-background"><GenericNotFound /></div>;
