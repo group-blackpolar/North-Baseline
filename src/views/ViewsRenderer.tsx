@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Construction } from 'lucide-react';
 import type { SessionUser } from '@/lib/auth';
 import type { Tab } from '@/context/TabsContext';
@@ -6,13 +6,16 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { SharkView } from '@/features/shark/SharkView';
 import { ViewsAdminView } from '@/features/views/ViewsAdminView';
 import { PersonalView } from '@/features/personal/PersonalView';
-import { AnalyticsBarChart, AnalyticsDataGrid, AnalyticsDonutChart, AnalyticsKpi, AnalyticsLineAreaChart } from '@/features/analytics/AnalyticsVisuals';
-import type { AnalyticsColumn, AnalyticsResult, AnalyticsValue } from '@/features/analytics/types';
+import { AnalyticsBarChart, AnalyticsDataGrid, AnalyticsDonutChart, AnalyticsFilterControls, AnalyticsKpi, AnalyticsLineAreaChart } from '@/features/analytics/AnalyticsVisuals';
+import type { AnalyticsColumn, AnalyticsFilter, AnalyticsResult, AnalyticsValue } from '@/features/analytics/types';
+import type { DatasetQueryFilter } from '@/features/analytics/datasetQuery';
+import type { PanelBindingFilterDefinition } from '@/features/analytics/panelBindingQuery';
 import { usePanelBindingQuery } from '@/features/analytics/usePanelBindingQuery';
 import { publishedBarChartProps, publishedDonutChartProps, publishedLineChartProps, publishedMetricField } from '@/features/analytics/publishedVisualProps';
 import type { PublishedPanelBinding, PublishedPanelDocument } from '@/lib/organizations';
 import { useCatalog } from '@/context/CatalogContext';
 import { useOrganization } from '@/context/OrganizationContext';
+import { useI18n } from '@/lib/i18n';
 
 const PERSONAL_CATEGORIES = new Set(['home', 'profile', 'billing', 'preferences', 'settings']);
 const SHARK_CATEGORIES = new Set(['shark-home', 'master-house']);
@@ -132,14 +135,21 @@ function PublishedAnalyticsContent({
   organizationId,
   panelId,
   locales,
+  filters,
+  onFilterDefinitions,
 }: {
   component: PublishedPanelDocument['sections'][number]['components'][number];
   organizationId: string | null | undefined;
   panelId: string;
   locales: string[];
+  filters: DatasetQueryFilter[];
+  onFilterDefinitions: (bindingId: string, definitions: PanelBindingFilterDefinition[]) => void;
 }) {
   const binding = datasetBinding(component.bindings);
-  const { result, response } = usePanelBindingQuery(organizationId, panelId, binding?.sourceId);
+  const { result, response } = usePanelBindingQuery(organizationId, panelId, binding?.sourceId, filters);
+  useEffect(() => {
+    if (binding && response) onFilterDefinitions(binding.sourceId, response.filterDefinitions);
+  }, [binding, onFilterDefinitions, response]);
 
   // A malformed or future binding type does not fall back to a client query.
   if (!binding) return null;
@@ -191,12 +201,51 @@ function SafeComponent({ type, props, locales }: { type: string; props: Record<s
   return null;
 }
 
+const FILTER_OPERATOR_LABEL: Record<DatasetQueryFilter['operator'], string> = { EQ: '=', NE: '≠', GT: '>', GTE: '≥', LT: '<', LTE: '≤', CONTAINS: '∋' };
+
 function PublishedPanel({ title, document, locales, organizationId, panelId }: { title: string; document: PublishedPanelDocument | null; locales: string[]; organizationId: string | null | undefined; panelId: string }) {
   const breakpoint = usePublishedBreakpoint();
+  const { t } = useI18n();
+  const [definitionsByBinding, setDefinitionsByBinding] = useState<Record<string, PanelBindingFilterDefinition[]>>({});
+  const [draftValues, setDraftValues] = useState<Record<string, string>>({});
+  const [filtersByBinding, setFiltersByBinding] = useState<Record<string, DatasetQueryFilter[]>>({});
+  useEffect(() => {
+    setDefinitionsByBinding({});
+    setDraftValues({});
+    setFiltersByBinding({});
+  }, [panelId]);
+  const registerFilterDefinitions = useCallback((bindingId: string, definitions: PanelBindingFilterDefinition[]) => {
+    setDefinitionsByBinding((current) => JSON.stringify(current[bindingId] ?? []) === JSON.stringify(definitions) ? current : { ...current, [bindingId]: definitions });
+  }, []);
+  const filterDefinitions = useMemo(() => {
+    const unique = new Map<string, { definition: PanelBindingFilterDefinition; operator: DatasetQueryFilter['operator'] }>();
+    for (const definitions of Object.values(definitionsByBinding)) for (const definition of definitions) {
+      for (const operator of definition.operators) unique.set(`${definition.fieldId}:${operator}`, { definition, operator });
+    }
+    return [...unique.entries()];
+  }, [definitionsByBinding]);
+  const filterControls = useMemo<AnalyticsFilter[]>(() => filterDefinitions.map(([id, { definition, operator }]) => {
+    const type = definition.type === 'DATE' ? 'date' : definition.type === 'BOOLEAN' ? 'select' : 'text';
+    return {
+      id,
+      label: `${localized(definition.displayName, locales) || definition.key} ${FILTER_OPERATOR_LABEL[operator]}`,
+      type,
+      value: draftValues[id] ?? '',
+      ...(definition.type === 'BOOLEAN' ? { options: [{ value: 'true', label: t('analytics.true') }, { value: 'false', label: t('analytics.false') }] } : {}),
+    };
+  }), [draftValues, filterDefinitions, locales, t]);
+  const applyFilters = () => {
+    setFiltersByBinding(Object.fromEntries(Object.entries(definitionsByBinding).map(([bindingId, definitions]) => [bindingId, definitions.flatMap((definition) => definition.operators.flatMap((operator): DatasetQueryFilter[] => {
+        const value = draftValues[`${definition.fieldId}:${operator}`];
+        if (value === undefined || value === '') return [];
+        return [{ fieldId: definition.fieldId, operator, value: definition.type === 'BOOLEAN' ? value === 'true' : value }];
+      }))])));
+  };
+  const clearFilters = () => { setDraftValues({}); setFiltersByBinding({}); };
   if (!document) return <div className="p-6 text-sm text-text-muted">Este panel publicado no tiene contenido disponible.</div>;
-  return <article className="mx-auto max-w-6xl space-y-6 p-6"><h1 className="font-display text-2xl font-semibold">{title}</h1>{document.sections.slice().sort((a, b) => a.order - b.order).map((section) => <section key={section.id} className={`grid grid-cols-12 auto-rows-[minmax(2rem,auto)] ${GAP[section.layout.gap]}`}>{section.components.slice().sort((a, b) => a.order - b.order).map((component) => {
+  return <article className="mx-auto max-w-6xl space-y-6 p-6"><h1 className="font-display text-2xl font-semibold">{title}</h1>{filterControls.length ? <div className="space-y-2"><AnalyticsFilterControls filters={filterControls} onChange={(id, value) => setDraftValues((current) => ({ ...current, [id]: Array.isArray(value) ? value[0] ?? '' : value }))} /><div className="flex justify-end gap-2"><button type="button" onClick={clearFilters} className="h-8 rounded-md border border-border px-3 text-xs text-text-secondary hover:bg-surface-hover">{t('analytics.clearFilters')}</button><button type="button" onClick={applyFilters} className="h-8 rounded-md bg-accent px-3 text-xs font-medium text-white hover:opacity-90">{t('analytics.applyFilters')}</button></div></div> : null}{document.sections.slice().sort((a, b) => a.order - b.order).map((section) => <section key={section.id} className={`grid grid-cols-12 auto-rows-[minmax(2rem,auto)] ${GAP[section.layout.gap]}`}>{section.components.slice().sort((a, b) => a.order - b.order).map((component) => {
     const content = datasetBinding(component.bindings)
-      ? <PublishedAnalyticsContent component={component} organizationId={organizationId} panelId={panelId} locales={locales} />
+      ? <PublishedAnalyticsContent component={component} organizationId={organizationId} panelId={panelId} locales={locales} filters={filtersByBinding[datasetBinding(component.bindings)!.sourceId] ?? []} onFilterDefinitions={registerFilterDefinitions} />
       : SafeComponent({ type: component.type, props: component.props, locales });
     return content === null ? null : <PublishedGridItem key={component.id} component={component} breakpoint={breakpoint}>{content}</PublishedGridItem>;
   })}</section>)}</article>;

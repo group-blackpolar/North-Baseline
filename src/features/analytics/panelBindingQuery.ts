@@ -1,7 +1,18 @@
 import { apiRequest } from '@/lib/api';
 import type { DatasetQueryFilter, DatasetQueryResponse } from './datasetQuery';
 
-export type PanelBindingQueryResult = DatasetQueryResponse & { bindingId: string };
+export type PanelBindingFilterDefinition = {
+  fieldId: string;
+  key: string;
+  displayName: Record<string, string>;
+  type: 'TEXT' | 'INTEGER' | 'DECIMAL' | 'BOOLEAN' | 'DATE' | 'DATETIME' | 'TIME';
+  operators: DatasetQueryFilter['operator'][];
+};
+
+export type PanelBindingQueryResult = DatasetQueryResponse & {
+  bindingId: string;
+  filterDefinitions: PanelBindingFilterDefinition[];
+};
 
 function pathSegment(value: string): string {
   return encodeURIComponent(value);

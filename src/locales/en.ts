@@ -584,6 +584,10 @@ const en: Dictionary = {
   'analytics.noNumericValues': 'There are no numeric values for this chart.',
   'analytics.filters': 'Filters',
   'analytics.all': 'All',
+  'analytics.applyFilters': 'Apply filters',
+  'analytics.clearFilters': 'Clear',
+  'analytics.true': 'Yes',
+  'analytics.false': 'No',
 };
 
 export default en;

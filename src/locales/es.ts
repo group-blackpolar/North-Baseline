@@ -582,6 +582,10 @@ const es = {
   'analytics.noNumericValues': 'No hay valores numéricos para este gráfico.',
   'analytics.filters': 'Filtros',
   'analytics.all': 'Todos',
+  'analytics.applyFilters': 'Aplicar filtros',
+  'analytics.clearFilters': 'Limpiar',
+  'analytics.true': 'Sí',
+  'analytics.false': 'No',
 } as const;
 
 export type Dictionary = { [K in keyof typeof es]: string };
