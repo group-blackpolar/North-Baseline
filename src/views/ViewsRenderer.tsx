@@ -104,6 +104,11 @@ function localizedLabel(props: Record<string, unknown>, locales: string[], fallb
   return localized(props.label, locales) || fallback;
 }
 
+function withChartTitle(props: Record<string, unknown>, locales: string[], chart: ReactNode): ReactNode {
+  const title = localized(props.title, locales);
+  return <div className="space-y-2">{title ? <h3 className="text-sm font-medium text-text">{title}</h3> : null}{chart}</div>;
+}
+
 /**
  * The panel document carries a canonical binding reference, never raw data or
  * a query. CORECROW owns the query and filter authorization for this request.
@@ -133,16 +138,16 @@ function PublishedAnalyticsContent({
     if (field) return <AnalyticsKpi result={result} field={field} label={localizedLabel(component.props, locales, field)} />;
   }
   if (component.type === 'bar_chart') {
-    const config = publishedBarChartProps(component.props, availableKeys);
-    if (config) return <AnalyticsBarChart result={result} {...config} />;
+    const config = publishedBarChartProps(component.props, availableKeys, locales);
+    if (config) return withChartTitle(component.props, locales, <AnalyticsBarChart result={result} {...config} />);
   }
   if (component.type === 'line_chart') {
-    const config = publishedLineChartProps(component.props, availableKeys);
-    if (config) return <AnalyticsLineAreaChart result={result} {...config} />;
+    const config = publishedLineChartProps(component.props, availableKeys, locales);
+    if (config) return withChartTitle(component.props, locales, <AnalyticsLineAreaChart result={result} {...config} />);
   }
   if (component.type === 'donut_chart') {
     const config = publishedDonutChartProps(component.props, availableKeys);
-    if (config) return <AnalyticsDonutChart result={result} {...config} />;
+    if (config) return withChartTitle(component.props, locales, <AnalyticsDonutChart result={result} {...config} />);
   }
 
   return <AnalyticsDataGrid result={result} />;
