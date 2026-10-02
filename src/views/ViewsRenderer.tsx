@@ -109,6 +109,20 @@ function withChartTitle(props: Record<string, unknown>, locales: string[], chart
   return <div className="space-y-2">{title ? <h3 className="text-sm font-medium text-text">{title}</h3> : null}{chart}</div>;
 }
 
+const KPI_VARIANTS = new Set(['default', 'primary', 'secondary', 'muted', 'success', 'warning', 'danger']);
+function metricPresentation(props: Record<string, unknown>, locales: string[]) {
+  const variant = typeof props.variant === 'string' && KPI_VARIANTS.has(props.variant) ? props.variant as 'default' | 'primary' | 'secondary' | 'muted' | 'success' | 'warning' | 'danger' : 'default';
+  const locale = locales[0];
+  const format = (value: AnalyticsValue) => {
+    if (value === null) return '—';
+    if (props.format === 'percent' && typeof value === 'number') return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(value)}%`;
+    if (props.format === 'currency' && typeof value === 'number') return new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+    if ((props.format === 'number' || props.format === 'duration') && typeof value === 'number') return new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(value);
+    return String(value);
+  };
+  return { variant, format };
+}
+
 /**
  * The panel document carries a canonical binding reference, never raw data or
  * a query. CORECROW owns the query and filter authorization for this request.
@@ -135,7 +149,7 @@ function PublishedAnalyticsContent({
   const availableKeys = new Set(response?.columns.map((column) => column.key) ?? []);
   if (component.type === 'metric') {
     const field = publishedMetricField(component.props, availableKeys);
-    if (field) return <AnalyticsKpi result={result} field={field} label={localizedLabel(component.props, locales, field)} />;
+    if (field) return <AnalyticsKpi result={result} field={field} label={localizedLabel(component.props, locales, field)} {...metricPresentation(component.props, locales)} />;
   }
   if (component.type === 'bar_chart') {
     const config = publishedBarChartProps(component.props, availableKeys, locales);

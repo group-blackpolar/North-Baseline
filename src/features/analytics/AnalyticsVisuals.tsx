@@ -49,12 +49,17 @@ function ResultState({ result, children }: { result: AnalyticsResult; children: 
   return <>{children(result.data)}</>;
 }
 
-export function AnalyticsKpi({ result, field, label, format }: { result: AnalyticsResult; field: string; label: string; format?: (value: AnalyticsValue) => string }) {
+const KPI_VARIANT = {
+  default: 'text-text', primary: 'text-accent', secondary: 'text-text-secondary', muted: 'text-text-muted',
+  success: 'text-success', warning: 'text-warning', danger: 'text-error',
+} as const;
+
+export function AnalyticsKpi({ result, field, label, format, variant = 'default' }: { result: AnalyticsResult; field: string; label: string; format?: (value: AnalyticsValue) => string; variant?: keyof typeof KPI_VARIANT }) {
   return (
     <ResultState result={result}>
       {(data) => {
         const value = data.rows[0]?.[field] ?? null;
-        return <div className="space-y-1"><p className="text-xs text-text-secondary">{label}</p><p className="font-display text-2xl font-semibold tracking-tight text-text">{format ? format(value) : display(value)}</p></div>;
+        return <div className="space-y-1"><p className="text-xs text-text-secondary">{label}</p><p className={`font-display text-2xl font-semibold tracking-tight ${KPI_VARIANT[variant]}`}>{format ? format(value) : display(value)}</p></div>;
       }}
     </ResultState>
   );
