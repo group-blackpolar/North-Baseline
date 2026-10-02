@@ -578,6 +578,16 @@ const en: Dictionary = {
   'pa.templates.title': 'Global template catalog',
   'pa.templates.emptyTitle': 'No templates',
   'pa.templates.emptyBody': 'No global templates published in catalog.',
+  'analytics.loading': 'Loading data…',
+  'analytics.error': 'We could not load this data.',
+  'analytics.empty': 'No data is available for this view.',
+  'analytics.noNumericValues': 'There are no numeric values for this chart.',
+  'analytics.filters': 'Filters',
+  'analytics.all': 'All',
+  'analytics.applyFilters': 'Apply filters',
+  'analytics.clearFilters': 'Clear',
+  'analytics.true': 'Yes',
+  'analytics.false': 'No',
 };
 
 export default en;

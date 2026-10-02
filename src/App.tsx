@@ -62,7 +62,7 @@ function savePendingRouteInvitation(value: PendingRouteInvitation | null) {
 
 function ShellSkeleton() {
   return (
-    <div className="h-screen w-screen flex bg-background">
+    <div className="north-app-shell flex bg-background">
       <div className="w-14 border-r border-border bg-surface p-2 space-y-2">
         <Skeleton className="h-9 w-9 rounded-xl" />
         <Skeleton className="h-9 w-9 rounded-xl" />
@@ -83,7 +83,7 @@ function ShellSkeleton() {
 function NoOrganizationState() {
   const { t } = useI18n();
   return (
-    <div className="h-screen w-screen flex items-center justify-center bg-background p-6">
+    <div className="north-app-shell flex items-center justify-center bg-background p-6">
       <EmptyState
         icon={Building2}
         title={t('empty.org.title')}
@@ -157,7 +157,7 @@ function WorkspaceGate({
             <NotificationProvider>
               <CatalogSync>
                 <PublishedRouteIntent route={route} />
-                <div className="h-screen w-screen flex bg-background text-text">
+                <div className="north-app-shell flex bg-background text-text">
                   <OrganizationRail />
                   <CategoryRail />
                   <ContextSidebar user={user} />
@@ -496,7 +496,9 @@ function AuthenticatedRouter({ user, onAuthError, route, pendingInvitation, onIn
 
   // Platform Administration is global: it must render before the organization
   // shell so it never depends on activeOrganization or its remount boundary (§9).
-  if (route.kind === 'platform-admin') return <PlatformAdminView user={user} route={route} />;
+  if (route.kind === 'platform-admin') {
+    return <div className="north-app-shell north-app-shell-host"><PlatformAdminView user={user} route={route} /></div>;
+  }
   if (!isOrganizationRoute) return <AppShell user={user} onAuthError={onAuthError} route={route} />;
   if (missing) return <GenericNotFound />;
   if (isLoading || !publicOrganization) return <ShellSkeleton />;

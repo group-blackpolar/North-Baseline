@@ -42,7 +42,12 @@
   --shadow-soft: 0 1px 2px rgb(16 24 40 / 0.04), 0 1px 3px rgb(16 24 40 / 0.06);
   --shadow-pop: 0 4px 6px -2px rgb(16 24 40 / 0.05), 0 12px 16px -4px rgb(16 24 40 / 0.10);
 
-  /* Shell density — sized for 100% browser zoom. */
+  /* Application density — matches the requested 70% desktop workspace scale. */
+  --north-ui-density: 0.7;
+  --north-ui-density-compensated-width: 142.857143vw;
+  --north-ui-density-compensated-height: 142.857143vh;
+
+  /* Shell dimensions are expressed before the application density is applied. */
   --shell-org-rail: 56px;
   --shell-category-rail: 52px;
   --shell-category-rail-open: 188px;
@@ -126,6 +131,30 @@
 }
 
 @layer components {
+  /*
+   * Keep the authenticated application physically viewport-sized while rendering
+   * its desktop UI at 70%. `zoom` preserves normal layout, pointer hit-testing,
+   * scrolling and resize handles better than transform scaling. The compensated
+   * logical dimensions prevent the reduced shell from leaving unused space.
+   */
+  .north-app-shell {
+    width: var(--north-ui-density-compensated-width);
+    height: var(--north-ui-density-compensated-height);
+    min-width: var(--north-ui-density-compensated-width);
+    min-height: var(--north-ui-density-compensated-height);
+    overflow: hidden;
+    zoom: var(--north-ui-density);
+  }
+
+  /* Platform Administration owns its own viewport-sized root. */
+  .north-app-shell-host > .h-screen {
+    height: var(--north-ui-density-compensated-height);
+  }
+
+  .north-app-shell-host > .w-screen {
+    width: var(--north-ui-density-compensated-width);
+  }
+
   .ui-label {
     font-family: var(--font-sans);
     font-size: 11px;
@@ -166,6 +195,15 @@
   :root {
     --shell-category-rail-open: 176px;
     --shell-context-sidebar: 200px;
+  }
+}
+
+/* Preserve readable touch targets on compact/tablet viewports. */
+@media (max-width: 1023px) {
+  :root {
+    --north-ui-density: 1;
+    --north-ui-density-compensated-width: 100vw;
+    --north-ui-density-compensated-height: 100vh;
   }
 }
 
