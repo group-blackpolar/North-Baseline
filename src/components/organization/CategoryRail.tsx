@@ -6,6 +6,8 @@ import { usePermissions } from '@/context/PermissionContext';
 import { resolveIcon } from '@/lib/iconMap';
 import { pushPath } from '@/lib/routes';
 import { useI18n } from '@/lib/i18n';
+import { useOrganization } from '@/context/OrganizationContext';
+import { navigateToPublishedTarget } from '@/lib/publishedNavigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
@@ -26,6 +28,7 @@ export function CategoryRail() {
   const { t } = useI18n();
   const { categories, isLoading } = useCatalog();
   const { activeTab, navigate } = useTabs();
+  const { activeOrganization } = useOrganization();
   const { can } = usePermissions();
   const [pinned, setPinned] = useState(readPinnedPreference);
   const [temporaryOpen, setTemporaryOpen] = useState(false);
@@ -126,7 +129,14 @@ export function CategoryRail() {
                   pushPath('/workspace/admin/dashboard');
                   return;
                 }
-                navigate(category.id, category.subcategories[0]?.id ?? null);
+                const subcategory = category.subcategories[0];
+                void navigateToPublishedTarget({
+                  organizationSlug: activeOrganization?.slug,
+                  category,
+                  subcategory,
+                  navigate,
+                  history: 'push',
+                }).catch(() => navigate(category.id, subcategory?.id ?? null));
               }}
             >
               <Icon className="size-4 shrink-0" />

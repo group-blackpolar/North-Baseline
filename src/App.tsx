@@ -44,6 +44,7 @@ import { acceptInvitation, resolvePublicOrganization, resolvePublishedPanel, typ
 import { currentNorthRoute, replacePath, type NorthRoute } from '@/lib/routes';
 import { GenericNotFound, OrganizationAccessGate } from '@/components/organization/OrganizationAccessGate';
 import { PlatformAdminView } from '@/features/platform-admin/PlatformAdminView';
+import { navigateToPublishedTarget } from '@/lib/publishedNavigation';
 
 const PENDING_ROUTE_INVITATION_KEY = 'north-pending-route-invitation-v1';
 type PendingRouteInvitation = { token: string; path: string; userId?: string };
@@ -103,18 +104,31 @@ function NoOrganizationState() {
 function CatalogSync({ children }: { children: ReactNode }) {
   const { categories, isLoading } = useCatalog();
   const { activeTab, navigate } = useTabs();
+  const { activeOrganization } = useOrganization();
 
   useEffect(() => {
     // The authoritative organization navigation is not workspace-scoped.
     if (isLoading || categories.length === 0) return;
 
-    // Si no hay tab activa, navegar a la primera categoría
+    let live = true;
+    const openCategory = (category: (typeof categories)[number]) => {
+      const subcategory = category.subcategories[0];
+      void navigateToPublishedTarget({
+        organizationSlug: activeOrganization?.slug,
+        category,
+        subcategory,
+        navigate,
+        history: 'replace',
+      }).catch(() => {
+        if (live) navigate(category.id, subcategory?.id ?? null);
+      });
+    };
+
+    // Si no hay tab activa, navegar al primer panel publicado si existe.
     if (!activeTab) {
       const firstCategory = categories[0];
-      if (firstCategory) {
-        navigate(firstCategory.id, firstCategory.subcategories[0]?.id ?? null);
-      }
-      return;
+      if (firstCategory) openCategory(firstCategory);
+      return () => { live = false; };
     }
 
     // Verificar si la tab actual apunta a una categoría que existe en el catálogo
@@ -122,11 +136,10 @@ function CatalogSync({ children }: { children: ReactNode }) {
     if (!hasCategory) {
       // La tab apunta a una categoría inexistente → re-rutear a la primera categoría
       const firstCategory = categories[0];
-      if (firstCategory) {
-        navigate(firstCategory.id, firstCategory.subcategories[0]?.id ?? null);
-      }
+      if (firstCategory) openCategory(firstCategory);
     }
-  }, [categories, isLoading, activeTab, navigate]);
+    return () => { live = false; };
+  }, [activeOrganization?.slug, categories, isLoading, activeTab, navigate]);
 
   return <>{children}</>;
 }

@@ -8,6 +8,8 @@ export interface SubcategoryModel {
   route: string;
   /** Stable server taxonomy key. Never derive routing or admin behavior from a label. */
   slug?: string;
+  /** Published server navigation targets. Personal/demo catalogs may omit them. */
+  publishedPanels?: Array<{ id: string; name: string; slug: string }>;
   order: number;
 }
 
