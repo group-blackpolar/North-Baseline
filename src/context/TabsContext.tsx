@@ -52,7 +52,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       // Mutar la tab activa
       return prev.map((t) =>
         t.id === current.id
-          ? { ...t, route: { categoryId, subcategoryId: subcategoryId ?? null }, ...(publishedPanel ? { publishedPanel } : {}) }
+          ? { ...t, route: { categoryId, subcategoryId: subcategoryId ?? null }, publishedPanel }
           : t
       );
     });

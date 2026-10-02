@@ -102,6 +102,11 @@ function navigationToCatalog(navigation: NavigationCategory[]): CategoryModel[] 
       icon: subcategory.icon ?? 'FileText',
       route: subcategory.slug,
       slug: subcategory.slug,
+      publishedPanels: subcategory.panels.map((panel) => ({
+        id: panel.id,
+        name: localizedName(panel.name),
+        slug: panel.slug,
+      })),
       order: index,
     })),
   }));
