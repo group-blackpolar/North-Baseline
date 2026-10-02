@@ -52,6 +52,7 @@ export type DatasetAggregateQuery = DatasetQueryBase & {
   mode: 'AGGREGATE';
   groupBy?: string[];
   measures: DatasetAggregateMeasure[];
+  orderBy?: Array<{ key: string; direction: 'ASC' | 'DESC' }>;
 };
 
 export type DatasetQueryRequest = DatasetRowsQuery | DatasetAggregateQuery;
