@@ -38,7 +38,7 @@ export function TabBar() {
             aria-selected={active}
             tabIndex={active ? 0 : -1}
             className={cn(
-              'north-enter group flex items-center gap-1.5 h-7 pl-2.5 pr-1 rounded-lg border text-xs cursor-pointer select-none transition-colors duration-150 shrink-0',
+              'north-enter group flex items-center gap-1.5 h-7 pl-2.5 pr-1 rounded-lg border text-xs cursor-pointer select-none transition-colors duration-(--duration-fast) shrink-0',
               active
                 ? 'bg-surface-active border-border text-text font-medium shadow-soft'
                 : 'border-transparent text-text-secondary hover:bg-surface-hover hover:text-text'
@@ -69,7 +69,7 @@ export function TabBar() {
             <button
               type="button"
               aria-label={t('tabs.close', { title })}
-              className="h-5 w-5 rounded-md flex items-center justify-center text-text-muted hover:bg-surface-hover hover:text-text transition-colors duration-150"
+              className="h-5 w-5 rounded-md flex items-center justify-center text-text-muted hover:bg-surface-hover hover:text-text transition-colors duration-(--duration-fast)"
               onClick={(event) => {
                 event.stopPropagation();
                 closeTab(tab.id);
@@ -85,7 +85,7 @@ export function TabBar() {
         type="button"
         aria-label={t('tabs.new')}
         title={t('tabs.new')}
-        className="h-7 w-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text hover:bg-surface-hover transition-colors duration-150 shrink-0"
+        className="h-7 w-7 rounded-lg flex items-center justify-center text-text-muted hover:text-text hover:bg-surface-hover transition-colors duration-(--duration-fast) shrink-0"
         onClick={openNewTab}
       >
         <Plus className="w-3.5 h-3.5" />

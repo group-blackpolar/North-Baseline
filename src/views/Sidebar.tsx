@@ -66,7 +66,7 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
           aria-label={t('sidebar.expand')}
           title={t('sidebar.expand')}
           onClick={() => setCollapsedPreference(false)}
-          className="h-8 w-8 rounded-lg hover:bg-surface-hover flex items-center justify-center text-text-muted hover:text-text transition-colors duration-150"
+          className="h-8 w-8 rounded-lg hover:bg-surface-hover flex items-center justify-center text-text-muted hover:text-text transition-colors duration-(--duration-fast)"
         >
           <CaretRight className="w-4 h-4" />
         </button>
@@ -83,7 +83,7 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
           aria-label={t('sidebar.collapse')}
           title={t('sidebar.collapse')}
           onClick={() => setCollapsedPreference(true)}
-          className="w-full flex items-center justify-end text-text-muted hover:text-text transition-colors duration-150"
+          className="w-full flex items-center justify-end text-text-muted hover:text-text transition-colors duration-(--duration-fast)"
         >
           <CaretDown className="w-4 h-4" />
         </button>
@@ -92,7 +92,7 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
           <select
             value={activeWorkspace?.id ?? ''}
             onChange={(event) => switchWorkspace(event.target.value)}
-            className="w-full h-8 rounded-md border border-border bg-surface px-2 text-xs font-medium text-text outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 transition-[border-color,box-shadow] duration-150"
+            className="w-full h-8 rounded-md border border-border bg-surface px-2 text-xs font-medium text-text outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 transition-[border-color,box-shadow] duration-(--duration-fast)"
           >
             {workspaces.map((ws) => (
               <option key={ws.id} value={ws.id}>
@@ -109,7 +109,7 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder={t('sidebar.search') || 'Search...'}
-            className="w-full h-8 pl-7 pr-2 rounded-md border border-border bg-surface text-xs text-text placeholder:text-text-muted outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 transition-[border-color,box-shadow] duration-150"
+            className="w-full h-8 pl-7 pr-2 rounded-md border border-border bg-surface text-xs text-text placeholder:text-text-muted outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 transition-[border-color,box-shadow] duration-(--duration-fast)"
           />
         </div>
       </header>
@@ -127,7 +127,7 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
             <div key={group.name} className="space-y-0.5">
               <button
                 type="button"
-                className="w-full flex items-center gap-1.5 px-2 py-1.5 ui-label text-[10px] text-text-muted hover:text-text transition-colors duration-150"
+                className="w-full flex items-center gap-1.5 px-2 py-1.5 ui-label text-[10px] text-text-muted hover:text-text transition-colors duration-(--duration-fast)"
                 onClick={() => toggleGroup(group.name)}
               >
                 {groupCollapsed ? <CaretRight className="w-3 h-3" /> : <CaretDown className="w-3 h-3" />}

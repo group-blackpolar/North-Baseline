@@ -53,7 +53,7 @@ export function NavigationDrawer({ open, onOpenChange, user }: { open: boolean; 
               </button>
             );
           })}
-          <button type="button" className={cn(row, 'text-text-muted hover:text-accent')} onClick={() => setOrgModal(true)}>
+          <button type="button" className={cn(row, 'text-text-muted hover:text-accent')} onClick={() => go(() => setOrgModal(true))}>
             <Icon icon={Plus} size="md" />{t('org.add')}
           </button>
         </nav>

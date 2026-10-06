@@ -46,3 +46,31 @@ export function Dialog({ size = 'md', ...props }: DialogProps) {
     </D.Root>
   );
 }
+
+/**
+ * Bare modal frame for content that renders its own heading/footer (legacy editors, forms).
+ * Same behaviour as `Dialog` (focus trap, scroll lock, Esc, outside click, sheet on phone) without the stock header.
+ */
+export function DialogFrame({ open, onOpenChange, label, size = 'md', children }: { open: boolean; onOpenChange: (open: boolean) => void; label: string; size?: 'sm' | 'md' | 'lg'; children: ReactNode }) {
+  const compact = useIsCompactShell();
+  return (
+    <D.Root open={open} onOpenChange={onOpenChange}>
+      <D.Portal container={portalContainer()}>
+        <D.Overlay className="np-overlay fixed inset-0 z-(--z-modal) bg-black/40 backdrop-blur-[2px]" />
+        <D.Content
+          aria-describedby={undefined}
+          data-side={compact ? 'bottom' : undefined}
+          className={cn(
+            'fixed z-(--z-modal) overflow-y-auto border border-border bg-surface p-5 shadow-overlay outline-none',
+            compact
+              ? 'np-sheet inset-x-0 bottom-0 max-h-[92dvh] rounded-t-2xl border-b-0 pb-[max(1.25rem,env(safe-area-inset-bottom))]'
+              : cn('np-dialog left-1/2 top-1/2 max-h-[85dvh] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl', WIDTH[size]),
+          )}
+        >
+          <D.Title className="sr-only">{label}</D.Title>
+          {children}
+        </D.Content>
+      </D.Portal>
+    </D.Root>
+  );
+}

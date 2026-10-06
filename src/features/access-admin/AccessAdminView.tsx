@@ -238,7 +238,7 @@ function GroupsScreen({ organizationId }: { organizationId: string }) {
           {groups.loading && !groups.data ? <Loading /> : groups.data && groups.data.length === 0 ? <EmptyState icon={Users} title={t('access.groups.empty')} /> : (
             <ul className="space-y-1" role="listbox" aria-label={t('access.nav.groups')}>
               {groups.data?.map((item) => (
-                <li key={item.id}><button type="button" role="option" aria-selected={item.id === group?.id} onClick={() => setSelected(item.id)} className={cn('flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-xs transition-colors duration-150', item.id === group?.id ? 'bg-surface-active text-text' : 'text-text-secondary hover:bg-surface-hover')}>
+                <li key={item.id}><button type="button" role="option" aria-selected={item.id === group?.id} onClick={() => setSelected(item.id)} className={cn('flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-xs transition-colors duration-(--duration-fast)', item.id === group?.id ? 'bg-surface-active text-text' : 'text-text-secondary hover:bg-surface-hover')}>
                   <span className="truncate font-medium">{item.name}</span><span className="text-text-muted">{item.memberUserIds.length}</span></button></li>
               ))}
             </ul>

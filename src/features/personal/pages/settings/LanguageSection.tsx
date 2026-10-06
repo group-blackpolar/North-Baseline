@@ -56,7 +56,7 @@ export function LanguageSection() {
                 type="button"
                 aria-pressed={selected}
                 className={cn(
-                  'np-card p-3 flex items-center gap-3 text-left transition-[border-color,box-shadow] duration-150',
+                  'np-card p-3 flex items-center gap-3 text-left transition-[border-color,box-shadow] duration-(--duration-fast)',
                   selected ? 'border-accent ring-2 ring-accent/25' : 'hover:border-border-strong'
                 )}
                 onClick={() => changeLanguage(language.id)}

@@ -1,3 +1,4 @@
+import { DialogFrame } from '@/components/ui/dialog';
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { ArrowLeft, ChatCircle, DownloadSimple, Envelope, PencilSimple, Trash } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
@@ -15,18 +16,13 @@ import { ErrorNote, StatusBadge, errorText, fieldLabel, formatDate, formatDateTi
 export type DocumentCan = { create: boolean; update: boolean; delete: boolean; download: boolean; send: boolean };
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 p-4 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <div role="dialog" aria-modal="true" aria-label={title} className="north-enter w-full max-w-lg space-y-4 rounded-2xl border border-border bg-surface p-5 shadow-pop">
+    <DialogFrame open onOpenChange={(open) => { if (!open) onClose(); }} label={title}>
+      <div className="space-y-4">
         <h3 className="font-display text-lg font-semibold text-text">{title}</h3>
         {children}
       </div>
-    </div>
+    </DialogFrame>
   );
 }
 

@@ -36,7 +36,7 @@ function SharkHome() {
             <button
               key={card.sub}
               type="button"
-              className="np-card p-4 text-left group hover:bg-surface-hover transition-colors duration-150"
+              className="np-card p-4 text-left group hover:bg-surface-hover transition-colors duration-(--duration-fast)"
               onClick={() => navigate('master-house', card.sub)}
             >
               <div className="flex items-start gap-3">
@@ -46,7 +46,7 @@ function SharkHome() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-text flex items-center gap-1.5">
                     {card.title}
-                    <ArrowUpRight className="w-3.5 h-3.5 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
+                    <ArrowUpRight className="w-3.5 h-3.5 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity duration-(--duration-fast)" />
                   </p>
                   <p className="text-xs text-text-secondary mt-0.5 leading-relaxed">{card.body}</p>
                 </div>

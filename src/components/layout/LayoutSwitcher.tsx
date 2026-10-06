@@ -28,7 +28,7 @@ export function LayoutSwitcher() {
             aria-label={t(m.label as keyof Dictionary)}
             aria-pressed={active}
             className={cn(
-              'h-8 w-8 rounded-lg flex items-center justify-center transition-colors duration-150',
+              'h-8 w-8 rounded-lg flex items-center justify-center transition-colors duration-(--duration-fast)',
               active
                 ? 'bg-surface-active text-text shadow-soft ring-1 ring-border'
                 : 'text-text-muted hover:bg-surface-hover hover:text-text'

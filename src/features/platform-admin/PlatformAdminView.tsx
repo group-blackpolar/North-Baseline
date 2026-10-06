@@ -118,7 +118,7 @@ export function PlatformAdminView({ user, route }: { user: SessionUser; route: N
                   type="button"
                   onClick={() => pushPath(`/workspace/admin/${entry.id}`)}
                   aria-current={active ? 'page' : undefined}
-                  className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors duration-150 ${
+                  className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors duration-(--duration-fast) ${
                     active ? 'bg-surface-active font-medium text-text' : 'text-text-secondary hover:bg-surface-hover'
                   }`}
                 >

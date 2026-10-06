@@ -109,7 +109,7 @@ function SortableGrid({ columns, rows }: { columns: AnalyticsColumn[]; rows: Ana
               const Icon = !active ? CaretUpDown : sort.direction === 'asc' ? ArrowUp : ArrowDown;
               return (
                 <th key={column.key} scope="col" aria-sort={active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'} className={`border-b border-border p-0 font-medium text-text-secondary ${numeric.has(column.key) ? 'text-right' : ''}`}>
-                  <button type="button" onClick={() => toggle(column.key)} className={`flex w-full items-center gap-1 px-3 py-2 hover:bg-surface-hover hover:text-text transition-colors duration-150 ${numeric.has(column.key) ? 'justify-end' : ''}`}>
+                  <button type="button" onClick={() => toggle(column.key)} className={`flex w-full items-center gap-1 px-3 py-2 hover:bg-surface-hover hover:text-text transition-colors duration-(--duration-fast) ${numeric.has(column.key) ? 'justify-end' : ''}`}>
                     {column.label}<Icon className={`size-3 shrink-0 ${active ? 'text-accent' : 'text-text-muted'}`} aria-hidden="true" />
                   </button>
                 </th>

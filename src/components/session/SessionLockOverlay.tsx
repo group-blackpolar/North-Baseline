@@ -17,7 +17,7 @@ export function SessionLockOverlay({ onResume, onLogout }: SessionLockOverlayPro
       role="dialog"
       aria-modal="true"
       aria-labelledby="session-lock-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-md p-4"
+      className="fixed inset-0 z-(--z-modal) flex items-center justify-center bg-background/60 backdrop-blur-md p-4"
     >
       <div className="np-card w-full max-w-sm p-6 space-y-4 text-center">
         <div className="mx-auto size-11 rounded-xl bg-surface-active flex items-center justify-center">

@@ -82,7 +82,7 @@ export function PlatformTable<Row>({
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={getRowKey(row)} className="border-t border-border/60 hover:bg-surface-hover/50 transition-colors duration-150">
+              <tr key={getRowKey(row)} className="border-t border-border/60 hover:bg-surface-hover/50 transition-colors duration-(--duration-fast)">
                 {columns.map((column, index) => (
                   <td
                     key={column.key}

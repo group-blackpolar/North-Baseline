@@ -1,3 +1,4 @@
+import { DialogFrame } from '@/components/ui/dialog';
 import { useState } from 'react';
 import { useViewsEditor } from './ViewsEditorContext';
 import { useI18n } from '@/lib/i18n';
@@ -32,8 +33,8 @@ export function ComponentLibraryModal() {
   const items = componentTypes.filter((type) => (q ? type.includes(q) : true));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="w-full max-w-lg rounded-2xl border border-border bg-surface p-5 shadow-xl">
+    <DialogFrame open onOpenChange={(open) => { if (!open) setModal(null); }} label={t('views.library.title')}>
+      <div>
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-text">{t('views.library.title')}</h2>
           <Button variant="outline" size="sm" onClick={() => setModal(null)}>
@@ -70,6 +71,6 @@ export function ComponentLibraryModal() {
           })}
         </div>
       </div>
-    </div>
+    </DialogFrame>
   );
 }

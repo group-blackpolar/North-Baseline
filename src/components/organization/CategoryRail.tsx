@@ -76,7 +76,7 @@ export function CategoryRail({ children }: { children?: ReactNode }) {
   return (
     <div
       className={cn(
-        'relative z-30 flex h-full shrink-0 transition-[margin] duration-[var(--shell-motion)] ease-out motion-reduce:transition-none',
+        'relative z-(--z-navigation) flex h-full shrink-0 transition-[margin] duration-[var(--shell-motion)] ease-out motion-reduce:transition-none',
         temporaryOpen && !pinned && 'shadow-pop'
       )}
       style={{ marginRight: temporaryOpen && !pinned ? `calc(${growth} * -1)` : 0 }}

@@ -41,7 +41,7 @@ export function FilterSelect({ label, value, options, onChange }: { label: strin
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-8 rounded-md border border-border bg-surface px-2 text-xs font-medium text-text outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 transition-[border-color,box-shadow] duration-150"
+        className="h-8 rounded-md border border-border bg-surface px-2 text-xs font-medium text-text outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 transition-[border-color,box-shadow] duration-(--duration-fast)"
       >
         {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
@@ -58,7 +58,7 @@ export function SimpleTable({ columns, rows }: { columns: string[]; rows: Array<
         </thead>
         <tbody>
           {rows.map((row, index) => (
-            <tr key={index} className="border-t border-border/60 hover:bg-surface-hover/50 transition-colors duration-150">
+            <tr key={index} className="border-t border-border/60 hover:bg-surface-hover/50 transition-colors duration-(--duration-fast)">
               {row.map((cell, cellIndex) => (
                 <td key={cellIndex} className={cn('px-3 py-2 whitespace-nowrap', cellIndex === 0 ? 'text-text font-medium' : 'mono-data text-text-secondary')}>{cell}</td>
               ))}

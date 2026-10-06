@@ -102,7 +102,7 @@ export function ShowcaseView({ route }: { route: ShowcaseRoute }) {
                     return (
                       <button key={subcategory.id} type="button" aria-current={active ? 'page' : undefined}
                         onClick={() => pushPath(pathFor(slug, category.slug, subcategory.slug, subcategory.panels[0].slug))}
-                        className={cn('w-full truncate rounded-md px-2.5 py-1.5 text-left text-[13px] transition-colors duration-150', active ? 'bg-surface-active font-medium text-text' : 'text-text-secondary hover:bg-surface-hover hover:text-text')}>
+                        className={cn('w-full truncate rounded-md px-2.5 py-1.5 text-left text-[13px] transition-colors duration-(--duration-fast)', active ? 'bg-surface-active font-medium text-text' : 'text-text-secondary hover:bg-surface-hover hover:text-text')}>
                         {label(subcategory.name, locale)}
                       </button>
                     );

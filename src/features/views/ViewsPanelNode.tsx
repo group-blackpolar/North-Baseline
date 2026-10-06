@@ -28,7 +28,7 @@ export function ViewsPanelNode({
   return (
     <div
       onClick={() => selectPanel(catId, subId, panel.id)}
-      className={`group flex items-center justify-between px-2 py-1.5 rounded-md text-xs cursor-pointer transition-colors duration-150 ${
+      className={`group flex items-center justify-between px-2 py-1.5 rounded-md text-xs cursor-pointer transition-colors duration-(--duration-fast) ${
         isPanelSelected ? 'bg-accent/10 text-accent font-medium' : 'text-text-secondary hover:bg-surface-hover hover:text-text'
       }`}
     >

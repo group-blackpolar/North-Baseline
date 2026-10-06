@@ -67,11 +67,11 @@ function savePendingRouteInvitation(value: PendingRouteInvitation | null) {
 function ShellSkeleton() {
   return (
     <div className="north-app-shell flex bg-background">
-      <div className="w-14 border-r border-border bg-surface p-2 space-y-2">
+      <div className="hidden md:block w-14 border-r border-border bg-surface p-2 space-y-2">
         <Skeleton className="h-9 w-9 rounded-xl" />
         <Skeleton className="h-9 w-9 rounded-xl" />
       </div>
-      <div className="w-64 border-r border-border bg-surface p-3 space-y-3">
+      <div className="hidden md:block w-64 border-r border-border bg-surface p-3 space-y-3">
         <Skeleton className="h-8 w-full" />
         <Skeleton className="h-8 w-full" />
         <Skeleton className="h-8 w-2/3" />
@@ -334,8 +334,9 @@ function AppInner() {
 
   if (checkingSession) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background text-text-muted font-display text-xs">
-        {t('app.checkingSession')}
+      <div className="fixed inset-0" role="status" aria-busy="true">
+        <span className="sr-only">{t('app.checkingSession')}</span>
+        <ShellSkeleton />
       </div>
     );
   }
@@ -453,7 +454,7 @@ function TermsAcceptance({
           type="button"
           onClick={() => void handleAccept()}
           disabled={loading}
-          className="w-full h-10 rounded-lg bg-accent hover:bg-accent-hover text-white font-medium text-sm transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+          className="w-full h-10 rounded-lg bg-accent hover:bg-accent-hover text-white font-medium text-sm transition-colors duration-(--duration-fast) disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {loading ? '…' : (t('terms.accept') || 'Aceptar y continuar')}
         </button>
@@ -513,7 +514,7 @@ function PublishedRouteIntent({ route }: { route: NorthRoute }) {
   }, [alreadyResolved, isLoading, navigate, route]);
 
   if (!missing) return null;
-  return <div className="fixed inset-0 z-[100] bg-background"><GenericNotFound /></div>;
+  return <div className="fixed inset-0 z-(--z-modal) bg-background"><GenericNotFound /></div>;
 }
 
 function AuthenticatedRouter({ user, onAuthError, route, pendingInvitation, onInvitationHandled, onInvitationBound }: { user: SessionUser; onAuthError: () => void; route: NorthRoute; pendingInvitation: PendingRouteInvitation | null; onInvitationHandled: () => void; onInvitationBound: (userId: string) => void }) {
