@@ -131,6 +131,26 @@
 }
 
 @layer components {
+  /* Icons: one stroke weight and size rhythm for every Lucide/own SVG icon.
+     Colour is inherited (currentColor), so hover/active states are plain CSS. */
+  svg.lucide {
+    stroke-width: 1.75;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+  }
+
+  /* Cards: depth from border + background + a soft shadow, lifted on hover only
+     when the card is interactive. */
+  .np-card {
+    background: linear-gradient(180deg, var(--color-surface), color-mix(in srgb, var(--color-surface) 92%, var(--color-background)));
+    transition: border-color var(--shell-motion-fast) ease, box-shadow var(--shell-motion-fast) ease;
+  }
+  a.np-card:hover, button.np-card:hover, .np-card[role="button"]:hover {
+    border-color: var(--color-border-strong);
+    box-shadow: var(--shadow-pop);
+  }
+
   /*
    * Keep the authenticated application physically viewport-sized while rendering
    * its desktop UI at 70%. `zoom` preserves normal layout, pointer hit-testing,
@@ -154,6 +174,10 @@
   .north-app-shell-host > .w-screen {
     width: var(--north-ui-density-compensated-width);
   }
+
+  /* Short enter for things that appear (tabs, published panels). */
+  .north-enter { animation: north-enter var(--shell-motion-fast) ease-out both; }
+  @keyframes north-enter { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
 
   .ui-label {
     font-family: var(--font-sans);
@@ -189,6 +213,12 @@
 
 :is([data-theme='dark'], [data-theme='midnight']) .north-icon-light {
   display: none;
+}
+
+@media (min-width: 1920px) {
+  :root {
+    --shell-context-sidebar: 256px;
+  }
 }
 
 @media (max-width: 1440px) {

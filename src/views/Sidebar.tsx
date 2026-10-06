@@ -57,9 +57,11 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
     try { localStorage.setItem(COLLAPSED_KEY, next ? '1' : '0'); } catch { /* storage unavailable */ }
   };
 
+  const asideClass = 'shrink-0 h-full bg-surface border-r border-border flex flex-col overflow-hidden transition-[width] duration-[var(--shell-motion)] ease-out motion-reduce:transition-none';
+
   if (collapsed) {
     return (
-      <aside aria-label={t('sidebar.context')} className="shrink-0 h-full bg-surface border-r border-border flex flex-col items-center py-2" style={{ width: 'var(--shell-context-sidebar-collapsed)' }}>
+      <aside aria-label={t('sidebar.context')} className={cn(asideClass, 'items-center py-2')} style={{ width: 'var(--shell-context-sidebar-collapsed)' }}>
         <button
           type="button"
           aria-label={t('sidebar.expand')}
@@ -74,7 +76,7 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
   }
 
   return (
-    <aside aria-label={t('sidebar.context')} className="shrink-0 h-full bg-surface border-r border-border flex flex-col" style={{ width: 'var(--shell-context-sidebar)' }}>
+    <aside aria-label={t('sidebar.context')} className={asideClass} style={{ width: 'var(--shell-context-sidebar)' }}>
       {/* Header */}
       <header className="shrink-0 p-2.5 border-b border-border space-y-2">
         <button

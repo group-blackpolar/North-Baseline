@@ -171,8 +171,6 @@ const es = {
   'shell.categories': 'Categorías',
   'shell.pinCategories': 'Fijar categorías',
   'shell.unpinCategories': 'Desfijar categorías',
-  'shell.overlayHint': 'Se cierra al salir o pulsar Esc',
-  'shell.pinned': 'Fijado',
   'shell.organizations': 'Espacios y organizaciones',
   'sidebar.context': 'Navegación contextual',
   'tabs.openViews': 'Vistas abiertas',

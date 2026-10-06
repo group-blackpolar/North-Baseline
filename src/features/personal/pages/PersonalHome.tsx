@@ -87,7 +87,7 @@ export function PersonalHome({ user }: { user: SessionUser }) {
   const openTabs = tabs.filter((tab) => tab.id !== activeTab?.id);
 
   return (
-    <main className="mx-auto w-full max-w-6xl p-4 lg:p-5 space-y-5">
+    <main className="mx-auto w-full max-w-[1680px] p-4 lg:p-5 space-y-5">
       <header className="pt-2 text-center">
         <p className="ui-label mb-2">{t('personal.workspace.name')}</p>
         <h1 className="font-display text-2xl font-semibold tracking-tight text-text">

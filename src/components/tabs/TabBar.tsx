@@ -37,7 +37,7 @@ export function TabBar() {
             aria-selected={active}
             tabIndex={active ? 0 : -1}
             className={cn(
-              'group flex items-center gap-1.5 h-7 pl-2.5 pr-1 rounded-lg border text-xs cursor-pointer select-none transition-colors duration-150 shrink-0',
+              'north-enter group flex items-center gap-1.5 h-7 pl-2.5 pr-1 rounded-lg border text-xs cursor-pointer select-none transition-colors duration-150 shrink-0',
               active
                 ? 'bg-surface-active border-border text-text font-medium shadow-soft'
                 : 'border-transparent text-text-secondary hover:bg-surface-hover hover:text-text'

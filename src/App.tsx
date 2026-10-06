@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Building2 } from 'lucide-react';
 import { Login } from '@/views/Login';
 import { TemporaryPasswordChange } from '@/views/TemporaryPasswordChange';
@@ -172,8 +172,9 @@ function WorkspaceGate({
                 <PublishedRouteIntent route={route} />
                 <div className="north-app-shell flex bg-background text-text">
                   <OrganizationRail />
-                  <CategoryRail />
-                  <ContextSidebar user={user} />
+                  <CategoryRail>
+                    <ContextSidebar user={user} />
+                  </CategoryRail>
                   <div className="flex-1 flex flex-col min-w-0">
                     <CurrentPath />
                     <TabBar />
@@ -281,7 +282,12 @@ function AppInner() {
   }, []);
 
   useEffect(() => {
-    const updateUser = (event: Event) => setUser((event as CustomEvent<SessionUser>).detail);
+    // Profile reads re-publish an identical user. Keep the previous reference so
+    // nothing downstream (providers, effects keyed on `user`) re-runs for no change.
+    const updateUser = (event: Event) => {
+      const next = (event as CustomEvent<SessionUser>).detail;
+      setUser((prev) => (prev && JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+    };
     window.addEventListener(SESSION_USER_UPDATED_EVENT, updateUser);
     return () => window.removeEventListener(SESSION_USER_UPDATED_EVENT, updateUser);
   }, []);
@@ -295,13 +301,13 @@ function AppInner() {
     });
   }, [user]);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     void authLogout().catch(() => {}).finally(() => {
       clearLocalSession();
       markSessionKilled();
     });
     savePendingRouteInvitation(null); setPendingRouteInvitation(null); setUser(null);
-  };
+  }, []);
 
   const handleTemporaryPasswordComplete = async (updatedUser: SessionUser) => {
     try {
@@ -446,7 +452,9 @@ function TermsAcceptance({
   );
 }
 
-/** Resolves a shared published URL only after the member-only shell is mounted.
+/** `route` keeps its identity while the path is unchanged (see useNorthRoute), so
+ * the effect below does not re-resolve the same panel on unrelated popstates.
+ * Resolves a shared published URL only after the member-only shell is mounted.
  * CoreCrow returns 404 for both missing and unauthorized resources, so the
  * client deliberately presents the same generic state in both cases. */
 function PublishedRouteIntent({ route }: { route: NorthRoute }) {
@@ -454,15 +462,17 @@ function PublishedRouteIntent({ route }: { route: NorthRoute }) {
   const { categories, isLoading } = useCatalog();
   const [missing, setMissing] = useState(false);
 
-  const knownPanelId = route.kind === 'panel'
-    ? categories
-      .find((category) => category.slug === route.categorySlug)
-      ?.subcategories.find((subcategory) => subcategory.slug === route.subcategorySlug)
-      ?.publishedPanels?.find((panel) => panel.slug === route.panelSlug)?.id
-    : undefined;
+  const knownCategory = route.kind === 'panel' ? categories.find((category) => category.slug === route.categorySlug) : undefined;
+  const knownSubcategory = route.kind === 'panel' ? knownCategory?.subcategories.find((subcategory) => subcategory.slug === route.subcategorySlug) : undefined;
+  const knownPanelId = route.kind === 'panel' ? knownSubcategory?.publishedPanels?.find((panel) => panel.slug === route.panelSlug)?.id : undefined;
+  // The organization Views editor (admin/settings) is rendered from the catalog
+  // route, never from a published panel document. Resolving its system panel can
+  // 404 and would cover a valid OWNER session with the not-found overlay.
+  const isViewsAdminTarget = knownCategory?.slug === 'admin' && knownSubcategory?.slug === 'settings'
+    && activeTab?.route.subcategoryId === knownSubcategory.id;
   const alreadyResolved = Boolean(
-    knownPanelId
-    && activeTab?.publishedPanel?.id === knownPanelId,
+    isViewsAdminTarget
+    || (knownPanelId && activeTab?.publishedPanel?.id === knownPanelId),
   );
 
   useEffect(() => {
@@ -511,15 +521,20 @@ function AuthenticatedRouter({ user, onAuthError, route, pendingInvitation, onIn
     if (!pendingInvitation.userId) onInvitationBound(user.id);
   }, [member, onInvitationBound, onInvitationHandled, pendingInvitation, route.path, user.id]);
 
+  // The public organization record only feeds the non-member access gate. Members
+  // already have everything from OrganizationContext, so never block (or
+  // unmount) the shell on this request, and re-run it per slug, not per route.
+  const organizationSlug = isOrganizationRoute ? route.organizationSlug : null;
+  const isMember = Boolean(member);
   useEffect(() => {
-    if (!isOrganizationRoute) { setPublicOrganization(null); setMissing(false); return; }
+    if (!organizationSlug || isMember) { setPublicOrganization(null); setMissing(false); return; }
     let live = true;
     setPublicOrganization(null); setMissing(false);
-    void resolvePublicOrganization(route.organizationSlug)
+    void resolvePublicOrganization(organizationSlug)
       .then((result) => { if (live) setPublicOrganization(result); })
       .catch(() => { if (live) setMissing(true); });
     return () => { live = false; };
-  }, [isOrganizationRoute, route]);
+  }, [organizationSlug, isMember]);
 
   useEffect(() => {
     if (member && activeOrganization?.id !== member.id) switchOrganization(member.id);
@@ -531,9 +546,10 @@ function AuthenticatedRouter({ user, onAuthError, route, pendingInvitation, onIn
     return <div className="north-app-shell north-app-shell-host"><PlatformAdminView user={user} route={route} /></div>;
   }
   if (!isOrganizationRoute) return <AppShell user={user} onAuthError={onAuthError} route={route} />;
-  if (missing) return <GenericNotFound />;
-  if (isLoading || !publicOrganization) return <ShellSkeleton />;
+  if (isLoading) return <ShellSkeleton />;
   if (!member) {
+    if (missing) return <GenericNotFound />;
+    if (!publicOrganization) return <ShellSkeleton />;
     return <OrganizationAccessGate
       organization={publicOrganization}
       authenticated
@@ -561,7 +577,10 @@ function AuthenticatedRouter({ user, onAuthError, route, pendingInvitation, onIn
 function useNorthRoute() {
   const [route, setRoute] = useState<NorthRoute>(() => currentNorthRoute());
   useEffect(() => {
-    const sync = () => setRoute(currentNorthRoute());
+    const sync = () => setRoute((prev) => {
+      const next = currentNorthRoute();
+      return prev.path === next.path ? prev : next;
+    });
     window.addEventListener('popstate', sync);
     return () => window.removeEventListener('popstate', sync);
   }, []);

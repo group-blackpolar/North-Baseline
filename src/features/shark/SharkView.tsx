@@ -18,7 +18,7 @@ const QUICK_ACCESS = [
 function SharkHome() {
   const { navigate } = useTabs();
   return (
-    <div className="p-6 space-y-6 max-w-5xl">
+    <div className="p-4 lg:p-5 space-y-6 max-w-[1680px]">
       <header className="flex items-center gap-4">
         <div className="size-14 rounded-2xl bg-text text-background flex items-center justify-center font-display text-xl font-bold shadow-soft">
           S

@@ -23,7 +23,7 @@ export function SettingsShell({ sub }: { sub: string }) {
 
   return (
     <div className="flex-1 flex justify-center overflow-y-auto">
-      <div className="w-full max-w-3xl p-6 space-y-4">
+      <div className="w-full max-w-5xl p-4 lg:p-5 space-y-4">
         <h1 className="text-xl font-display font-semibold text-text">{t('settings.title')}</h1>
         {content}
       </div>
