@@ -18,6 +18,7 @@ import { useOrganization } from '@/context/OrganizationContext';
 import { useI18n } from '@/lib/i18n';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ACCESS_SECTIONS, AccessAdminView } from '@/features/access-admin/AccessAdminView';
+import { DocumentWorkspaceHost } from '@/features/documents/DocumentsWorkspace';
 
 const PERSONAL_CATEGORIES = new Set(['home', 'profile', 'billing', 'preferences', 'settings']);
 const SHARK_CATEGORIES = new Set(['shark-home', 'master-house']);
@@ -248,7 +249,9 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
   return <article className="north-enter mx-auto w-full max-w-[1680px] space-y-5 p-4 lg:p-5"><h1 className="font-display text-2xl font-semibold">{title}</h1>{filterControls.length ? <div className="space-y-2"><AnalyticsFilterControls filters={filterControls} onChange={(id, value) => setDraftValues((current) => ({ ...current, [id]: Array.isArray(value) ? value[0] ?? '' : value }))} /><div className="flex justify-end gap-2"><button type="button" onClick={clearFilters} className="h-8 rounded-md border border-border px-3 text-xs text-text-secondary hover:bg-surface-hover">{t('analytics.clearFilters')}</button><button type="button" onClick={applyFilters} className="h-8 rounded-md bg-accent px-3 text-xs font-medium text-white hover:opacity-90">{t('analytics.applyFilters')}</button></div></div> : null}{document.sections.slice().sort((a, b) => a.order - b.order).map((section) => <section key={section.id} className={`grid grid-cols-12 auto-rows-[minmax(2rem,auto)] ${GAP[section.layout.gap]}`}>{section.components.slice().sort((a, b) => a.order - b.order).map((component) => {
     const content = datasetBinding(component.bindings)
       ? <PublishedAnalyticsContent component={component} organizationId={organizationId} panelId={panelId} locales={locales} filters={filtersByBinding[datasetBinding(component.bindings)!.sourceId] ?? []} onFilterDefinitions={registerFilterDefinitions} />
-      : SafeComponent({ type: component.type, props: component.props, locales });
+      : component.type === 'document_workspace'
+        ? <DocumentWorkspaceHost organizationId={organizationId} props={component.props} />
+        : SafeComponent({ type: component.type, props: component.props, locales });
     return content === null ? null : <PublishedGridItem key={component.id} component={component} breakpoint={breakpoint}>{content}</PublishedGridItem>;
   })}</section>)}</article>;
 }

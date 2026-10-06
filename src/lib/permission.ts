@@ -13,6 +13,13 @@ export const PERM = {
   commerceRead: 'commerce.read',
   billingRead: 'billing.read',
   billingManage: 'billing.manage',
+  documentsRead: 'documents.read',
+  documentsCreate: 'documents.create',
+  documentsUpdate: 'documents.update',
+  documentsDelete: 'documents.delete',
+  documentsDownload: 'documents.download',
+  documentsSend: 'documents.send',
+  documentsManage: 'documents.manage',
 } as const;
 
 export type Permission = string;
