@@ -171,6 +171,7 @@ const en: Dictionary = {
   'personal.administration': 'Administration',
   'personal.home': 'Home',
   'filters.apply': 'Apply',
+  'documents.moreActions': 'More actions',
   'shell.openMenu': 'Open menu',
   'common.close': 'Close',
   'tabs.switcher': 'Open views ({n})',

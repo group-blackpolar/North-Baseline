@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from
 import { ArrowsClockwise, EnvelopeSimple, Key, ShieldCheck, Trash, Users, WarningCircle } from '@phosphor-icons/react';
 import { DashboardCard } from '@/components/dashboard/primitives';
 import { Button } from '@/components/ui/button';
+import { ResponsiveList } from '@/components/ui/responsive-list';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -85,42 +86,53 @@ function UsersScreen({ organizationId, currentUserId }: { organizationId: string
   const { busy, error, ok, act } = useBusy();
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
 
+  const roleSelect = (member: Member) => (
+    <select aria-label={t('access.col.role')} className={selectClass} value={member.role} disabled={!manage || busy === member.userId}
+      onChange={(event) => void act(member.userId, () => changeMemberRole(organizationId, member.userId, event.target.value as TenantRole), t('access.users.roleChanged')).then(() => members.reload())}>
+      {TENANT_ROLES.map((role) => <option key={role} value={role}>{role}</option>)}
+    </select>
+  );
+  const removeControl = (member: Member) => confirmRemove === member.userId ? (
+    <span className="inline-flex gap-1">
+      <Button size="sm" variant="destructive" disabled={busy === member.userId} onClick={() => void act(member.userId, () => removeMember(organizationId, member.userId), t('access.users.removed')).then(() => { setConfirmRemove(null); return members.reload(); })}>{t('access.confirm')}</Button>
+      <Button size="sm" variant="ghost" onClick={() => setConfirmRemove(null)}>{t('access.cancel')}</Button>
+    </span>
+  ) : <Button size="icon-sm" variant="ghost" aria-label={t('access.users.remove')} title={t('access.users.remove')} disabled={!manage} onClick={() => setConfirmRemove(member.userId)}><Trash className="size-3.5" /></Button>;
+  const you = (member: Member) => member.userId === currentUserId && <span className="ml-1.5 text-text-muted">({t('access.you')})</span>;
+
   return (
     <Shell title={t('access.users.title')} hint={t('access.users.hint')}>
       <DashboardCard title={t('access.users.members')} description={manage ? undefined : t('access.readOnly')} actions={<Button size="sm" variant="ghost" onClick={() => void members.reload()}><ArrowsClockwise className="size-3.5" />{t('access.refresh')}</Button>}>
         <Notice error={error ?? members.error} ok={ok} />
         {members.loading && !members.data ? <Loading /> : members.data && members.data.length === 0 ? <EmptyState icon={Users} title={t('access.users.empty')} /> : members.data && (
-          <div className="overflow-x-auto rounded-lg border border-border">
-            <table className="min-w-full border-separate border-spacing-0">
-              <thead><tr><th className={th}>{t('access.col.user')}</th><th className={th}>{t('access.col.email')}</th><th className={th}>{t('access.col.status')}</th><th className={th}>{t('access.col.role')}</th><th className={th} /></tr></thead>
-              <tbody>
-                {members.data.map((member) => {
-                  const self = member.userId === currentUserId;
-                  return (
-                    <tr key={member.id} className="hover:bg-surface-hover/50">
-                      <td className={td}>{memberLabel(member)}{self && <span className="ml-1.5 text-text-muted">({t('access.you')})</span>}</td>
-                      <td className={td}>{member.email ?? '—'}</td>
-                      <td className={td}>{member.status ?? '—'}</td>
-                      <td className={td}>
-                        <select aria-label={t('access.col.role')} className={selectClass} value={member.role} disabled={!manage || busy === member.userId}
-                          onChange={(event) => void act(member.userId, () => changeMemberRole(organizationId, member.userId, event.target.value as TenantRole), t('access.users.roleChanged')).then(() => members.reload())}>
-                          {TENANT_ROLES.map((role) => <option key={role} value={role}>{role}</option>)}
-                        </select>
-                      </td>
-                      <td className={cn(td, 'text-right')}>
-                        {confirmRemove === member.userId ? (
-                          <span className="inline-flex gap-1">
-                            <Button size="sm" variant="destructive" disabled={busy === member.userId} onClick={() => void act(member.userId, () => removeMember(organizationId, member.userId), t('access.users.removed')).then(() => { setConfirmRemove(null); return members.reload(); })}>{t('access.confirm')}</Button>
-                            <Button size="sm" variant="ghost" onClick={() => setConfirmRemove(null)}>{t('access.cancel')}</Button>
-                          </span>
-                        ) : <Button size="icon-sm" variant="ghost" aria-label={t('access.users.remove')} title={t('access.users.remove')} disabled={!manage} onClick={() => setConfirmRemove(member.userId)}><Trash className="size-3.5" /></Button>}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <ResponsiveList items={members.data} getKey={(member) => member.id}
+            renderCard={(member) => (
+              <div className="np-card space-y-2 p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0"><p className="truncate text-sm font-medium text-text">{memberLabel(member)}{you(member)}</p><p className="truncate text-xs text-text-secondary">{member.email ?? '—'}</p></div>
+                  <span className="text-xs text-text-muted">{member.status ?? '—'}</span>
+                </div>
+                <div className="flex items-center justify-between gap-2">{roleSelect(member)}{removeControl(member)}</div>
+              </div>
+            )}
+            table={(
+              <div className="overflow-x-auto rounded-lg border border-border">
+                <table className="min-w-full border-separate border-spacing-0">
+                  <thead><tr><th className={th}>{t('access.col.user')}</th><th className={th}>{t('access.col.email')}</th><th className={th}>{t('access.col.status')}</th><th className={th}>{t('access.col.role')}</th><th className={th} /></tr></thead>
+                  <tbody>
+                    {members.data.map((member) => (
+                      <tr key={member.id} className="hover:bg-surface-hover/50">
+                        <td className={td}>{memberLabel(member)}{you(member)}</td>
+                        <td className={td}>{member.email ?? '—'}</td>
+                        <td className={td}>{member.status ?? '—'}</td>
+                        <td className={td}>{roleSelect(member)}</td>
+                        <td className={cn(td, 'text-right')}>{removeControl(member)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )} />
         )}
         <p className="text-[11px] text-text-muted">{t('access.users.rolesNote')}</p>
       </DashboardCard>
@@ -150,6 +162,12 @@ function InvitationsScreen({ organizationId }: { organizationId: string }) {
     const done = await act('create', async () => { setIssued(await createInvitation(organizationId, { email: email.trim(), role, expiresInHours: hours, groupIds, permissions: [] })); }, t('access.inv.created'));
     if (done) { setEmail(''); setGroupIds([]); await invitations.reload(); }
   };
+  const invitationActions = (invitation: Invitation) => (
+    <>
+      <Button size="sm" variant="ghost" disabled={!manage || busy === invitation.id} onClick={() => void act(invitation.id, async () => { setIssued(await replaceInvitation(organizationId, invitation.id)); }, t('access.inv.replaced')).then(() => invitations.reload())}>{t('access.inv.replace')}</Button>
+      <Button size="sm" variant="ghost" disabled={!manage || busy === invitation.id} onClick={() => void act(invitation.id, () => revokeInvitation(organizationId, invitation.id), t('access.inv.revoked')).then(() => invitations.reload())}>{t('access.inv.revoke')}</Button>
+    </>
+  );
   const statusClass = (status: Invitation['status']) => status === 'PENDING' ? 'text-accent' : status === 'ACCEPTED' ? 'text-success' : 'text-text-muted';
 
   return (
@@ -178,27 +196,33 @@ function InvitationsScreen({ organizationId }: { organizationId: string }) {
         <DashboardCard title={t('access.inv.list')} actions={<Button size="sm" variant="ghost" onClick={() => void invitations.reload()}><ArrowsClockwise className="size-3.5" />{t('access.refresh')}</Button>}>
           {invitations.error && <Notice error={invitations.error} />}
           {invitations.loading && !invitations.data ? <Loading /> : invitations.data && invitations.data.length === 0 ? <EmptyState icon={EnvelopeSimple} title={t('access.inv.empty')} /> : invitations.data && (
-            <div className="overflow-x-auto rounded-lg border border-border">
-              <table className="min-w-full border-separate border-spacing-0">
-                <thead><tr><th className={th}>{t('access.col.email')}</th><th className={th}>{t('access.col.role')}</th><th className={th}>{t('access.col.status')}</th><th className={th}>{t('access.inv.expires')}</th><th className={th} /></tr></thead>
-                <tbody>{invitations.data.map((invitation) => (
-                  <tr key={invitation.id} className="hover:bg-surface-hover/50">
-                    <td className={td}>{invitation.email ?? t('access.inv.code')}</td>
-                    <td className={td}>{invitation.role}</td>
-                    <td className={cn(td, statusClass(invitation.status))}>{invitation.status}</td>
-                    <td className={td}>{new Date(invitation.expiresAt).toLocaleString()}</td>
-                    <td className={cn(td, 'text-right')}>
-                      {invitation.status === 'PENDING' && (
-                        <span className="inline-flex gap-1">
-                          <Button size="sm" variant="ghost" disabled={!manage || busy === invitation.id} onClick={() => void act(invitation.id, async () => { setIssued(await replaceInvitation(organizationId, invitation.id)); }, t('access.inv.replaced')).then(() => invitations.reload())}>{t('access.inv.replace')}</Button>
-                          <Button size="sm" variant="ghost" disabled={!manage || busy === invitation.id} onClick={() => void act(invitation.id, () => revokeInvitation(organizationId, invitation.id), t('access.inv.revoked')).then(() => invitations.reload())}>{t('access.inv.revoke')}</Button>
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}</tbody>
-              </table>
-            </div>
+            <ResponsiveList items={invitations.data} getKey={(invitation) => invitation.id}
+              renderCard={(invitation) => (
+                <div className="np-card space-y-2 p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="min-w-0 truncate text-sm font-medium text-text">{invitation.email ?? t('access.inv.code')}</p>
+                    <span className={cn('text-xs', statusClass(invitation.status))}>{invitation.status}</span>
+                  </div>
+                  <p className="text-xs text-text-secondary">{invitation.role} · {t('access.inv.expires')}: {new Date(invitation.expiresAt).toLocaleString()}</p>
+                  {invitation.status === 'PENDING' && <div className="flex gap-1">{invitationActions(invitation)}</div>}
+                </div>
+              )}
+              table={(
+                <div className="overflow-x-auto rounded-lg border border-border">
+                  <table className="min-w-full border-separate border-spacing-0">
+                    <thead><tr><th className={th}>{t('access.col.email')}</th><th className={th}>{t('access.col.role')}</th><th className={th}>{t('access.col.status')}</th><th className={th}>{t('access.inv.expires')}</th><th className={th} /></tr></thead>
+                    <tbody>{invitations.data.map((invitation) => (
+                      <tr key={invitation.id} className="hover:bg-surface-hover/50">
+                        <td className={td}>{invitation.email ?? t('access.inv.code')}</td>
+                        <td className={td}>{invitation.role}</td>
+                        <td className={cn(td, statusClass(invitation.status))}>{invitation.status}</td>
+                        <td className={td}>{new Date(invitation.expiresAt).toLocaleString()}</td>
+                        <td className={cn(td, 'text-right')}>{invitation.status === 'PENDING' && <span className="inline-flex gap-1">{invitationActions(invitation)}</span>}</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+              )} />
           )}
         </DashboardCard>
       </div>

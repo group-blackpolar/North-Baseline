@@ -106,7 +106,7 @@ export function PersonalHome({ user }: { user: SessionUser }) {
           aria-label={t('home.searchLabel')}
           className="h-11 w-full rounded-xl border border-border-strong bg-surface pl-10 pr-16 text-sm text-text shadow-soft outline-none placeholder:text-text-muted focus-visible:border-accent"
         />
-        <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border bg-background px-1.5 py-0.5 text-[10px] text-text-muted">Ctrl K</kbd>
+        <kbd className="pointer-events-none max-md:hidden absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border bg-background px-1.5 py-0.5 text-[10px] text-text-muted">Ctrl K</kbd>
         {query.trim() && (
           <div className="absolute inset-x-0 top-[calc(100%+6px)] z-20 rounded-xl border border-border bg-surface p-1.5 shadow-pop">
             {searchResults.length > 0 ? searchResults.map((item) => (

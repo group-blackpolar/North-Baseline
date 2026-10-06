@@ -169,6 +169,7 @@ const es = {
   'personal.administration': 'Administración',
   'personal.home': 'Inicio',
   'filters.apply': 'Aplicar',
+  'documents.moreActions': 'Más acciones',
   'shell.openMenu': 'Abrir menú',
   'common.close': 'Cerrar',
   'tabs.switcher': 'Vistas abiertas ({n})',

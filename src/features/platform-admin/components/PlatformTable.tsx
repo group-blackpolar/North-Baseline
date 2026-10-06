@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Tray } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ResponsiveList } from '@/components/ui/responsive-list';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useI18n } from '@/lib/i18n';
 
@@ -68,37 +69,52 @@ export function PlatformTable<Row>({
 
   return (
     <div className="space-y-3">
-      <div className="rounded-lg border border-border overflow-x-auto">
-        <table className="w-full text-sm min-w-105">
-          <caption className="sr-only">{label}</caption>
-          <thead className="bg-surface-hover/60">
-            <tr>
-              {columns.map((column) => (
-                <th key={column.key} scope="col" className="text-left ui-label px-3 py-2 whitespace-nowrap">
-                  {column.header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={getRowKey(row)} className="border-t border-border/60 hover:bg-surface-hover/50 transition-colors duration-(--duration-fast)">
-                {columns.map((column, index) => (
-                  <td
-                    key={column.key}
-                    className={cn(
-                      'px-3 py-2 align-top',
-                      column.className ?? (index === 0 ? 'text-text font-medium' : 'mono-data text-text-secondary')
-                    )}
-                  >
-                    {column.render ? column.render(row) : null}
-                  </td>
+      <ResponsiveList items={rows} getKey={getRowKey}
+        renderCard={(row) => (
+          <div className="np-card space-y-1.5 p-3">
+            {columns.map((column, index) => (index === 0
+              ? <div key={column.key} className="text-sm font-medium text-text">{column.render?.(row)}</div>
+              : (
+                <div key={column.key} className="flex items-start justify-between gap-3 text-xs">
+                  <span className="shrink-0 text-text-muted">{column.header}</span>
+                  <span className="min-w-0 text-right text-text-secondary">{column.render?.(row)}</span>
+                </div>
+              )))}
+          </div>
+        )}
+        table={(
+        <div className="rounded-lg border border-border overflow-x-auto">
+          <table className="w-full text-sm min-w-105">
+            <caption className="sr-only">{label}</caption>
+            <thead className="bg-surface-hover/60">
+              <tr>
+                {columns.map((column) => (
+                  <th key={column.key} scope="col" className="text-left ui-label px-3 py-2 whitespace-nowrap">
+                    {column.header}
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={getRowKey(row)} className="border-t border-border/60 hover:bg-surface-hover/50 transition-colors duration-(--duration-fast)">
+                  {columns.map((column, index) => (
+                    <td
+                      key={column.key}
+                      className={cn(
+                        'px-3 py-2 align-top',
+                        column.className ?? (index === 0 ? 'text-text font-medium' : 'mono-data text-text-secondary')
+                      )}
+                    >
+                      {column.render ? column.render(row) : null}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        )} />
       {hasMore && (
         <button
           type="button"

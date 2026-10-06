@@ -81,5 +81,5 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
 };
 
 // Land on the Seminsa organization route, like a real deep link.
-if (window.location.pathname.startsWith('/dev/')) window.history.replaceState({}, '', '/seminsa');
+if (window.location.pathname.startsWith('/dev/')) window.history.replaceState({}, '', new URLSearchParams(window.location.search).get('path') ?? '/seminsa');
 await import('/src/main.tsx');
