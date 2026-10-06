@@ -8,6 +8,7 @@ export const INVITABLE_ROLES = ['ADMIN', 'BILLING_ADMIN', 'MEMBER', 'VIEWER'] as
 export const REGISTERED_PERMISSIONS = [
   'organization.read', 'organization.update', 'members.read', 'members.manage', 'invitations.manage', 'groups.read',
   'groups.manage', 'permissions.manage', 'audit.read', 'commerce.read', 'billing.read', 'billing.manage',
+  'documents.read', 'documents.create', 'documents.update', 'documents.delete', 'documents.download', 'documents.send', 'documents.manage',
 ] as const;
 export type RegisteredPermission = (typeof REGISTERED_PERMISSIONS)[number];
 
