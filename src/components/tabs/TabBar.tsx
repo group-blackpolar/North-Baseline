@@ -1,3 +1,4 @@
+/* oxlint-disable react/only-export-components */
 import { Plus, X } from '@phosphor-icons/react';
 import { useTabs, type Tab } from '@/context/TabsContext';
 import { useCatalog } from '@/context/CatalogContext';
@@ -5,7 +6,7 @@ import { resolveIcon } from '@/lib/iconMap';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/lib/i18n';
 
-function tabMeta(
+export function tabMeta(
   tab: Tab,
   getCategory: (id: string) => { name: string; icon: string } | undefined,
   getSubcategory: (catId: string, subId: string | null) => { name: string; icon: string; labelKey?: string } | undefined,

@@ -1,5 +1,6 @@
 import { Sidebar, Square, SquareHalf, SquareHalfBottom, SquaresFour } from '@phosphor-icons/react';
 import { useLayout } from '@/context/LayoutContext';
+import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useI18n, type Dictionary } from '@/lib/i18n';
 
@@ -21,10 +22,9 @@ export function LayoutSwitcher() {
         const Icon = m.icon;
         const active = mode === m.id;
         return (
+          <Tooltip key={m.id} label={t(m.label as keyof Dictionary)} side="left">
           <button
-            key={m.id}
             type="button"
-            title={t(m.label as keyof Dictionary)}
             aria-label={t(m.label as keyof Dictionary)}
             aria-pressed={active}
             className={cn(
@@ -37,6 +37,7 @@ export function LayoutSwitcher() {
           >
             <Icon className="w-4 h-4" />
           </button>
+          </Tooltip>
         );
       })}
     </div>

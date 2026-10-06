@@ -10,8 +10,7 @@ import { cn } from '@/lib/utils';
 import type { SessionUser } from '@/lib/auth';
 import type { SubcategoryModel } from '@/lib/models';
 import { ProfileMenu } from '@/components/sidebar/ProfileMenu';
-import { useOrganization } from '@/context/OrganizationContext';
-import { navigateToPublishedTarget } from '@/lib/publishedNavigation';
+import { useCategoryNavigation } from '@/lib/shellNavigation';
 
 const COLLAPSED_KEY = 'north-context-sidebar-collapsed';
 
@@ -23,8 +22,8 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
   const { t } = useI18n();
   const { categories } = useCatalog();
   const { workspaces, activeWorkspace, switchWorkspace } = useWorkspace();
-  const { navigate, activeTab } = useTabs();
-  const { activeOrganization } = useOrganization();
+  const { activeTab } = useTabs();
+  const goToCategory = useCategoryNavigation();
   const { can } = usePermissions();
   const [collapsed, setCollapsed] = useState(readCollapsedPreference);
   const [search, setSearch] = useState('');
@@ -146,16 +145,7 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
                       key={sub.id}
                       type="button"
                       disabled={disabled}
-                      onClick={() => {
-                        if (!activeCategory) return;
-                        void navigateToPublishedTarget({
-                          organizationSlug: activeOrganization?.slug,
-                          category: activeCategory,
-                          subcategory: sub,
-                          navigate,
-                          history: 'push',
-                        }).catch(() => navigate(activeCategory.id, sub.id));
-                      }}
+                      onClick={() => { if (activeCategory) goToCategory(activeCategory, sub); }}
                       className={cn(
                         'w-full flex items-center gap-2 pl-6 pr-2 py-1.5 rounded-md text-[13px] transition-colors duration-[var(--shell-motion-fast)]',
                         disabled

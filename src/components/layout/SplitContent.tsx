@@ -2,6 +2,7 @@ import { useLayout } from '@/context/LayoutContext';
 import { useTabs, type Tab } from '@/context/TabsContext';
 import { ViewRenderer } from '@/views/ViewsRenderer';
 import { ResizeHandle } from '@/components/layout/ResizeHandle';
+import { useIsCompactShell } from '@/lib/responsive';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { SessionUser } from '@/lib/auth';
@@ -44,7 +45,9 @@ function Pane({ index, user }: { index: number; user: SessionUser }) {
 }
 
 export function SplitContent({ user }: { user: SessionUser }) {
-  const { mode, paneSize, dragging } = useLayout();
+  const { mode: storedMode, paneSize, dragging } = useLayout();
+  // Split panes make no sense on phone/portrait tablet: ignore the stored mode there (kept for desktop).
+  const mode = useIsCompactShell() ? 'single' : storedMode;
   const { activeTab } = useTabs();
 
   const animated = cn('flex flex-col min-w-0 min-h-0', !dragging && 'transition-[width,height] duration-200 ease-out');

@@ -20,6 +20,8 @@ import { SessionGuard } from '@/components/session/SessionGuard';
 import { ErrorProvider } from '@/context/ErrorContext';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { EmptyState } from '@/components/ui/empty-state';
+import { MobileHeader } from '@/components/mobile/MobileHeader';
+import { useIsCompactShell } from '@/lib/responsive';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   clearLocalSession,
@@ -160,6 +162,7 @@ function WorkspaceGate({
 }) {
   const { activeWorkspace } = useWorkspace();
   const activeWorkspaceId = activeWorkspace?.id ?? null;
+  const compact = useIsCompactShell();
 
   return (
     <CatalogProvider workspaceId={activeWorkspaceId} organizationId={organizationId} platformRole={user.role}>
@@ -172,18 +175,21 @@ function WorkspaceGate({
               <CatalogSync>
                 <PublishedRouteIntent route={route} />
                 <div className="north-app-shell flex bg-background text-text">
-                  <OrganizationRail />
-                  <CategoryRail>
-                    <ContextSidebar user={user} />
-                  </CategoryRail>
+                  {/* Conditional siblings keep the content column at a stable position, so a resize never remounts the workspace. */}
+                  {!compact && <OrganizationRail />}
+                  {!compact && (
+                    <CategoryRail>
+                      <ContextSidebar user={user} />
+                    </CategoryRail>
+                  )}
                   <div className="flex-1 flex flex-col min-w-0">
-                    <CurrentPath />
-                    <TabBar />
+                    {compact ? <MobileHeader user={user} /> : <CurrentPath />}
+                    {!compact && <TabBar />}
                     <div className="flex-1 flex flex-col min-h-0">
                       <SplitContent user={user} />
                     </div>
                   </div>
-                  <LayoutSwitcher />
+                  {!compact && <LayoutSwitcher />}
                 </div>
               </CatalogSync>
             </NotificationProvider>

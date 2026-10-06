@@ -10,6 +10,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { Status } from '@/components/ui/status';
 import { PageHeader } from '@/components/ui/page-header';
 import { EmptyState } from '@/components/ui/empty-state';
+import { I18nProvider } from '@/lib/i18n';
 import { Card } from '@/components/ui/card';
 import { SkeletonRows } from '@/components/ui/skeleton';
 
@@ -50,4 +51,4 @@ function Playground() {
   );
 }
 
-createRoot(document.getElementById('root')!).render(<TooltipProvider><Playground /></TooltipProvider>);
+createRoot(document.getElementById('root')!).render(<I18nProvider><TooltipProvider><Playground /></TooltipProvider></I18nProvider>);

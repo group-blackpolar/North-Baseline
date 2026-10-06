@@ -4,11 +4,10 @@ import { useCatalog } from '@/context/CatalogContext';
 import { useTabs } from '@/context/TabsContext';
 import { usePermissions } from '@/context/PermissionContext';
 import { resolveIcon } from '@/lib/iconMap';
-import { pushPath } from '@/lib/routes';
 import { useI18n } from '@/lib/i18n';
-import { useOrganization } from '@/context/OrganizationContext';
-import { navigateToPublishedTarget } from '@/lib/publishedNavigation';
+import { useCategoryNavigation } from '@/lib/shellNavigation';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 const PINNED_KEY = 'north-category-rail-pinned';
@@ -33,8 +32,8 @@ function readPinnedPreference() {
 export function CategoryRail({ children }: { children?: ReactNode }) {
   const { t } = useI18n();
   const { categories, isLoading } = useCatalog();
-  const { activeTab, navigate } = useTabs();
-  const { activeOrganization } = useOrganization();
+  const { activeTab } = useTabs();
+  const goToCategory = useCategoryNavigation();
   const { can } = usePermissions();
   const [pinned, setPinned] = useState(readPinnedPreference);
   const [hovered, setHovered] = useState(false);
@@ -120,10 +119,9 @@ export function CategoryRail({ children }: { children?: ReactNode }) {
                   : category.name;
 
           return (
+            <Tooltip key={category.id} label={expanded ? '' : label} side="right">
             <button
-              key={category.id}
               type="button"
-              title={label}
               aria-label={label}
               disabled={disabled}
               aria-current={active ? 'page' : undefined}
@@ -136,25 +134,12 @@ export function CategoryRail({ children }: { children?: ReactNode }) {
                     ? 'bg-surface-active text-text shadow-soft ring-1 ring-border'
                     : 'text-text-secondary hover:bg-surface-hover hover:text-text'
               )}
-              onClick={() => {
-                if (disabled) return;
-                if (category.id === 'platform-administration') {
-                  pushPath('/workspace/admin/dashboard');
-                  return;
-                }
-                const subcategory = category.subcategories[0];
-                void navigateToPublishedTarget({
-                  organizationSlug: activeOrganization?.slug,
-                  category,
-                  subcategory,
-                  navigate,
-                  history: 'push',
-                }).catch(() => navigate(category.id, subcategory?.id ?? null));
-              }}
+              onClick={() => { if (!disabled) goToCategory(category); }}
             >
               <Icon className="size-4 shrink-0" />
               {expanded && <span className="text-xs font-medium truncate">{label}</span>}
             </button>
+            </Tooltip>
           );
         })}
 

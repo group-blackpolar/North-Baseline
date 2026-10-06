@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import * as D from '@radix-ui/react-dialog';
 import { X } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/lib/i18n';
 import { IconButton } from './icon-button';
 import { portalContainer } from './portal';
 
@@ -28,6 +29,7 @@ const SIDE: Record<SheetSide, string> = {
 
 /** Drawer (left/right) or bottom sheet. Radix gives focus trap, scroll lock, Esc and aria; animation is CSS (`np-sheet`). */
 export function Sheet({ open, onOpenChange, title, description, hideTitle, side = 'bottom', footer, className, children }: SheetProps) {
+  const { t } = useI18n();
   return (
     <D.Root open={open} onOpenChange={onOpenChange}>
       <D.Portal container={portalContainer()}>
@@ -42,7 +44,7 @@ export function Sheet({ open, onOpenChange, title, description, hideTitle, side 
               <D.Title className="font-display text-base font-semibold text-text">{title}</D.Title>
               {description ? <D.Description className="mt-0.5 text-[13px] text-text-secondary">{description}</D.Description> : null}
             </div>
-            <D.Close asChild><IconButton label="Close" icon={<X />} /></D.Close>
+            <D.Close asChild><IconButton label={t('common.close')} icon={<X />} /></D.Close>
           </header>
           <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">{children}</div>
           {footer ? <footer className="border-t border-border px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">{footer}</footer> : null}

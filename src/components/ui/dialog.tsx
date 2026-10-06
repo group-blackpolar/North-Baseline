@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import * as D from '@radix-ui/react-dialog';
 import { X } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/lib/i18n';
 import { useIsCompactShell } from '@/lib/responsive';
 import { IconButton } from './icon-button';
 import { portalContainer } from './portal';
@@ -23,6 +24,7 @@ const WIDTH = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-3xl' } as const;
 /** Centered modal on desktop; the same content as a bottom sheet on phone/tablet-portrait. */
 export function Dialog({ size = 'md', ...props }: DialogProps) {
   const compact = useIsCompactShell();
+  const { t } = useI18n();
   if (compact) return <Sheet {...props} side="bottom" />;
   const { open, onOpenChange, title, description, footer, children } = props;
   return (
@@ -35,7 +37,7 @@ export function Dialog({ size = 'md', ...props }: DialogProps) {
               <D.Title className="font-display text-base font-semibold text-text">{title}</D.Title>
               {description ? <D.Description className="mt-0.5 text-[13px] text-text-secondary">{description}</D.Description> : null}
             </div>
-            <D.Close asChild><IconButton label="Close" icon={<X />} /></D.Close>
+            <D.Close asChild><IconButton label={t('common.close')} icon={<X />} /></D.Close>
           </header>
           <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5">{children}</div>
           {footer ? <footer className="flex justify-end gap-2 border-t border-border px-5 py-3">{footer}</footer> : null}

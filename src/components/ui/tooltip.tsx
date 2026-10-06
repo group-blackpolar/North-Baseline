@@ -11,7 +11,7 @@ export const TooltipProvider = ({ children }: { children: ReactNode }) => (
 /** Label for icon-only controls. Hidden on touch (hover does not exist there); never carries essential info. */
 export function Tooltip({ label, children, side = 'top' }: { label: string; children: ReactNode; side?: 'top' | 'right' | 'bottom' | 'left' }) {
   const coarse = useMediaQuery('(pointer: coarse)');
-  if (coarse) return <>{children}</>;
+  if (coarse || !label) return <>{children}</>;
   return (
     <RadixTooltip.Root>
       <RadixTooltip.Trigger asChild>{children}</RadixTooltip.Trigger>
