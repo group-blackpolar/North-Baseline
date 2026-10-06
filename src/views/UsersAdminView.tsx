@@ -31,12 +31,12 @@ export function UsersAdminView() {
         <Button size="sm" variant="outline">+ crear usuario</Button>
       </div>
 
-      {error && <div className="text-sm text-accent-2 font-mono mb-4">error: {error}</div>}
-      {!users && !error && <div className="text-sm text-text-dim font-mono">cargando desde api.blackpolar.org…</div>}
+      {error && <div className="text-sm text-warning font-mono mb-4">error: {error}</div>}
+      {!users && !error && <div className="text-sm text-text-secondary font-mono">cargando desde api.blackpolar.org…</div>}
 
       {users && (
-        <div className="rounded-lg border border-line bg-panel overflow-hidden">
-          <div className="grid grid-cols-[1fr_1fr_90px_120px] px-4 py-2 text-[10px] font-mono text-text-dim border-b border-line">
+        <div className="rounded-lg border border-border bg-surface overflow-hidden">
+          <div className="grid grid-cols-[1fr_1fr_90px_120px] px-4 py-2 text-[10px] font-mono text-text-secondary border-b border-border">
             <div>NOMBRE</div>
             <div>EMAIL</div>
             <div>ROL</div>
@@ -45,16 +45,16 @@ export function UsersAdminView() {
           {visible.map((u) => (
             <div
               key={u.id}
-              className="grid grid-cols-[1fr_1fr_90px_120px] px-4 py-3 text-sm border-b border-line last:border-0 items-center hover:bg-panel-2 transition-colors"
+              className="grid grid-cols-[1fr_1fr_90px_120px] px-4 py-3 text-sm border-b border-border last:border-0 items-center hover:bg-surface-hover transition-colors"
             >
               <div className="font-display">{u.name ?? '—'}</div>
-              <div className="font-mono text-text-dim text-xs">{u.email}</div>
+              <div className="font-mono text-text-secondary text-xs">{u.email}</div>
               <div><Badge className={['ADMIN', 'SUPERADMIN'].includes(u.role) ? 'text-accent border-accent/40' : ''}>{u.role.toLowerCase()}</Badge></div>
-              <div className="font-mono text-text-dim text-xs">{new Date(u.createdAt).toLocaleDateString()}</div>
+              <div className="font-mono text-text-secondary text-xs">{new Date(u.createdAt).toLocaleDateString()}</div>
             </div>
           ))}
           {visible.length === 0 && (
-            <div className="text-sm text-text-dim font-mono p-6 text-center">sin resultados.</div>
+            <div className="text-sm text-text-secondary font-mono p-6 text-center">sin resultados.</div>
           )}
         </div>
       )}

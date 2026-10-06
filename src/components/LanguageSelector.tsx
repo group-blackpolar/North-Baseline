@@ -14,7 +14,7 @@ export function LanguageSelector({ value, onChange }: { value: string; onChange:
     <div className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 text-xs font-mono text-text-dim hover:text-text transition-colors"
+        className="flex items-center gap-1.5 text-xs font-mono text-text-secondary hover:text-text transition-colors"
       >
         {current.label}
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -22,7 +22,7 @@ export function LanguageSelector({ value, onChange }: { value: string; onChange:
         </svg>
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-32 rounded-md border border-line bg-panel shadow-lg overflow-hidden z-10">
+        <div className="absolute right-0 mt-2 w-32 rounded-md border border-border bg-surface shadow-lg overflow-hidden z-10">
           {LANGS.map((l) => (
             <button
               key={l.code}
@@ -30,8 +30,8 @@ export function LanguageSelector({ value, onChange }: { value: string; onChange:
                 onChange(l.code)
                 setOpen(false)
               }}
-              className={`w-full text-left px-3 py-2 text-xs font-mono hover:bg-panel-2 ${
-                l.code === value ? 'text-accent' : 'text-text-dim'
+              className={`w-full text-left px-3 py-2 text-xs font-mono hover:bg-surface-hover ${
+                l.code === value ? 'text-accent' : 'text-text-secondary'
               }`}
             >
               {l.label}

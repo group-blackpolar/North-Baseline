@@ -19,13 +19,10 @@
   --color-warning: #F79009;
   --color-error: #F04438;
 
-  /* Aliases legacy — remover en TASK de migración (no usar en código nuevo) */
-  --color-bg: #F6F7F9;
-  --color-panel: #FBFCFD;
-  --color-panel-2: #F2F4F7;
-  --color-line: #E4E7EC;
-  --color-text-dim: #5A6472;
-  --color-accent-2: #EA580C;
+  /* Surfaces: L0 background · L1 surface (rails, body) · L2 card (.np-card) · L3 floating (shadow-pop/overlay) */
+  --color-border-hover: #D0D5DD;
+  --color-border-selected: color-mix(in srgb, var(--color-accent) 40%, transparent);
+  --color-card-highlight: rgb(255 255 255 / 0.6);
 
   /* Tipografía */
   --font-display: "Manrope", "Inter", system-ui, sans-serif;
@@ -37,10 +34,32 @@
   --radius-md: 8px;
   --radius-lg: 10px;
   --radius-xl: 14px;
+  --radius-2xl: 16px;
 
   /* Elevación sutil */
+  --shadow-xs: 0 1px 2px rgb(16 24 40 / 0.05);
   --shadow-soft: 0 1px 2px rgb(16 24 40 / 0.04), 0 1px 3px rgb(16 24 40 / 0.06);
   --shadow-pop: 0 4px 6px -2px rgb(16 24 40 / 0.05), 0 12px 16px -4px rgb(16 24 40 / 0.10);
+  --shadow-overlay: 0 8px 12px -4px rgb(16 24 40 / 0.08), 0 24px 48px -12px rgb(16 24 40 / 0.22);
+
+  /* Z-index scale (use z-(--z-modal), never literal z-50/z-[100]) */
+  --z-sticky: 10;
+  --z-navigation: 20;
+  --z-drawer: 40;
+  --z-popover: 50;
+  --z-modal: 60;
+  --z-toast: 70;
+
+  /* Motion: CSS for hover/press/color, Motion lib for enter/exit/layout */
+  --duration-fast: 120ms;
+  --duration-normal: 180ms;
+  --duration-slow: 280ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Minimum interactive target; 44px on coarse pointers (see media query below) */
+  --touch-min: 32px;
 
   /* Application density — matches the requested 70% desktop workspace scale. */
   --north-ui-density: 0.7;
@@ -78,13 +97,9 @@
     --color-success: #34D399;
     --color-warning: #FBBF24;
     --color-error: #F87171;
-    /* aliases legacy dark */
-    --color-bg: #0D0F13;
-    --color-panel: #14171C;
-    --color-panel-2: #1A1E24;
-    --color-line: #262B33;
-    --color-text-dim: #A6AFBA;
-    --color-accent-2: #FB7A3D;
+    --color-border-hover: #343B45;
+    --color-card-highlight: rgb(255 255 255 / 0.03);
+    --shadow-overlay: 0 8px 12px -4px rgb(0 0 0 / 0.4), 0 24px 48px -12px rgb(0 0 0 / 0.6);
   }
 
   body {
@@ -127,13 +142,13 @@
     --color-accent: #3ecfba;
     --color-accent-hover: #5adcc8;
     --color-accent-soft: rgba(62, 207, 186, 0.14);
+    --color-border-hover: #2e3f6b;
+    --color-card-highlight: rgb(255 255 255 / 0.03);
+    --shadow-overlay: 0 8px 12px -4px rgb(0 0 0 / 0.4), 0 24px 48px -12px rgb(0 0 0 / 0.6);
   }
 }
 
 @layer components {
-  /* Icons inherit currentColor; never let a flex parent squash them. */
-  svg.ph { flex-shrink: 0; }
-
   /* Cards: depth from border + background + a soft shadow, lifted on hover only
      when the card is interactive. */
   .np-card {
@@ -141,7 +156,7 @@
     transition: border-color var(--shell-motion-fast) ease, box-shadow var(--shell-motion-fast) ease;
   }
   a.np-card:hover, button.np-card:hover, .np-card[role="button"]:hover {
-    border-color: var(--color-border-strong);
+    border-color: var(--color-border-hover);
     box-shadow: var(--shadow-pop);
   }
 
@@ -190,7 +205,7 @@
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-soft);
+    box-shadow: var(--shadow-soft), inset 0 1px 0 var(--color-card-highlight);
   }
 }
 
@@ -227,8 +242,12 @@
   :root {
     --north-ui-density: 1;
     --north-ui-density-compensated-width: 100vw;
-    --north-ui-density-compensated-height: 100vh;
+    --north-ui-density-compensated-height: 100dvh;
   }
+}
+
+@media (pointer: coarse) {
+  :root { --touch-min: 44px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
