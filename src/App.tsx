@@ -44,6 +44,7 @@ import { acceptInvitation, resolvePublicOrganization, resolvePublishedPanel, typ
 import { currentNorthRoute, replacePath, type NorthRoute } from '@/lib/routes';
 import { GenericNotFound, OrganizationAccessGate } from '@/components/organization/OrganizationAccessGate';
 import { PlatformAdminView } from '@/features/platform-admin/PlatformAdminView';
+import { ShowcaseView } from '@/features/showcase/ShowcaseView';
 import { navigateToPublishedTarget } from '@/lib/publishedNavigation';
 
 const PENDING_ROUTE_INVITATION_KEY = 'north-pending-route-invitation-v1';
@@ -321,6 +322,9 @@ function AppInner() {
       );
     }
   };
+
+  // Public showcase: anonymous, read-only, independent of session state.
+  if (route.kind === 'showcase') return <ShowcaseView route={route} />;
 
   if (checkingSession) {
     return (

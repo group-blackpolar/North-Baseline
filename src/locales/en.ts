@@ -647,6 +647,12 @@ const en: Dictionary = {
   'access.perm.directHint': 'Grant or revoke registered permissions for one member.',
   'access.perm.pick': 'Choose a member…',
   'access.perm.note': 'This list only reflects what CORECROW has already granted; the interface never grants permissions by itself.',
+  'showcase.badge': 'Public demo',
+  'showcase.signIn': 'Sign in',
+  'showcase.menu': 'Sections',
+  'showcase.fictional': 'Fictitious data for demonstration purposes.',
+  'showcase.unavailable': 'This view is not available.',
+  'showcase.empty': 'There are no public views available.',
 };
 
 export default en;

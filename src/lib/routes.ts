@@ -5,7 +5,7 @@
 export const RESERVED_ROOTS = new Set([
   'admin', 'api', 'auth', 'billing', 'callback', 'create', 'dashboard',
   'desktop-auth', 'health', 'invitations', 'login', 'logout', 'me',
-  'organizations', 'personal', 'privacy', 'register', 'security', 'settings',
+  'organizations', 'personal', 'privacy', 'register', 'security', 'settings', 'showcase',
   'sign-in', 'sign-up', 'support', 'terms', 'users', 'v1', 'verify',
   'workspace', 'workspaces', 'www',
 ]);
@@ -13,6 +13,7 @@ export const RESERVED_ROOTS = new Set([
 export type NorthRoute =
   | { kind: 'workspace'; path: string }
   | { kind: 'platform-admin'; path: string }
+  | { kind: 'showcase'; organizationSlug: string; panel: { categorySlug: string; subcategorySlug: string; panelSlug: string } | null; path: string }
   | { kind: 'organization'; organizationSlug: string; path: string }
   | { kind: 'panel'; organizationSlug: string; categorySlug: string; subcategorySlug: string; panelSlug: string; path: string }
   | { kind: 'unknown'; path: string };
@@ -24,6 +25,12 @@ function segment(value: string) {
 export function parseNorthRoute(pathname: string): NorthRoute {
   const path = pathname.startsWith('/') ? pathname : `/${pathname}`;
   const parts = path.split('/').filter(Boolean).map(segment);
+  // Anonymous public showcase: /showcase/:org and /showcase/:org/:category/:subcategory/:panel
+  if (parts[0] === 'showcase' && parts[1]) {
+    if (parts.length === 2) return { kind: 'showcase', organizationSlug: parts[1], panel: null, path };
+    if (parts.length === 5 && parts.every(Boolean)) return { kind: 'showcase', organizationSlug: parts[1], panel: { categorySlug: parts[2], subcategorySlug: parts[3], panelSlug: parts[4] }, path };
+    return { kind: 'unknown', path };
+  }
   if (parts[0] === 'workspace') {
     return parts[1] === 'admin' ? { kind: 'platform-admin', path } : { kind: 'workspace', path };
   }
