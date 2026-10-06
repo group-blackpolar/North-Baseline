@@ -1,0 +1,17 @@
+<!doctype html>
+<!--
+  Development-only visual harness (never part of `vite build`, which only bundles index.html).
+  Open http://localhost:5173/dev/harness.html while `pnpm dev` runs. It boots the real application
+  with a mocked API so layouts can be reviewed at any viewport without a session.
+-->
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>North — visual harness</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/dev/harness.ts"></script>
+  </body>
+</html>
