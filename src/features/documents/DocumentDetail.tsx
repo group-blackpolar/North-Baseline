@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { ArrowLeft, Download, Mail, MessageCircle, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, ChatCircle, DownloadSimple, Envelope, PencilSimple, Trash } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -142,17 +142,17 @@ export function DocumentDetail({ organizationId, documentId, initial, can, chann
           <p className="text-xs text-text-muted">{localizedLabel(document.type.name, locale)} · {formatDate(document.date, locale)}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {can.update && document.editable && <Button variant="secondary" onClick={() => onEdit(document)}><Pencil className="size-4" />{t('documents.edit')}</Button>}
-          {can.download && <Button variant="secondary" disabled={busy === 'pdf'} onClick={() => void run('pdf', async () => { saveBlob(await fetchPdf(organizationId, document.id, locale === 'en' ? 'en' : 'es'), `${document.reference}.pdf`); await reload(); })}><Download className="size-4" />{t('documents.downloadPdf')}</Button>}
-          {can.send && sendable && <Button variant="secondary" onClick={() => setDialog('email')}><Mail className="size-4" />{t('documents.sendEmail')}</Button>}
-          {can.send && sendable && <Button variant="secondary" onClick={() => setDialog('whatsapp')}><MessageCircle className="size-4" />{t('documents.sendWhatsApp')}</Button>}
+          {can.update && document.editable && <Button variant="secondary" onClick={() => onEdit(document)}><PencilSimple className="size-4" />{t('documents.edit')}</Button>}
+          {can.download && <Button variant="secondary" disabled={busy === 'pdf'} onClick={() => void run('pdf', async () => { saveBlob(await fetchPdf(organizationId, document.id, locale === 'en' ? 'en' : 'es'), `${document.reference}.pdf`); await reload(); })}><DownloadSimple className="size-4" />{t('documents.downloadPdf')}</Button>}
+          {can.send && sendable && <Button variant="secondary" onClick={() => setDialog('email')}><Envelope className="size-4" />{t('documents.sendEmail')}</Button>}
+          {can.send && sendable && <Button variant="secondary" onClick={() => setDialog('whatsapp')}><ChatCircle className="size-4" />{t('documents.sendWhatsApp')}</Button>}
           {transitions.length > 0 && (
             <select aria-label={t('documents.changeStatus')} className={selectClass} value="" disabled={busy === 'status'} onChange={(event) => { if (event.target.value) changeStatus(event.target.value as DocumentStatus); }}>
               <option value="">{t('documents.changeStatus')}</option>
               {transitions.map((status) => <option key={status} value={status}>{t(`documents.status.${status}` as never)}</option>)}
             </select>
           )}
-          {can.delete && document.status === 'DRAFT' && <Button variant="ghost" aria-label={t('documents.delete')} title={t('documents.delete')} disabled={busy === 'delete'} onClick={() => { if (window.confirm(t('documents.confirmDelete'))) void run('delete', async () => { await deleteDocument(organizationId, document.id); onDeleted(); }); }}><Trash2 className="size-4" /></Button>}
+          {can.delete && document.status === 'DRAFT' && <Button variant="ghost" aria-label={t('documents.delete')} title={t('documents.delete')} disabled={busy === 'delete'} onClick={() => { if (window.confirm(t('documents.confirmDelete'))) void run('delete', async () => { await deleteDocument(organizationId, document.id); onDeleted(); }); }}><Trash className="size-4" /></Button>}
         </div>
       </header>
       <ErrorNote message={error} />

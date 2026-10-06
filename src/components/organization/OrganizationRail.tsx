@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Home, Plus } from 'lucide-react';
+import { House, Plus } from '@phosphor-icons/react';
 import { useOrganization } from '@/context/OrganizationContext';
 import { PERSONAL_ORG_ID } from '@/lib/demo/store';
 import { OrganizationModal } from '@/components/organization/OrganizationModal';
@@ -44,7 +44,7 @@ export function OrganizationRail() {
         )}
         onClick={() => { switchOrganization(PERSONAL_ORG_ID); navigateToOrganization(PERSONAL_ORG_ID); }}
       >
-        <Home className="w-4 h-4" />
+        <House className="w-4 h-4" />
       </button>
 
       <div className="w-6 h-px bg-border my-1" />

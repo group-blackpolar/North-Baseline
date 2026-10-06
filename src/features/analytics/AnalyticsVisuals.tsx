@@ -14,7 +14,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { AlertCircle, ArrowDown, ArrowUp, ChevronsUpDown, Filter, LoaderCircle } from 'lucide-react';
+import { ArrowDown, ArrowUp, CaretUpDown, CircleNotch, Funnel, WarningCircle } from '@phosphor-icons/react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useI18n } from '@/lib/i18n';
 import type { AnalyticsColumn, AnalyticsData, AnalyticsFilter, AnalyticsResult, AnalyticsRow, AnalyticsSeries, AnalyticsValue } from './types';
@@ -37,10 +37,10 @@ function display(value: AnalyticsValue): string {
 function ResultState({ result, children }: { result: AnalyticsResult; children: (data: AnalyticsData) => ReactNode }) {
   const { t } = useI18n();
   if (result.state === 'loading') {
-    return <div aria-busy="true" className="flex min-h-32 items-center justify-center gap-2 text-xs text-text-muted"><LoaderCircle className="size-4 animate-spin" />{t('analytics.loading')}</div>;
+    return <div aria-busy="true" className="flex min-h-32 items-center justify-center gap-2 text-xs text-text-muted"><CircleNotch className="size-4 animate-spin" />{t('analytics.loading')}</div>;
   }
   if (result.state === 'error') {
-    return <div role="alert" className="flex min-h-32 items-center justify-center gap-2 px-4 text-center text-xs text-error"><AlertCircle className="size-4 shrink-0" />{result.message || t('analytics.error')}</div>;
+    return <div role="alert" className="flex min-h-32 items-center justify-center gap-2 px-4 text-center text-xs text-error"><WarningCircle className="size-4 shrink-0" />{result.message || t('analytics.error')}</div>;
   }
   if (result.state === 'empty') {
     return <div role="status" className="flex min-h-32 items-center justify-center px-4 text-center text-xs text-text-muted">{result.message || t('analytics.empty')}</div>;
@@ -107,7 +107,7 @@ function SortableGrid({ columns, rows }: { columns: AnalyticsColumn[]; rows: Ana
             <th scope="col" className="w-8 border-b border-border px-2 py-2 text-right font-medium text-text-muted">#</th>
             {columns.map((column) => {
               const active = sort?.key === column.key;
-              const Icon = !active ? ChevronsUpDown : sort.direction === 'asc' ? ArrowUp : ArrowDown;
+              const Icon = !active ? CaretUpDown : sort.direction === 'asc' ? ArrowUp : ArrowDown;
               return (
                 <th key={column.key} scope="col" aria-sort={active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'} className={`border-b border-border p-0 font-medium text-text-secondary ${numeric.has(column.key) ? 'text-right' : ''}`}>
                   <button type="button" onClick={() => toggle(column.key)} className={`flex w-full items-center gap-1 px-3 py-2 hover:bg-surface-hover hover:text-text transition-colors duration-150 ${numeric.has(column.key) ? 'justify-end' : ''}`}>
@@ -163,5 +163,5 @@ export function AnalyticsDonutChart({ result, categoryKey, valueKey, variant = '
 export function AnalyticsFilterControls({ filters, onChange }: { filters: AnalyticsFilter[]; onChange: (id: string, value: string | string[]) => void }) {
   const { t } = useI18n();
   if (!filters.length) return null;
-  return <fieldset className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface-hover/40 p-3"><legend className="sr-only">{t('analytics.filters')}</legend><Filter className="mb-2 size-4 text-text-muted" aria-hidden="true" />{filters.map((filter) => <label key={filter.id} className="min-w-32 flex-1 space-y-1 text-xs text-text-secondary"><span className="block font-medium">{filter.label}</span>{filter.type === 'select' || filter.type === 'multiselect' ? <select multiple={filter.type === 'multiselect'} value={filter.value} disabled={filter.disabled} onChange={(event) => onChange(filter.id, filter.type === 'multiselect' ? [...event.currentTarget.selectedOptions].map((option) => option.value) : event.currentTarget.value)} className="h-8 w-full rounded-md border border-border bg-surface px-2 text-xs text-text disabled:cursor-not-allowed disabled:opacity-60">{filter.type === 'select' && <option value="">{t('analytics.all')}</option>}{(filter.options ?? []).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> : <input type={filter.type === 'date' ? 'date' : 'text'} value={Array.isArray(filter.value) ? '' : filter.value} disabled={filter.disabled} onChange={(event) => onChange(filter.id, event.currentTarget.value)} className="h-8 w-full rounded-md border border-border bg-surface px-2 text-xs text-text disabled:cursor-not-allowed disabled:opacity-60" />}</label>)}</fieldset>;
+  return <fieldset className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface-hover/40 p-3"><legend className="sr-only">{t('analytics.filters')}</legend><Funnel className="mb-2 size-4 text-text-muted" aria-hidden="true" />{filters.map((filter) => <label key={filter.id} className="min-w-32 flex-1 space-y-1 text-xs text-text-secondary"><span className="block font-medium">{filter.label}</span>{filter.type === 'select' || filter.type === 'multiselect' ? <select multiple={filter.type === 'multiselect'} value={filter.value} disabled={filter.disabled} onChange={(event) => onChange(filter.id, filter.type === 'multiselect' ? [...event.currentTarget.selectedOptions].map((option) => option.value) : event.currentTarget.value)} className="h-8 w-full rounded-md border border-border bg-surface px-2 text-xs text-text disabled:cursor-not-allowed disabled:opacity-60">{filter.type === 'select' && <option value="">{t('analytics.all')}</option>}{(filter.options ?? []).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> : <input type={filter.type === 'date' ? 'date' : 'text'} value={Array.isArray(filter.value) ? '' : filter.value} disabled={filter.disabled} onChange={(event) => onChange(filter.id, event.currentTarget.value)} className="h-8 w-full rounded-md border border-border bg-surface px-2 text-xs text-text disabled:cursor-not-allowed disabled:opacity-60" />}</label>)}</fieldset>;
 }

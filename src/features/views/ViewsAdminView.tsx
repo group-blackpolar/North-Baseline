@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AlertCircle, LoaderCircle } from 'lucide-react';
+import { CircleNotch, WarningCircle } from '@phosphor-icons/react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
 import { useCatalog } from '@/context/CatalogContext';
@@ -65,7 +65,7 @@ export function ViewsAdminView({ organizationId }: { organizationId: string }) {
   if (loading) {
     return (
       <div className="flex flex-1 items-center justify-center gap-2 text-sm text-text-muted">
-        <LoaderCircle className="h-4 w-4 animate-spin" />
+        <CircleNotch className="h-4 w-4 animate-spin" />
         {t('admin.loading')}
       </div>
     );
@@ -75,7 +75,7 @@ export function ViewsAdminView({ organizationId }: { organizationId: string }) {
     return (
       <div className="flex flex-1 items-center justify-center p-6">
         <EmptyState
-          icon={AlertCircle}
+          icon={WarningCircle}
           title={t('admin.errorTitle')}
           body={`${loadError?.message ?? ''} ${loadError?.requestId ? `(${loadError.requestId})` : ''}`}
           action={

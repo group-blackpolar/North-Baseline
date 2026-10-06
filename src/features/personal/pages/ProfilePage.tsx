@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { CheckCircle2, CircleAlert, LockKeyhole } from 'lucide-react';
+import { CheckCircle, LockKey, WarningCircle } from '@phosphor-icons/react';
 import { DashboardCard } from '@/components/dashboard/primitives';
 import { Button } from '@/components/ui/button';
 import { getOwnProfile, updateOwnProfile, type SessionUser } from '@/lib/auth';
@@ -103,8 +103,8 @@ export function ProfilePage({ sub, user }: { sub: string; user: SessionUser }) {
         <DashboardCard title={t('profile.identitySecurity')} description={t('profile.securityHint')}>
           <div className="flex items-start gap-3 rounded-lg border border-border bg-surface-hover/50 p-3">
             {profile.emailVerified
-              ? <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
-              : <CircleAlert className="mt-0.5 size-4 shrink-0 text-warning" />}
+              ? <CheckCircle className="mt-0.5 size-4 shrink-0 text-success" />
+              : <WarningCircle className="mt-0.5 size-4 shrink-0 text-warning" />}
             <div>
               <p className="text-sm font-medium text-text">
                 {profile.emailVerified ? t('profile.emailVerified') : t('profile.emailPending')}
@@ -113,7 +113,7 @@ export function ProfilePage({ sub, user }: { sub: string; user: SessionUser }) {
             </div>
           </div>
           <div className="flex items-start gap-3 rounded-lg border border-dashed border-border-strong p-3">
-            <LockKeyhole className="mt-0.5 size-4 shrink-0 text-text-muted" />
+            <LockKey className="mt-0.5 size-4 shrink-0 text-text-muted" />
             <div>
               <p className="text-sm font-medium text-text">{t('profile.securityComing')}</p>
               <p className="mt-0.5 text-xs text-text-secondary">{t('profile.securityComingHint')}</p>

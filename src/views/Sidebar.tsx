@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, Search } from 'lucide-react';
+import { CaretDown, CaretRight, MagnifyingGlass } from '@phosphor-icons/react';
 import { useCatalog } from '@/context/CatalogContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useTabs } from '@/context/TabsContext';
@@ -69,7 +69,7 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
           onClick={() => setCollapsedPreference(false)}
           className="h-8 w-8 rounded-lg hover:bg-surface-hover flex items-center justify-center text-text-muted hover:text-text transition-colors duration-150"
         >
-          <ChevronRight className="w-4 h-4" />
+          <CaretRight className="w-4 h-4" />
         </button>
       </aside>
     );
@@ -86,7 +86,7 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
           onClick={() => setCollapsedPreference(true)}
           className="w-full flex items-center justify-end text-text-muted hover:text-text transition-colors duration-150"
         >
-          <ChevronDown className="w-4 h-4" />
+          <CaretDown className="w-4 h-4" />
         </button>
 
         {workspaces.length > 1 && (
@@ -104,7 +104,7 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
         )}
 
         <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
+          <MagnifyingGlass className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
           <input
             type="text"
             value={search}
@@ -131,7 +131,7 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
                 className="w-full flex items-center gap-1.5 px-2 py-1.5 ui-label text-[10px] text-text-muted hover:text-text transition-colors duration-150"
                 onClick={() => toggleGroup(group.name)}
               >
-                {groupCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                {groupCollapsed ? <CaretRight className="w-3 h-3" /> : <CaretDown className="w-3 h-3" />}
                 <span className="truncate">{group.name}</span>
               </button>
 

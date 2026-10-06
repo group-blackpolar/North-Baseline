@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ArrowLeft, Building2, FileClock, KeyRound, LayoutDashboard, LayoutTemplate, Receipt, Send, ShieldAlert, Users2 } from 'lucide-react';
+import { ArrowLeft, Buildings, ClockCounterClockwise, Key, Layout, PaperPlaneTilt, Receipt, ShieldWarning, SquaresFour, Users } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import type { SessionUser } from '@/lib/auth';
@@ -34,21 +34,21 @@ type SectionDefinition = {
     | 'pa.nav.audit'
     | 'pa.nav.permissions'
     | 'pa.nav.templates';
-  icon: typeof LayoutDashboard;
+  icon: typeof SquaresFour;
   superadminOnly?: boolean;
 };
 
 /** §10 — visibility map. It only drives navigation: every request is still
  * authorized by CORECROW, and a forced URL renders a denied state. */
 const SECTIONS: SectionDefinition[] = [
-  { id: 'dashboard', labelKey: 'pa.nav.dashboard', icon: LayoutDashboard },
-  { id: 'users', labelKey: 'pa.nav.users', icon: Users2 },
-  { id: 'organizations', labelKey: 'pa.nav.organizations', icon: Building2 },
+  { id: 'dashboard', labelKey: 'pa.nav.dashboard', icon: SquaresFour },
+  { id: 'users', labelKey: 'pa.nav.users', icon: Users },
+  { id: 'organizations', labelKey: 'pa.nav.organizations', icon: Buildings },
   { id: 'billing', labelKey: 'pa.nav.billing', icon: Receipt },
-  { id: 'contacts', labelKey: 'pa.nav.contacts', icon: Send },
-  { id: 'audit', labelKey: 'pa.nav.audit', icon: FileClock, superadminOnly: true },
-  { id: 'permissions', labelKey: 'pa.nav.permissions', icon: KeyRound, superadminOnly: true },
-  { id: 'templates', labelKey: 'pa.nav.templates', icon: LayoutTemplate, superadminOnly: true },
+  { id: 'contacts', labelKey: 'pa.nav.contacts', icon: PaperPlaneTilt },
+  { id: 'audit', labelKey: 'pa.nav.audit', icon: ClockCounterClockwise, superadminOnly: true },
+  { id: 'permissions', labelKey: 'pa.nav.permissions', icon: Key, superadminOnly: true },
+  { id: 'templates', labelKey: 'pa.nav.templates', icon: Layout, superadminOnly: true },
 ];
 
 function sectionOf(path: string): PlatformSection | null {
@@ -95,7 +95,7 @@ export function PlatformAdminView({ user, route }: { user: SessionUser; route: N
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-background p-6">
         <div className="max-w-md">
-          <EmptyState icon={ShieldAlert} title={t('pa.state.deniedTitle')} body={t('pa.state.deniedBody')} />
+          <EmptyState icon={ShieldWarning} title={t('pa.state.deniedTitle')} body={t('pa.state.deniedBody')} />
         </div>
       </div>
     );
@@ -152,7 +152,7 @@ export function PlatformAdminView({ user, route }: { user: SessionUser; route: N
           ) : (
             <div className="max-w-md">
               <EmptyState
-                icon={ShieldAlert}
+                icon={ShieldWarning}
                 title={t('pa.state.deniedTitle')}
                 body={t('pa.state.deniedBody')}
                 action={

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronRight, ChevronDown, Folder, Plus, Edit2, Archive } from 'lucide-react';
+import { Archive, CaretDown, CaretRight, Folder, PencilSimple, Plus } from '@phosphor-icons/react';
 import { useViewsEditor } from './ViewsEditorContext';
 import { useI18n } from '@/lib/i18n';
 import type { ManagementCategory } from '@/lib/northAdmin';
@@ -39,7 +39,7 @@ export function ViewsCategoryNode({
             }}
             className="p-0.5 rounded text-text-muted hover:text-text"
           >
-            {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            {collapsed ? <CaretRight className="w-3.5 h-3.5" /> : <CaretDown className="w-3.5 h-3.5" />}
           </button>
           <Folder className="w-3.5 h-3.5 text-accent shrink-0" />
           <span className="truncate">{localName(cat.name)}</span>
@@ -70,7 +70,7 @@ export function ViewsCategoryNode({
             }}
             className="p-1 rounded hover:bg-surface text-text-muted hover:text-text"
           >
-            <Edit2 className="w-3 h-3" />
+            <PencilSimple className="w-3 h-3" />
           </button>
           {cat.resourceKind !== 'SYSTEM' && (
             <button

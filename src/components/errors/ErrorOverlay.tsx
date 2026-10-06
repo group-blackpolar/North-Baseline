@@ -1,17 +1,18 @@
-import { AlertTriangle, Building2, FolderX, LockKeyhole, ShieldAlert, TimerOff, WifiOff } from 'lucide-react';
+import { Buildings, FolderMinus, LockKey, ShieldWarning, Timer, Warning, WifiSlash } from '@phosphor-icons/react';
+import type { IconComponent } from '@/components/ui/icon';
 import { useI18n } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import type { AppError, AppErrorCode } from '@/lib/appErrors';
-import type { LucideIcon } from 'lucide-react';
 
-const ICONS: Record<AppErrorCode, LucideIcon> = {
-  API_UNAVAILABLE: WifiOff,
-  AUTH_ERROR: LockKeyhole,
-  PERMISSION_DENIED: ShieldAlert,
-  WORKSPACE_UNAVAILABLE: FolderX,
-  ORGANIZATION_UNAVAILABLE: Building2,
-  SESSION_EXPIRED: TimerOff,
-  UNEXPECTED: AlertTriangle,
+
+const ICONS: Record<AppErrorCode, IconComponent> = {
+  API_UNAVAILABLE: WifiSlash,
+  AUTH_ERROR: LockKey,
+  PERMISSION_DENIED: ShieldWarning,
+  WORKSPACE_UNAVAILABLE: FolderMinus,
+  ORGANIZATION_UNAVAILABLE: Buildings,
+  SESSION_EXPIRED: Timer,
+  UNEXPECTED: Warning,
 };
 
 interface ErrorOverlayProps {

@@ -1,4 +1,4 @@
-import { Loader2, Plus, Code2 } from 'lucide-react';
+import { CircleNotch, Code, Plus } from '@phosphor-icons/react';
 import { useViewsEditor } from './ViewsEditorContext';
 import { useI18n } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,7 @@ export function ViewsCanvasBody({ loading, error }: { loading: boolean; error: s
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center py-20 text-xs text-text-muted">
-        <Loader2 className="w-5 h-5 animate-spin mr-2" />
+        <CircleNotch className="w-5 h-5 animate-spin mr-2" />
         <span>{t('admin.loading')}</span>
       </div>
     );
@@ -61,7 +61,7 @@ export function ViewsCanvasBody({ loading, error }: { loading: boolean; error: s
               onClick={() => setModal({ type: 'dev_json' })}
               className="text-xs"
             >
-              <Code2 className="h-3.5 w-3.5 mr-1" />
+              <Code className="h-3.5 w-3.5 mr-1" />
               {t('views.devJson.title')}
             </Button>
           </div>

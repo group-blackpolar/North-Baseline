@@ -4,21 +4,21 @@ import { useI18n } from '@/lib/i18n';
 import { componentTypes, type ComponentType } from '@/lib/northAdmin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Type, AlignLeft, Gauge, Table2, Link2, List, CreditCard, Minus, Image, Video, FileText, Code2 } from 'lucide-react';
+import { Code, CreditCard, FileText, Gauge, Image, Link, List, Minus, Table, TextAlignLeft, TextT, Video } from '@phosphor-icons/react';
 
-const icons: Record<ComponentType, typeof Type> = {
-  heading: Type,
-  rich_text: AlignLeft,
+const icons: Record<ComponentType, typeof TextT> = {
+  heading: TextT,
+  rich_text: TextAlignLeft,
   metric: Gauge,
-  table: Table2,
-  link: Link2,
+  table: Table,
+  link: Link,
   list: List,
   card: CreditCard,
   divider: Minus,
   image: Image,
   video: Video,
   file: FileText,
-  embed: Code2,
+  embed: Code,
 };
 
 export function ComponentLibraryModal() {
@@ -50,7 +50,7 @@ export function ComponentLibraryModal() {
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2 max-h-80 overflow-y-auto pr-1">
           {items.map((type) => {
-            const Icon = icons[type] ?? Type;
+            const Icon = icons[type] ?? TextT;
             return (
               <button
                 key={type}

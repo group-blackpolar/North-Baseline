@@ -1,14 +1,14 @@
-import { PanelLeft, PanelRight, PanelBottom, LayoutGrid, Square } from 'lucide-react';
+import { Sidebar, Square, SquareHalf, SquareHalfBottom, SquaresFour } from '@phosphor-icons/react';
 import { useLayout } from '@/context/LayoutContext';
 import { cn } from '@/lib/utils';
 import { useI18n, type Dictionary } from '@/lib/i18n';
 
 const MODES = [
   { id: 'single', icon: Square, label: 'layout.single' },
-  { id: 'left', icon: PanelLeft, label: 'layout.left' },
-  { id: 'right', icon: PanelRight, label: 'layout.right' },
-  { id: 'bottom', icon: PanelBottom, label: 'layout.bottom' },
-  { id: 'grid', icon: LayoutGrid, label: 'layout.grid' },
+  { id: 'left', icon: Sidebar, label: 'layout.left' },
+  { id: 'right', icon: SquareHalf, label: 'layout.right' },
+  { id: 'bottom', icon: SquareHalfBottom, label: 'layout.bottom' },
+  { id: 'grid', icon: SquaresFour, label: 'layout.grid' },
 ] as const;
 
 export function LayoutSwitcher() {

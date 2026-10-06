@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AlertCircle, ChevronRight, FileText, FolderPlus, Layers3, LoaderCircle, Plus, ShieldCheck } from 'lucide-react';
+import { CaretRight, CircleNotch, FileText, FolderPlus, Plus, ShieldCheck, Stack, WarningCircle } from '@phosphor-icons/react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useCatalog } from '@/context/CatalogContext';
 import { useAppErrorSafe } from '@/context/ErrorContext';
@@ -105,10 +105,10 @@ export function OrganizationAdminView({ organizationId }: { organizationId: stri
     } finally { setSaving(false); }
   };
 
-  if (loading) return <div className="flex h-full items-center justify-center text-sm text-text-muted"><LoaderCircle className="mr-2 h-4 w-4 animate-spin" />{t('admin.loading')}</div>;
+  if (loading) return <div className="flex h-full items-center justify-center text-sm text-text-muted"><CircleNotch className="mr-2 h-4 w-4 animate-spin" />{t('admin.loading')}</div>;
   if (loadError) {
     const protectedState = loadError.status === 401 || loadError.status === 403 || loadError.status === 404;
-    return <div className="p-6"><EmptyState icon={protectedState ? ShieldCheck : AlertCircle} title={t(protectedState ? 'admin.unavailableTitle' : 'admin.errorTitle')} body={protectedState ? t('admin.unavailableBody') : requestError(loadError)} action={<button type="button" className="rounded-md border border-border px-3 py-2 text-sm hover:bg-surface-hover" onClick={() => void reload(true)}>{t('admin.retry')}</button>} /></div>;
+    return <div className="p-6"><EmptyState icon={protectedState ? ShieldCheck : WarningCircle} title={t(protectedState ? 'admin.unavailableTitle' : 'admin.errorTitle')} body={protectedState ? t('admin.unavailableBody') : requestError(loadError)} action={<button type="button" className="rounded-md border border-border px-3 py-2 text-sm hover:bg-surface-hover" onClick={() => void reload(true)}>{t('admin.retry')}</button>} /></div>;
   }
 
   const canCreateSubcategory = Boolean(selection.categoryId);
@@ -122,11 +122,11 @@ export function OrganizationAdminView({ organizationId }: { organizationId: stri
     {catalogWarning && <p role="status" className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">{catalogWarning}</p>}
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <section className="rounded-xl border border-border bg-surface p-4 md:p-5">
-        <div className="mb-4 flex items-center gap-2"><Layers3 className="h-4 w-4 text-accent" /><h2 className="font-medium">{t('admin.taxonomy')}</h2></div>
+        <div className="mb-4 flex items-center gap-2"><Stack className="h-4 w-4 text-accent" /><h2 className="font-medium">{t('admin.taxonomy')}</h2></div>
         <div className="space-y-2">
           {tree.length === 0 ? <EmptyState icon={FolderPlus} title={t('admin.emptyTitle')} body={t('admin.emptyBody')} /> : tree.map((category) => (
             <div key={category.id} className="rounded-lg border border-border">
-              <button type="button" onClick={() => setSelection({ categoryId: category.id })} className="flex w-full items-center gap-2 px-3 py-2.5 text-left hover:bg-surface-hover"><FolderPlus className="h-4 w-4 text-accent" /><span className="min-w-0 flex-1 truncate font-medium">{localName(category.name, locale)}</span><code className="text-xs text-text-muted">/{category.slug}</code><ChevronRight className="h-4 w-4 text-text-muted" /></button>
+              <button type="button" onClick={() => setSelection({ categoryId: category.id })} className="flex w-full items-center gap-2 px-3 py-2.5 text-left hover:bg-surface-hover"><FolderPlus className="h-4 w-4 text-accent" /><span className="min-w-0 flex-1 truncate font-medium">{localName(category.name, locale)}</span><code className="text-xs text-text-muted">/{category.slug}</code><CaretRight className="h-4 w-4 text-text-muted" /></button>
               <div className="border-t border-border px-3 py-2">
                 {category.subcategories.map((subcategory) => (
                   <div key={subcategory.id}>

@@ -1,4 +1,4 @@
-import { Plus, X } from 'lucide-react';
+import { Plus, X } from '@phosphor-icons/react';
 import { useTabs, type Tab } from '@/context/TabsContext';
 import { useCatalog } from '@/context/CatalogContext';
 import { resolveIcon } from '@/lib/iconMap';

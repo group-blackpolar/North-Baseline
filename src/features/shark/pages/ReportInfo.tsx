@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ArrowUpRight, CalendarDays, Database, Globe2, Layers, Waves } from 'lucide-react';
+import { ArrowUpRight, CalendarBlank, Database, Globe, Stack, Waves } from '@phosphor-icons/react';
 import { useTabs } from '@/context/TabsContext';
 import { DashboardCard, MetricCard } from '@/components/dashboard/primitives';
 import { compact } from '@/components/dashboard/charts';
@@ -43,10 +43,10 @@ export function ReportInfo() {
 
       {/* KPIs del dataset */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-        <MetricCard label="CONTAINERS" value={compact(dataset.containers)} icon={Layers} />
+        <MetricCard label="CONTAINERS" value={compact(dataset.containers)} icon={Stack} />
         <MetricCard label="TEUS" value={compact(dataset.teus)} icon={Database} />
-        <MetricCard label="COVERAGE" value="2024 – 2026" icon={Globe2} />
-        <MetricCard label="LAST UPDATE" value="Jun 2026" icon={CalendarDays} />
+        <MetricCard label="COVERAGE" value="2024 – 2026" icon={Globe} />
+        <MetricCard label="LAST UPDATE" value="Jun 2026" icon={CalendarBlank} />
       </div>
 
       {/* Dataset information */}

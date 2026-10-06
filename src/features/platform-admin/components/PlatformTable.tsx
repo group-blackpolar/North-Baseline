@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Inbox } from 'lucide-react';
+import { Tray } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -59,7 +59,7 @@ export function PlatformTable<Row>({
   if (rows.length === 0) {
     return (
       <EmptyState
-        icon={Inbox}
+        icon={Tray}
         title={emptyTitle ?? t('pa.table.emptyTitle')}
         body={emptyBody ?? t('pa.table.emptyBody')}
       />

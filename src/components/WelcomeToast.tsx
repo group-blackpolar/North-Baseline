@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Hand, X } from 'lucide-react';
+import { Hand, X } from '@phosphor-icons/react';
 
 export function WelcomeToast({ open, onClose }: { open: boolean; onClose: () => void }) {
   useEffect(() => {

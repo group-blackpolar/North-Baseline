@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check } from 'lucide-react';
+import { Check } from '@phosphor-icons/react';
 import { useI18n } from '@/lib/i18n';
 import { DashboardCard } from '@/components/dashboard/primitives';
 import { getRegionPrefs, saveRegionPrefs, type RegionPrefs } from '@/lib/regionPrefs';

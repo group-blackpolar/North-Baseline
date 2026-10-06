@@ -1,26 +1,23 @@
-import {
-  Activity, BarChart3, Database, GitBranch, KeyRound, LayoutDashboard,
-  ScrollText, Settings, ShieldCheck, StickyNote, UserRound, Users,
-  type LucideIcon,
-} from 'lucide-react';
+import { ChartBar, Database, Gear, GitBranch, Key, Note, Pulse, Scroll, ShieldCheck, SquaresFour, User, Users } from '@phosphor-icons/react';
+import type { IconComponent } from '@/components/ui/icon';
 
-const REGISTRY: Record<string, LucideIcon> = {
-  layout: LayoutDashboard,
-  note: StickyNote,
-  user: UserRound,
+const REGISTRY: Record<string, IconComponent> = {
+  layout: SquaresFour,
+  note: Note,
+  user: User,
   users: Users,
   shield: ShieldCheck,
-  settings: Settings,
-  scroll: ScrollText,
+  settings: Gear,
+  scroll: Scroll,
   branch: GitBranch,
   db: Database,
-  pulse: Activity,
-  key: KeyRound,
-  chart: BarChart3,
+  pulse: Pulse,
+  key: Key,
+  chart: ChartBar,
 };
 
-const FALLBACK: LucideIcon = LayoutDashboard;
+const FALLBACK: IconComponent = SquaresFour;
 
-export function resolveIcon(name: string): LucideIcon {
+export function resolveIcon(name: string): IconComponent {
   return REGISTRY[name] ?? FALLBACK;
 }

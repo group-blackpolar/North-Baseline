@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Container, Ship } from 'lucide-react';
+import { Boat, Package } from '@phosphor-icons/react';
 import { DashboardCard, FilterBar, FilterSelect, MetricCard, SimpleTable } from '@/components/dashboard/primitives';
 import { GroupedBarChart, ShareDonut, TrendLineChart, formatNumber, yearSeries } from '@/components/dashboard/charts';
 import { sharkService } from '../data/service';
@@ -49,8 +49,8 @@ export function PortDashboard() {
 
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <MetricCard label="CONTAINERS" value={formatNumber(report.containers)} icon={Container} />
-        <MetricCard label="TEUS" value={formatNumber(report.teus)} icon={Ship} />
+        <MetricCard label="CONTAINERS" value={formatNumber(report.containers)} icon={Package} />
+        <MetricCard label="TEUS" value={formatNumber(report.teus)} icon={Boat} />
       </div>
 
       {/* Visualizaciones */}

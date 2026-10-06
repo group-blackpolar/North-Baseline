@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { CircleNotch } from '@phosphor-icons/react';
 import { useViewsEditor } from './ViewsEditorContext';
 import { useI18n } from '@/lib/i18n';
 import { getPanelAudience, type TaxonomyPanel } from '@/lib/northAdmin';
@@ -37,7 +37,7 @@ export function ViewsSettingsTab() {
           </span>
           {loading ? (
             <div className="mt-2 flex items-center gap-2 text-xs text-text-muted">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <CircleNotch className="h-3.5 w-3.5 animate-spin" />
               {t('admin.loading')}
             </div>
           ) : (

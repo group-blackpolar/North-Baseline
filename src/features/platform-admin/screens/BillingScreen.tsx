@@ -1,4 +1,4 @@
-import { CreditCard } from 'lucide-react';
+import { CreditCard } from '@phosphor-icons/react';
 import { MetricCard } from '@/components/dashboard/primitives';
 import { Badge } from '@/components/ui/badge';
 import { getPlatformBillingSummary } from '@/lib/platformAdmin';

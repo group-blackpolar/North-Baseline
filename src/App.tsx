@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Building2 } from 'lucide-react';
+import { Buildings } from '@phosphor-icons/react';
 import { Login } from '@/views/Login';
 import { TemporaryPasswordChange } from '@/views/TemporaryPasswordChange';
 import { OrganizationRail } from '@/components/organization/OrganizationRail';
@@ -87,7 +87,7 @@ function NoOrganizationState() {
   return (
     <div className="north-app-shell flex items-center justify-center bg-background p-6">
       <EmptyState
-        icon={Building2}
+        icon={Buildings}
         title={t('empty.org.title')}
         body={t('empty.org.body')}
         className="w-full max-w-sm"

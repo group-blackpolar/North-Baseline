@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { KeyRound, Search, ShieldCheck } from 'lucide-react';
+import { Key, MagnifyingGlass, ShieldCheck } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/badge';
 import { listPlatformTemplates, listPlatformUsers, listUserNorthCapabilities, type PlatformTemplate, type PlatformUser } from '@/lib/platformAdmin';
 import { useI18n } from '@/lib/i18n';
@@ -30,7 +30,7 @@ export function PermissionsScreen() {
           setQuery(draft.trim());
         }}
       >
-        <Search className="h-4 w-4 text-text-muted" />
+        <MagnifyingGlass className="h-4 w-4 text-text-muted" />
         <input
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
@@ -81,7 +81,7 @@ export function PermissionsScreen() {
           <header className="flex items-start justify-between gap-3">
             <div>
               <p className="text-sm font-display font-semibold text-text">
-                <KeyRound className="mr-1.5 inline h-4 w-4 text-accent" />
+                <Key className="mr-1.5 inline h-4 w-4 text-accent" />
                 {selected.name ?? selected.email}
               </p>
               <p className="text-xs text-text-secondary">{t('pa.permissions.note')}</p>

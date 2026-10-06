@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertCircle } from 'lucide-react';
+import { WarningCircle } from '@phosphor-icons/react';
 import { ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import type { DocumentStatus, Localized } from './api';
@@ -32,7 +32,7 @@ export function StatusBadge({ status, label }: { status: DocumentStatus; label: 
 
 export function ErrorNote({ message }: { message: string | null }) {
   if (!message) return null;
-  return <p role="alert" className="flex items-start gap-1.5 text-xs text-error"><AlertCircle className="mt-px size-3.5 shrink-0" />{message}</p>;
+  return <p role="alert" className="flex items-start gap-1.5 text-xs text-error"><WarningCircle className="mt-px size-3.5 shrink-0" />{message}</p>;
 }
 
 /** Loads an authenticated image into an object URL and releases it on unmount. */

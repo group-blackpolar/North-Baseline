@@ -131,14 +131,8 @@
 }
 
 @layer components {
-  /* Icons: one stroke weight and size rhythm for every Lucide/own SVG icon.
-     Colour is inherited (currentColor), so hover/active states are plain CSS. */
-  svg.lucide {
-    stroke-width: 1.75;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    flex-shrink: 0;
-  }
+  /* Icons inherit currentColor; never let a flex parent squash them. */
+  svg.ph { flex-shrink: 0; }
 
   /* Cards: depth from border + background + a soft shadow, lifted on hover only
      when the card is interactive. */

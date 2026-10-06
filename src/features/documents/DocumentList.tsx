@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Download, FilePlus2, FileText, Pencil, Search, Send } from 'lucide-react';
+import { DownloadSimple, FilePlus, FileText, MagnifyingGlass, PaperPlaneTilt, PencilSimple } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
@@ -72,7 +72,7 @@ export function DocumentList({ organizationId, type, can, refreshKey, onNew, onO
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[14rem] flex-1 sm:max-w-sm">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-text-muted" />
+          <MagnifyingGlass className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-text-muted" />
           <Input value={q} onChange={(event) => setQ(event.target.value)} placeholder={t('documents.search')} aria-label={t('documents.search')} className="pl-8" />
         </div>
         <select aria-label={t('documents.col.status')} className={selectClass} value={status} onChange={(event) => setStatus(event.target.value as DocumentStatus | '')}>
@@ -82,7 +82,7 @@ export function DocumentList({ organizationId, type, can, refreshKey, onNew, onO
         <label className="flex items-center gap-1.5 text-xs text-text-secondary">{t('documents.from')}<Input type="date" value={from} onChange={(event) => setFrom(event.target.value)} className="h-9 w-36" /></label>
         <label className="flex items-center gap-1.5 text-xs text-text-secondary">{t('documents.to')}<Input type="date" value={to} onChange={(event) => setTo(event.target.value)} className="h-9 w-36" /></label>
         {filtered && <Button variant="ghost" size="sm" onClick={() => { setQ(''); setStatus(''); setFrom(''); setTo(''); }}>{t('analytics.clearFilters')}</Button>}
-        <div className="ml-auto"><Button variant="accent" onClick={onNew} disabled={!can.create} title={can.create ? undefined : t('documents.noPermission')}><FilePlus2 className="size-4" />{t('documents.new')}</Button></div>
+        <div className="ml-auto"><Button variant="accent" onClick={onNew} disabled={!can.create} title={can.create ? undefined : t('documents.noPermission')}><FilePlus className="size-4" />{t('documents.new')}</Button></div>
       </div>
 
       <ErrorNote message={error} />
@@ -91,7 +91,7 @@ export function DocumentList({ organizationId, type, can, refreshKey, onNew, onO
         <div aria-busy="true" className="space-y-2"><Skeleton className="h-9 w-full" /><Skeleton className="h-9 w-full" /><Skeleton className="h-9 w-full" /></div>
       ) : rows.length === 0 ? (
         <EmptyState icon={FileText} title={filtered ? t('documents.emptyFiltered') : t('documents.empty')} body={filtered ? undefined : t('documents.emptyHint')} className="mx-auto max-w-md"
-          action={!filtered && can.create ? <Button variant="accent" onClick={onNew}><FilePlus2 className="size-4" />{t('documents.new')}</Button> : undefined} />
+          action={!filtered && can.create ? <Button variant="accent" onClick={onNew}><FilePlus className="size-4" />{t('documents.new')}</Button> : undefined} />
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border bg-surface">
           <table className="min-w-full border-separate border-spacing-0">
@@ -109,9 +109,9 @@ export function DocumentList({ organizationId, type, can, refreshKey, onNew, onO
                   <td className={td}><StatusBadge status={row.status} label={t(`documents.status.${row.status}` as never)} /></td>
                   <td className={cn(td, 'text-right')} onClick={(event) => event.stopPropagation()}>
                     <span className="inline-flex gap-0.5 opacity-70 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-                      {can.update && (row.status === 'DRAFT' || row.status === 'READY') && <Button size="icon-sm" variant="ghost" aria-label={t('documents.edit')} title={t('documents.edit')} onClick={() => onEdit(row.id)}><Pencil className="size-3.5" /></Button>}
-                      {can.download && <Button size="icon-sm" variant="ghost" aria-label={t('documents.pdf')} title={t('documents.pdf')} disabled={busy === row.id} onClick={() => void download(row)}><Download className="size-3.5" /></Button>}
-                      {can.send && row.status !== 'DRAFT' && row.status !== 'CANCELLED' && <Button size="icon-sm" variant="ghost" aria-label={t('documents.send')} title={t('documents.send')} onClick={() => onSend(row.id)}><Send className="size-3.5" /></Button>}
+                      {can.update && (row.status === 'DRAFT' || row.status === 'READY') && <Button size="icon-sm" variant="ghost" aria-label={t('documents.edit')} title={t('documents.edit')} onClick={() => onEdit(row.id)}><PencilSimple className="size-3.5" /></Button>}
+                      {can.download && <Button size="icon-sm" variant="ghost" aria-label={t('documents.pdf')} title={t('documents.pdf')} disabled={busy === row.id} onClick={() => void download(row)}><DownloadSimple className="size-3.5" /></Button>}
+                      {can.send && row.status !== 'DRAFT' && row.status !== 'CANCELLED' && <Button size="icon-sm" variant="ghost" aria-label={t('documents.send')} title={t('documents.send')} onClick={() => onSend(row.id)}><PaperPlaneTilt className="size-3.5" /></Button>}
                     </span>
                   </td>
                 </tr>

@@ -1,4 +1,4 @@
-import { ArrowUp, ArrowDown, Copy, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Copy, Trash } from '@phosphor-icons/react';
 import { useViewsEditor } from './ViewsEditorContext';
 import { useI18n } from '@/lib/i18n';
 import type { PanelDocument } from '@/lib/northAdmin';
@@ -67,7 +67,7 @@ export function ViewsBlockCard({
               onClick={() => removeComponent(section.id, comp.id)}
               className="p-1 rounded text-text-muted hover:text-red-500"
             >
-              <Trash2 className="h-3 w-3" />
+              <Trash className="h-3 w-3" />
             </button>
           </span>
         )}

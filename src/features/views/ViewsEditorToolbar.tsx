@@ -4,7 +4,7 @@ import { useI18n } from '@/lib/i18n';
 import { publishDraft } from '@/lib/northAdmin';
 import { hasUnsafeContent } from '@/features/admin/contentDocument';
 import { Button } from '@/components/ui/button';
-import { Eye, Edit3, Settings, History, Check, Loader2, ArrowUpRight, AlertTriangle } from 'lucide-react';
+import { ArrowUpRight, Check, CircleNotch, ClockCounterClockwise, Eye, Gear, PencilSimple, Warning } from '@phosphor-icons/react';
 
 export function ViewsEditorToolbar() {
   const {
@@ -92,7 +92,7 @@ export function ViewsEditorToolbar() {
             activeMode === 'editor' ? 'bg-surface text-text shadow-sm' : 'text-text-muted hover:text-text'
           }`}
         >
-          <Edit3 className="w-3.5 h-3.5" />
+          <PencilSimple className="w-3.5 h-3.5" />
           <span>{t('views.editor')}</span>
         </button>
         <button
@@ -112,7 +112,7 @@ export function ViewsEditorToolbar() {
             activeMode === 'settings' ? 'bg-surface text-text shadow-sm' : 'text-text-muted hover:text-text'
           }`}
         >
-          <Settings className="w-3.5 h-3.5" />
+          <Gear className="w-3.5 h-3.5" />
           <span>{t('views.settings')}</span>
         </button>
         <button
@@ -122,7 +122,7 @@ export function ViewsEditorToolbar() {
             activeMode === 'revisions' ? 'bg-surface text-text shadow-sm' : 'text-text-muted hover:text-text'
           }`}
         >
-          <History className="w-3.5 h-3.5" />
+          <ClockCounterClockwise className="w-3.5 h-3.5" />
           <span>{t('views.revisions')}</span>
         </button>
       </div>
@@ -148,7 +148,7 @@ export function ViewsEditorToolbar() {
           disabled={saving || !isDirty}
           className="h-8 text-xs gap-1.5"
         >
-          {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+          {saving ? <CircleNotch className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
           <span>{saving ? t('views.saving') : t('views.saveDraft')}</span>
         </Button>
         <Button
@@ -158,14 +158,14 @@ export function ViewsEditorToolbar() {
           title={unsafe ? t('views.publishUnsafe') : undefined}
           className="h-8 text-xs gap-1.5"
         >
-          {publishing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
+          {publishing ? <CircleNotch className="w-3.5 h-3.5 animate-spin" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
           <span>{publishing ? t('views.saving') : t('views.publish')}</span>
         </Button>
       </div>
     </header>
     {(publishError || saveError === 'conflict' || conflict || unsafe) && (
       <div className="shrink-0 border-b border-border bg-surface px-4 py-2 flex items-center gap-2 text-[11px] text-text-secondary">
-        <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+        <Warning className="h-3.5 w-3.5 text-amber-500 shrink-0" />
         <span className="flex-1">
           {unsafe
             ? t('views.publishUnsafe')

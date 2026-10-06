@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { AlertCircle, KeyRound, MailCheck, RefreshCw, ShieldCheck, Trash2, Users2, UsersRound } from 'lucide-react';
+import { ArrowsClockwise, EnvelopeSimple, Key, ShieldCheck, Trash, Users, WarningCircle } from '@phosphor-icons/react';
 import { DashboardCard } from '@/components/dashboard/primitives';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -39,7 +39,7 @@ function errorText(error: unknown) {
 }
 
 function Notice({ error, ok }: { error?: string | null; ok?: string | null }) {
-  if (error) return <p role="alert" className="flex items-start gap-1.5 text-xs text-error"><AlertCircle className="mt-px size-3.5 shrink-0" />{error}</p>;
+  if (error) return <p role="alert" className="flex items-start gap-1.5 text-xs text-error"><WarningCircle className="mt-px size-3.5 shrink-0" />{error}</p>;
   if (ok) return <p role="status" className="text-xs text-success">{ok}</p>;
   return null;
 }
@@ -87,9 +87,9 @@ function UsersScreen({ organizationId, currentUserId }: { organizationId: string
 
   return (
     <Shell title={t('access.users.title')} hint={t('access.users.hint')}>
-      <DashboardCard title={t('access.users.members')} description={manage ? undefined : t('access.readOnly')} actions={<Button size="sm" variant="ghost" onClick={() => void members.reload()}><RefreshCw className="size-3.5" />{t('access.refresh')}</Button>}>
+      <DashboardCard title={t('access.users.members')} description={manage ? undefined : t('access.readOnly')} actions={<Button size="sm" variant="ghost" onClick={() => void members.reload()}><ArrowsClockwise className="size-3.5" />{t('access.refresh')}</Button>}>
         <Notice error={error ?? members.error} ok={ok} />
-        {members.loading && !members.data ? <Loading /> : members.data && members.data.length === 0 ? <EmptyState icon={Users2} title={t('access.users.empty')} /> : members.data && (
+        {members.loading && !members.data ? <Loading /> : members.data && members.data.length === 0 ? <EmptyState icon={Users} title={t('access.users.empty')} /> : members.data && (
           <div className="overflow-x-auto rounded-lg border border-border">
             <table className="min-w-full border-separate border-spacing-0">
               <thead><tr><th className={th}>{t('access.col.user')}</th><th className={th}>{t('access.col.email')}</th><th className={th}>{t('access.col.status')}</th><th className={th}>{t('access.col.role')}</th><th className={th} /></tr></thead>
@@ -113,7 +113,7 @@ function UsersScreen({ organizationId, currentUserId }: { organizationId: string
                             <Button size="sm" variant="destructive" disabled={busy === member.userId} onClick={() => void act(member.userId, () => removeMember(organizationId, member.userId), t('access.users.removed')).then(() => { setConfirmRemove(null); return members.reload(); })}>{t('access.confirm')}</Button>
                             <Button size="sm" variant="ghost" onClick={() => setConfirmRemove(null)}>{t('access.cancel')}</Button>
                           </span>
-                        ) : <Button size="icon-sm" variant="ghost" aria-label={t('access.users.remove')} title={t('access.users.remove')} disabled={!manage} onClick={() => setConfirmRemove(member.userId)}><Trash2 className="size-3.5" /></Button>}
+                        ) : <Button size="icon-sm" variant="ghost" aria-label={t('access.users.remove')} title={t('access.users.remove')} disabled={!manage} onClick={() => setConfirmRemove(member.userId)}><Trash className="size-3.5" /></Button>}
                       </td>
                     </tr>
                   );
@@ -169,15 +169,15 @@ function InvitationsScreen({ organizationId }: { organizationId: string }) {
                 ))}</div>
               </fieldset>
             )}
-            <Button type="submit" variant="accent" disabled={!manage || busy === 'create'}><MailCheck className="size-4" />{t('access.inv.send')}</Button>
+            <Button type="submit" variant="accent" disabled={!manage || busy === 'create'}><EnvelopeSimple className="size-4" />{t('access.inv.send')}</Button>
             <Notice error={error} ok={ok} />
             {issued && <p role="status" className="text-xs text-text-secondary">{issued.delivery === 'sent' ? t('access.inv.sent') : t('access.inv.notSent')}</p>}
           </form>
         </DashboardCard>
 
-        <DashboardCard title={t('access.inv.list')} actions={<Button size="sm" variant="ghost" onClick={() => void invitations.reload()}><RefreshCw className="size-3.5" />{t('access.refresh')}</Button>}>
+        <DashboardCard title={t('access.inv.list')} actions={<Button size="sm" variant="ghost" onClick={() => void invitations.reload()}><ArrowsClockwise className="size-3.5" />{t('access.refresh')}</Button>}>
           {invitations.error && <Notice error={invitations.error} />}
-          {invitations.loading && !invitations.data ? <Loading /> : invitations.data && invitations.data.length === 0 ? <EmptyState icon={MailCheck} title={t('access.inv.empty')} /> : invitations.data && (
+          {invitations.loading && !invitations.data ? <Loading /> : invitations.data && invitations.data.length === 0 ? <EmptyState icon={EnvelopeSimple} title={t('access.inv.empty')} /> : invitations.data && (
             <div className="overflow-x-auto rounded-lg border border-border">
               <table className="min-w-full border-separate border-spacing-0">
                 <thead><tr><th className={th}>{t('access.col.email')}</th><th className={th}>{t('access.col.role')}</th><th className={th}>{t('access.col.status')}</th><th className={th}>{t('access.inv.expires')}</th><th className={th} /></tr></thead>
@@ -235,7 +235,7 @@ function GroupsScreen({ organizationId }: { organizationId: string }) {
             <Button type="submit" variant="accent" disabled={!manage || busy === 'create'}>{t('access.groups.create')}</Button>
           </form>
           <Notice error={error ?? groups.error} ok={ok} />
-          {groups.loading && !groups.data ? <Loading /> : groups.data && groups.data.length === 0 ? <EmptyState icon={UsersRound} title={t('access.groups.empty')} /> : (
+          {groups.loading && !groups.data ? <Loading /> : groups.data && groups.data.length === 0 ? <EmptyState icon={Users} title={t('access.groups.empty')} /> : (
             <ul className="space-y-1" role="listbox" aria-label={t('access.nav.groups')}>
               {groups.data?.map((item) => (
                 <li key={item.id}><button type="button" role="option" aria-selected={item.id === group?.id} onClick={() => setSelected(item.id)} className={cn('flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-xs transition-colors duration-150', item.id === group?.id ? 'bg-surface-active text-text' : 'text-text-secondary hover:bg-surface-hover')}>
@@ -246,7 +246,7 @@ function GroupsScreen({ organizationId }: { organizationId: string }) {
         </DashboardCard>
 
         {group && (
-          <DashboardCard title={group.name} description={group.description ?? undefined} actions={<Button size="sm" variant="ghost" disabled={!manage || busy === group.id} onClick={() => { if (window.confirm(t('access.groups.confirmDelete'))) void mutate(group.id, () => deleteGroup(organizationId, group.id), t('access.groups.deleted')); }}><Trash2 className="size-3.5" />{t('access.groups.delete')}</Button>}>
+          <DashboardCard title={group.name} description={group.description ?? undefined} actions={<Button size="sm" variant="ghost" disabled={!manage || busy === group.id} onClick={() => { if (window.confirm(t('access.groups.confirmDelete'))) void mutate(group.id, () => deleteGroup(organizationId, group.id), t('access.groups.deleted')); }}><Trash className="size-3.5" />{t('access.groups.delete')}</Button>}>
             <section className="space-y-2">
               <h3 className="ui-label">{t('access.groups.members')}</h3>
               <div className="flex flex-wrap gap-1.5">
@@ -316,7 +316,7 @@ function PermissionsScreen({ organizationId }: { organizationId: string }) {
             <PermissionChecklist granted={grants.data ?? []} disabled={!manage || busy !== null}
               onToggle={(permission, grant) => void act(permission, () => (grant ? grantMemberPermission : revokeMemberPermission)(organizationId, userId, permission)).then(async (done) => { if (done) await grants.reload(); })} />
           ))}
-          <p className="flex items-center gap-1.5 text-[11px] text-text-muted"><KeyRound className="size-3" />{t('access.perm.note')}</p>
+          <p className="flex items-center gap-1.5 text-[11px] text-text-muted"><Key className="size-3" />{t('access.perm.note')}</p>
         </DashboardCard>
       </div>
     </Shell>

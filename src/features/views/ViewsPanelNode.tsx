@@ -1,4 +1,4 @@
-import { FileText, Copy, Edit2, Archive } from 'lucide-react';
+import { Archive, Copy, FileText, PencilSimple } from '@phosphor-icons/react';
 import { useViewsEditor } from './ViewsEditorContext';
 import { useI18n } from '@/lib/i18n';
 import type { TaxonomyPanel } from '@/lib/northAdmin';
@@ -75,7 +75,7 @@ export function ViewsPanelNode({
             }}
             className="p-1 rounded hover:bg-surface text-text-muted hover:text-text"
           >
-            <Edit2 className="w-3 h-3" />
+            <PencilSimple className="w-3 h-3" />
           </button>
           {panel.resourceKind !== 'SYSTEM' && (
             <button

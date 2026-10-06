@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Filter } from 'lucide-react';
+import { Funnel } from '@phosphor-icons/react';
 import { listPlatformAudit, type PlatformAuditEvent, type PlatformAuditQuery } from '@/lib/platformAdmin';
 import { useI18n } from '@/lib/i18n';
 import { ResourceFailure, useCursorList } from '../resource';
@@ -78,7 +78,7 @@ export function AuditScreen() {
         }}
       >
         <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-text-muted" />
+          <Funnel className="h-4 w-4 text-text-muted" />
           <span className="text-sm font-medium text-text">{t('pa.audit.filters')}</span>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">

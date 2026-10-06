@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Loader2, LogOut } from 'lucide-react';
+import { CircleNotch, SignOut } from '@phosphor-icons/react';
 import { useI18n } from '@/lib/i18n';
 import { useNotifications } from '@/context/NotificationContext';
 import { useLogout } from '@/hooks/useLogout';
@@ -68,7 +68,7 @@ export function ProfileMenu({ user }: { user: SessionUser }) {
             onClick={() => void handleLogout()}
             className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-text hover:bg-error/10 hover:text-error transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {isLoggingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
+            {isLoggingOut ? <CircleNotch className="w-4 h-4 animate-spin" /> : <SignOut className="w-4 h-4" />}
             {isLoggingOut
               ? (t('profile.loggingOut') || 'Cerrando sesión…')
               : (t('profile.logout') || 'Cerrar sesión')}

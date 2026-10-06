@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react';
+import { Check } from '@phosphor-icons/react';
 import { useTheme, type ThemeName } from '@/lib/theme';
 import { useI18n } from '@/lib/i18n';
 import { DashboardCard } from '@/components/dashboard/primitives';

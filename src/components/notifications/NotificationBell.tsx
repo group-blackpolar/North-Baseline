@@ -1,15 +1,16 @@
 import { useState } from 'react';
-import { Bell, CheckCheck, CircleAlert, CircleCheck, Info, TriangleAlert } from 'lucide-react';
+import { Bell, CheckCircle, Checks, Info, Warning, WarningCircle } from '@phosphor-icons/react';
+import type { IconComponent } from '@/components/ui/icon';
 import { useNotifications, type NotificationType } from '@/context/NotificationContext';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-import type { LucideIcon } from 'lucide-react';
 
-const TYPE_ICON: Record<NotificationType, LucideIcon> = {
+
+const TYPE_ICON: Record<NotificationType, IconComponent> = {
   info: Info,
-  success: CircleCheck,
-  warning: TriangleAlert,
-  error: CircleAlert,
+  success: CheckCircle,
+  warning: Warning,
+  error: WarningCircle,
 };
 
 const TYPE_COLOR: Record<NotificationType, string> = {
@@ -66,7 +67,7 @@ export function NotificationBell() {
                 className="flex items-center gap-1.5 text-[11px] font-medium text-text-secondary hover:text-text disabled:opacity-40 transition-colors duration-150"
                 onClick={markAllRead}
               >
-                <CheckCheck className="w-3.5 h-3.5" />
+                <Checks className="w-3.5 h-3.5" />
                 {t('notifications.markAll')}
               </button>
             </div>

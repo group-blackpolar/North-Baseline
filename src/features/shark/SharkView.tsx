@@ -1,4 +1,4 @@
-import { ArrowUpRight, Construction, GitCompare, MapPin, Ship, Users } from 'lucide-react';
+import { ArrowUpRight, Barricade, Boat, GitDiff, MapPin, Users } from '@phosphor-icons/react';
 import { useTabs } from '@/context/TabsContext';
 import type { TabRoute } from '@/context/TabsContext';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -9,8 +9,8 @@ import { ConsigneeDetails } from './pages/ConsigneeDetails';
 
 const QUICK_ACCESS = [
   { sub: 'report-info', icon: MapPin, title: 'Report Info', body: 'Dataset scope, coverage and navigation guide.' },
-  { sub: 'port', icon: Ship, title: 'Port Analysis', body: "Container movements across Panama's main ports." },
-  { sub: 'year-comparison', icon: GitCompare, title: 'Year Comparison', body: 'Compare maritime import activity across multiple years.' },
+  { sub: 'port', icon: Boat, title: 'Port Analysis', body: "Container movements across Panama's main ports." },
+  { sub: 'year-comparison', icon: GitDiff, title: 'Year Comparison', body: 'Compare maritime import activity across multiple years.' },
   { sub: 'consignee-details', icon: Users, title: 'Consignee Details', body: 'Explore individual consignee activity and distribution.' },
 ];
 
@@ -83,7 +83,7 @@ export function SharkView({ route }: { route: TabRoute }) {
       return (
         <div className="p-6">
           <EmptyState
-            icon={Construction}
+            icon={Barricade}
             title={`${title} — in progress`}
             body="This Master House section is being prepared for the demo."
             className="max-w-md"

@@ -1,5 +1,5 @@
 import { useState, type FocusEvent, type KeyboardEvent, type ReactNode } from 'react';
-import { PanelLeftOpen } from 'lucide-react';
+import { SidebarSimple } from '@phosphor-icons/react';
 import { useCatalog } from '@/context/CatalogContext';
 import { useTabs } from '@/context/TabsContext';
 import { usePermissions } from '@/context/PermissionContext';
@@ -171,7 +171,7 @@ export function CategoryRail({ children }: { children?: ReactNode }) {
             )}
             onClick={togglePinned}
           >
-            <PanelLeftOpen className="size-4" />
+            <SidebarSimple className="size-4" />
           </button>
         </div>
       </nav>

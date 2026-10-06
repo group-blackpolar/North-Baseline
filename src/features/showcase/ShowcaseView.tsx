@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { LogIn } from 'lucide-react';
+import { SignIn } from '@phosphor-icons/react';
 import { NorthIcon } from '@/components/brand/NorthLogo';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -88,7 +88,7 @@ export function ShowcaseView({ route }: { route: ShowcaseRoute }) {
           <div className="ml-auto flex items-center gap-3">
             <LanguageSelector value={locale} onChange={(code) => setLocale(code as 'es' | 'en')} />
             <ThemeToggle language={locale === 'en' ? 'en' : 'es'} />
-            <Button variant="accent" size="sm" onClick={() => pushPath('/')}><LogIn className="size-4" />{t('showcase.signIn')}</Button>
+            <Button variant="accent" size="sm" onClick={() => pushPath('/')}><SignIn className="size-4" />{t('showcase.signIn')}</Button>
           </div>
         </header>
         <div className="flex min-h-0 flex-1">

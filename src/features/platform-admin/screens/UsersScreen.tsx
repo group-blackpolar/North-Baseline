@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, X } from 'lucide-react';
+import { MagnifyingGlass, X } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/badge';
 import { getPlatformUser, listPlatformUsers, type PlatformUser, type PlatformUserDetail } from '@/lib/platformAdmin';
 import { useI18n } from '@/lib/i18n';
@@ -69,7 +69,7 @@ export function UsersScreen() {
           setSelectedId(null);
         }}
       >
-        <Search className="h-4 w-4 text-text-muted" />
+        <MagnifyingGlass className="h-4 w-4 text-text-muted" />
         <input
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
