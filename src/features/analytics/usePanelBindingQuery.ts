@@ -3,6 +3,8 @@ import { ApiError } from '@/lib/api';
 import type { DatasetQueryFilter } from './datasetQuery';
 import { datasetQueryToAnalyticsResult } from './datasetQueryAdapters';
 import { queryPanelAnalyticsBinding, type PanelBindingQueryResult } from './panelBindingQuery';
+import { useShowcaseSlug } from '@/features/showcase/ShowcaseContext';
+import { queryShowcaseBinding } from '@/lib/showcase';
 import type { AnalyticsResult } from './types';
 
 export type PanelBindingQueryState = {
@@ -28,6 +30,8 @@ export function usePanelBindingQuery(
   bindingId: string | null | undefined,
   filters: DatasetQueryFilter[] = [],
 ): PanelBindingQueryState {
+  // Inside the anonymous showcase the same typed result contract comes from the public endpoint.
+  const showcaseSlug = useShowcaseSlug();
   const filtersJson = useMemo(() => JSON.stringify(filters), [filters]);
   const requestRef = useRef(0);
   const [reloadVersion, incrementReloadVersion] = useReducer((value: number) => value + 1, 0);
@@ -49,7 +53,10 @@ export function usePanelBindingQuery(
     requestRef.current = requestId;
     setState({ result: { state: 'loading' }, response: null, error: null });
 
-    void queryPanelAnalyticsBinding(organizationId, panelId, bindingId, parsedFilters, controller.signal)
+    const request = showcaseSlug
+      ? queryShowcaseBinding(showcaseSlug, panelId, bindingId, parsedFilters, controller.signal)
+      : queryPanelAnalyticsBinding(organizationId, panelId, bindingId, parsedFilters, controller.signal);
+    void request
       .then((response) => {
         if (requestRef.current !== requestId) return;
         setState({ result: datasetQueryToAnalyticsResult(response), response, error: null });
@@ -61,7 +68,7 @@ export function usePanelBindingQuery(
       });
 
     return () => controller.abort();
-  }, [bindingId, filtersJson, organizationId, panelId, reloadVersion]);
+  }, [bindingId, filtersJson, organizationId, panelId, reloadVersion, showcaseSlug]);
 
   return { ...state, reload: incrementReloadVersion };
 }

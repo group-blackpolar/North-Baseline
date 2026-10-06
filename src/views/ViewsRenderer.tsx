@@ -205,7 +205,7 @@ function SafeComponent({ type, props, locales }: { type: string; props: Record<s
 
 const FILTER_OPERATOR_LABEL: Record<DatasetQueryFilter['operator'], string> = { EQ: '=', NE: '≠', GT: '>', GTE: '≥', LT: '<', LTE: '≤', CONTAINS: '∋' };
 
-function PublishedPanel({ title, document, locales, organizationId, panelId }: { title: string; document: PublishedPanelDocument | null; locales: string[]; organizationId: string | null | undefined; panelId: string }) {
+export function PublishedPanel({ title, document, locales, organizationId, panelId }: { title: string; document: PublishedPanelDocument | null; locales: string[]; organizationId: string | null | undefined; panelId: string }) {
   const breakpoint = usePublishedBreakpoint();
   const { t } = useI18n();
   const [definitionsByBinding, setDefinitionsByBinding] = useState<Record<string, PanelBindingFilterDefinition[]>>({});

@@ -645,6 +645,12 @@ const es = {
   'access.perm.directHint': 'Concede o revoca permisos registrados a un miembro concreto.',
   'access.perm.pick': 'Elige un miembro…',
   'access.perm.note': 'Esta lista solo refleja lo que CORECROW ya concedió; la interfaz nunca otorga permisos por sí misma.',
+  'showcase.badge': 'Demostración pública',
+  'showcase.signIn': 'Iniciar sesión',
+  'showcase.menu': 'Secciones',
+  'showcase.fictional': 'Datos ficticios con fines demostrativos.',
+  'showcase.unavailable': 'Esta vista no está disponible.',
+  'showcase.empty': 'No hay vistas públicas disponibles.',
 } as const;
 
 export type Dictionary = { [K in keyof typeof es]: string };
