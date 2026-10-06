@@ -8,12 +8,13 @@ import { useI18n } from '@/lib/i18n';
 function tabMeta(
   tab: Tab,
   getCategory: (id: string) => { name: string; icon: string } | undefined,
-  getSubcategory: (catId: string, subId: string | null) => { name: string; icon: string } | undefined
+  getSubcategory: (catId: string, subId: string | null) => { name: string; icon: string; labelKey?: string } | undefined,
+  label: (key: string) => string,
 ) {
   const sub = getSubcategory(tab.route.categoryId, tab.route.subcategoryId);
   const cat = getCategory(tab.route.categoryId);
   return {
-    title: sub?.name ?? cat?.name ?? tab.route.categoryId,
+    title: (sub?.labelKey ? label(sub.labelKey) : sub?.name) ?? cat?.name ?? tab.route.categoryId,
     Icon: resolveIcon(sub?.icon ?? cat?.icon),
   };
 }
@@ -27,7 +28,7 @@ export function TabBar() {
     <div role="tablist" aria-label={t('tabs.openViews')} className="shrink-0 flex items-center gap-1 px-2 border-b border-border bg-surface overflow-x-auto" style={{ height: 'var(--shell-tabs-height)' }}>
       {tabs.map((tab, index) => {
         const active = tab.id === activeTab?.id;
-        const { title, Icon } = tabMeta(tab, getCategory, getSubcategory);
+        const { title, Icon } = tabMeta(tab, getCategory, getSubcategory, (key) => t(key as never));
 
         return (
           <div

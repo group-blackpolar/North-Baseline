@@ -14,8 +14,8 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { AlertCircle, Filter, LoaderCircle } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { AlertCircle, ArrowDown, ArrowUp, ChevronsUpDown, Filter, LoaderCircle } from 'lucide-react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useI18n } from '@/lib/i18n';
 import type { AnalyticsColumn, AnalyticsData, AnalyticsFilter, AnalyticsResult, AnalyticsRow, AnalyticsSeries, AnalyticsValue } from './types';
 
@@ -29,7 +29,7 @@ function number(value: AnalyticsValue): number | null {
 
 function display(value: AnalyticsValue): string {
   if (value === null) return '—';
-  if (typeof value === 'number') return new Intl.NumberFormat().format(value);
+  if (typeof value === 'number') return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value);
   if (typeof value === 'boolean') return value ? '✓' : '—';
   return value;
 }
@@ -72,16 +72,62 @@ export function AnalyticsDataGrid({ result, columns }: { result: AnalyticsResult
       {(data) => {
         const visible = columns ?? data.columns;
         if (visible.length === 0) return <div role="status" className="py-6 text-center text-xs text-text-muted">{t('analytics.empty')}</div>;
-        return (
-          <div className="overflow-x-auto">
-            <table className="min-w-full border-separate border-spacing-0 text-left text-xs">
-              <thead><tr>{visible.map((column) => <th key={column.key} className={`border-b border-border px-3 py-2 font-medium text-text-secondary ${column.align === 'right' ? 'text-right' : ''}`}>{column.label}</th>)}</tr></thead>
-              <tbody>{data.rows.map((row, index) => <tr key={index} className="odd:bg-surface-hover/40">{visible.map((column) => <td key={column.key} className={`border-b border-border/60 px-3 py-2 text-text ${column.align === 'right' ? 'text-right tabular-nums' : ''}`}>{display(row[column.key] ?? null)}</td>)}</tr>)}</tbody>
-            </table>
-          </div>
-        );
+        return <SortableGrid columns={visible} rows={data.rows} />;
       }}
     </ResultState>
+  );
+}
+
+/** Sorts only the rows CORECROW already returned; it never requests more data. */
+function SortableGrid({ columns, rows }: { columns: AnalyticsColumn[]; rows: AnalyticsRow[] }) {
+  const [sort, setSort] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+  const numeric = useMemo(
+    () => new Set(columns.filter((column) => column.align === 'right' || (rows.length > 0 && rows.every((row) => row[column.key] === null || typeof row[column.key] === 'number'))).map((column) => column.key)),
+    [columns, rows],
+  );
+  const sorted = useMemo(() => {
+    if (!sort) return rows;
+    const factor = sort.direction === 'asc' ? 1 : -1;
+    return [...rows].sort((left, right) => {
+      const a = left[sort.key] ?? null;
+      const b = right[sort.key] ?? null;
+      if (a === b) return 0;
+      if (a === null) return 1;
+      if (b === null) return -1;
+      return (typeof a === 'number' && typeof b === 'number' ? a - b : String(a).localeCompare(String(b))) * factor;
+    });
+  }, [rows, sort]);
+  const toggle = (key: string) => setSort((current) => (current?.key !== key ? { key, direction: 'desc' } : current.direction === 'desc' ? { key, direction: 'asc' } : null));
+
+  return (
+    <div className="max-h-[32rem] overflow-auto rounded-lg border border-border">
+      <table className="min-w-full border-separate border-spacing-0 text-left text-xs">
+        <thead className="sticky top-0 z-10 bg-surface">
+          <tr>
+            <th scope="col" className="w-8 border-b border-border px-2 py-2 text-right font-medium text-text-muted">#</th>
+            {columns.map((column) => {
+              const active = sort?.key === column.key;
+              const Icon = !active ? ChevronsUpDown : sort.direction === 'asc' ? ArrowUp : ArrowDown;
+              return (
+                <th key={column.key} scope="col" aria-sort={active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'} className={`border-b border-border p-0 font-medium text-text-secondary ${numeric.has(column.key) ? 'text-right' : ''}`}>
+                  <button type="button" onClick={() => toggle(column.key)} className={`flex w-full items-center gap-1 px-3 py-2 hover:bg-surface-hover hover:text-text transition-colors duration-150 ${numeric.has(column.key) ? 'justify-end' : ''}`}>
+                    {column.label}<Icon className={`size-3 shrink-0 ${active ? 'text-accent' : 'text-text-muted'}`} aria-hidden="true" />
+                  </button>
+                </th>
+              );
+            })}
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((row, index) => (
+            <tr key={index} className="odd:bg-surface-hover/40 hover:bg-accent-soft/40 transition-colors duration-100">
+              <td className="border-b border-border/60 px-2 py-2 text-right tabular-nums text-text-muted">{index + 1}</td>
+              {columns.map((column) => <td key={column.key} className={`border-b border-border/60 px-3 py-2 text-text ${numeric.has(column.key) ? 'text-right tabular-nums' : ''}`}>{display(row[column.key] ?? null)}</td>)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

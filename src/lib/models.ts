@@ -2,6 +2,8 @@ export interface SubcategoryModel {
   id: string;
   categoryId: string;
   name: string;
+  /** Locale key that overrides `name` for client-owned (non-server) entries. */
+  labelKey?: string;
   icon: string;      // nombre de icono resuelto vía iconRegistry
   requiredPermission?: string;
   group?: string;    // agrupación visual dentro del sidebar

@@ -4,6 +4,8 @@ import {
   Bell,
   ChartBar,
   Database,
+  FileText,
+  Folder,
   GitBranch,
   Key,
   Languages,
@@ -13,6 +15,7 @@ import {
   ScrollText,
   Settings,
   Shield,
+  Ship,
   ShieldCheck,
   User,
   Users,
@@ -40,8 +43,12 @@ export const ICON_MAP: Record<string, LucideIcon> = {
   bell: Bell,
   accessibility: Accessibility,
   wrench: Wrench,
+  // Names stored by CORECROW navigation (compared case-insensitively).
+  ship: Ship,
+  folder: Folder,
+  filetext: FileText,
 };
 
 export function resolveIcon(name?: string): LucideIcon {
-  return ICON_MAP[name ?? ''] ?? LayoutDashboard;
+  return ICON_MAP[(name ?? '').toLowerCase()] ?? LayoutDashboard;
 }

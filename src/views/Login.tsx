@@ -302,7 +302,10 @@ export function Login({ onSuccess, onOnboardingIssue, initialMode = 'login' }: L
               <form onSubmit={handleEmailLogin} className="w-full space-y-4">
                 <Field label={t('auth.email')}><Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" /></Field>
                 <PasswordField label={t('auth.password')} value={pass} onChange={setPass} visible={showPass} setVisible={setShowPass} showLabel={t('auth.showPassword')} hideLabel={t('auth.hidePassword')} autoComplete="current-password" />
-                <div className="flex justify-end"><button type="button" onClick={() => switchMode('forgot')} className="text-xs text-accent hover:underline">{t('auth.forgotPassword')}</button></div>
+                <div className="flex flex-wrap justify-end gap-x-4 gap-y-2">
+                  <button type="button" onClick={() => switchMode('verification')} className="text-xs text-accent hover:underline">{t('auth.verifyEmailLink')}</button>
+                  <button type="button" onClick={() => switchMode('forgot')} className="text-xs text-accent hover:underline">{t('auth.forgotPassword')}</button>
+                </div>
                 {notice && <div role="status" className="text-xs text-accent font-mono">{notice}</div>}
                 {error && <div role="alert" className="text-xs text-red-600 dark:text-red-400 font-mono">{error}</div>}
                 <Button type="submit" variant="dark" disabled={loading} className="north-primary w-full h-10">{loading ? t('auth.signingIn') : t('auth.signIn')}</Button>

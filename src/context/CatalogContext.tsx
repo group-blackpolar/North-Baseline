@@ -4,6 +4,7 @@ import type { CategoryModel, SubcategoryModel } from '@/lib/models';
 import { getOrganizationNavigation, type NavigationCategory } from '@/lib/organizations';
 import { PERSONAL_ORG_ID } from '@/lib/demo/store';
 import type { SessionUser } from '@/lib/auth';
+import { ACCESS_SECTIONS } from '@/features/access-admin/AccessAdminView';
 
 interface CatalogContextValue {
   categories: CategoryModel[];
@@ -87,6 +88,21 @@ function localizedName(value: Record<string, string>) {
   return value.es ?? value.en ?? Object.values(value)[0] ?? '';
 }
 
+/** Organization access screens. UI entries only: every read and write behind them is authorized by CORECROW. */
+function accessSubcategories(categoryId: string, offset: number): SubcategoryModel[] {
+  return ACCESS_SECTIONS.map((section, index) => ({
+    id: `access-${section}`,
+    categoryId,
+    name: section,
+    labelKey: `access.nav.${section}`,
+    icon: section === 'invitations' ? 'bell' : section === 'permissions' ? 'key' : 'users',
+    requiredPermission: section === 'invitations' ? 'invitations.manage' : section === 'groups' ? 'groups.read' : 'members.read',
+    route: `access/${section}`,
+    slug: `access-${section}`,
+    order: offset + index,
+  }));
+}
+
 function navigationToCatalog(navigation: NavigationCategory[]): CategoryModel[] {
   return navigation.map((category) => ({
     id: category.id,
@@ -108,6 +124,6 @@ function navigationToCatalog(navigation: NavigationCategory[]): CategoryModel[] 
         slug: panel.slug,
       })),
       order: index,
-    })),
+    })).concat(category.slug === 'admin' ? accessSubcategories(category.id, category.subcategories.length) : []),
   }));
 }
