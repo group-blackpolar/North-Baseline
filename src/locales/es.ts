@@ -168,6 +168,7 @@ const es = {
   'personal.preferencesHint': 'Ajusta la apariencia y las notificaciones para que encajen con tu rutina.',
   'personal.administration': 'Administración',
   'personal.home': 'Inicio',
+  'filters.apply': 'Aplicar',
   'shell.openMenu': 'Abrir menú',
   'common.close': 'Cerrar',
   'tabs.switcher': 'Vistas abiertas ({n})',

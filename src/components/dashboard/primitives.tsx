@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { ResponsiveFilters } from '@/components/ui/responsive-filters';
 import { cn } from '@/lib/utils';
 
 export function MetricCard({ label, value, delta, icon: Icon }: { label: string; value: string; delta?: string; icon?: React.ComponentType<{ className?: string }> }) {
@@ -30,7 +31,7 @@ export function DashboardCard({ title, description, actions, children, className
 }
 
 export function FilterBar({ children }: { children: ReactNode }) {
-  return <div className="np-card px-3 py-2 flex flex-wrap items-center gap-2">{children}</div>;
+  return <div className="np-card px-3 py-2 flex flex-wrap items-center gap-2"><ResponsiveFilters>{children}</ResponsiveFilters></div>;
 }
 
 export function FilterSelect({ label, value, options, onChange }: { label: string; value: string; options: Array<{ value: string; label: string }>; onChange: (value: string) => void }) {

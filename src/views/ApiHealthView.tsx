@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { NorthChartTooltip } from '@/components/charts'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { Card, CardHeader, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -87,9 +88,7 @@ export function ApiHealthView() {
             <LineChart data={chartData}>
               <XAxis dataKey="i" hide />
               <YAxis stroke="var(--color-text-secondary)" fontSize={11} unit="ms" />
-              <Tooltip
-                contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 8, fontSize: 12 }}
-              />
+              <Tooltip content={<NorthChartTooltip format={(v) => `${v} ms`} />} />
               <Line type="monotone" dataKey="latencia" stroke="var(--color-accent)" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>

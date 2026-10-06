@@ -42,6 +42,16 @@
   --shadow-pop: 0 4px 6px -2px rgb(16 24 40 / 0.05), 0 12px 16px -4px rgb(16 24 40 / 0.10);
   --shadow-overlay: 0 8px 12px -4px rgb(16 24 40 / 0.08), 0 24px 48px -12px rgb(16 24 40 / 0.22);
 
+  /* Chart series colours (categorical). Consumed through components/charts/palette.ts */
+  --chart-1: var(--color-accent);
+  --chart-2: #60A5FA;
+  --chart-3: #FBBF24;
+  --chart-4: #A78BFA;
+  --chart-5: #F87171;
+  --chart-6: #34D399;
+  --chart-7: #F472B6;
+  --chart-8: #94A3B8;
+
   /* Z-index scale (use z-(--z-modal), never literal z-50/z-[100]) */
   --z-sticky: 10;
   --z-navigation: 20;

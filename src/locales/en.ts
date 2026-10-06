@@ -170,6 +170,7 @@ const en: Dictionary = {
   'personal.preferencesHint': 'Tune your workspace appearance and notifications to match your routine.',
   'personal.administration': 'Administration',
   'personal.home': 'Home',
+  'filters.apply': 'Apply',
   'shell.openMenu': 'Open menu',
   'common.close': 'Close',
   'tabs.switcher': 'Open views ({n})',

@@ -12,46 +12,20 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { AXIS_TICK, CHART_PALETTE, GRID, NorthChartTooltip, compact, formatNumber } from '@/components/charts';
 import type { AggEntry, SeriesRow } from '@/features/shark/data/types';
 
 /** Wrappers reutilizables de recharts con el lenguaje visual de NORTH.
  *  Todas las vistas SHARK (y futuras) consumen estos componentes, no recharts directo. */
 
-const AXIS_TICK = { fontSize: 10, fill: 'var(--color-text-muted)' };
-const TOOLTIP_STYLE = {
-  background: 'var(--color-surface)',
-  border: '1px solid var(--color-border)',
-  borderRadius: 10,
-  fontSize: 12,
-};
-
 /** Colores por año: el año vigente resalta con accent. */
 export const SERIES_COLORS: Record<string, string> = {
   '2024': 'var(--color-text-muted)',
-  '2025': '#60A5FA',
-  '2026': 'var(--color-accent)',
+  '2025': 'var(--chart-2)',
+  '2026': 'var(--chart-1)',
 };
 
-export const CHART_PALETTE = [
-  'var(--color-accent)',
-  '#60A5FA',
-  '#FBBF24',
-  '#F87171',
-  '#A78BFA',
-  '#34D399',
-  '#F472B6',
-  '#94A3B8',
-];
-
-export function formatNumber(value: number): string {
-  return value.toLocaleString('en-US');
-}
-
-export function compact(value: number): string {
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
-  if (value >= 1_000) return `${Math.round(value / 1_000)}K`;
-  return String(value);
-}
+export { CHART_PALETTE, formatNumber, compact };
 
 export interface SeriesDef {
   key: string;
@@ -76,14 +50,10 @@ export function TrendLineChart({
     <div style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 4, right: 8, left: -14, bottom: 0 }}>
-          <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 3" vertical={false} />
+          <CartesianGrid {...GRID} vertical={false} />
           <XAxis dataKey="label" tick={AXIS_TICK} tickLine={false} axisLine={false} />
           <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={(v) => compact(Number(v))} />
-          <Tooltip
-            contentStyle={TOOLTIP_STYLE}
-            labelStyle={{ color: 'var(--color-text)' }}
-            formatter={(value) => [formatNumber(Number(value)), undefined]}
-          />
+          <Tooltip content={<NorthChartTooltip />} />
           {series.map((s) => (
             <Line
               key={s.key}
@@ -116,7 +86,7 @@ export function GroupedBarChart({
     <div style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} layout={horizontal ? 'vertical' : 'horizontal'} margin={{ top: 4, right: 8, left: horizontal ? 8 : -14, bottom: 0 }}>
-          <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 3" vertical={!horizontal} horizontal={horizontal} />
+          <CartesianGrid {...GRID} vertical={!horizontal} horizontal={horizontal} />
           {horizontal ? (
             <>
               <XAxis type="number" tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={(v) => compact(Number(v))} />
@@ -128,12 +98,7 @@ export function GroupedBarChart({
               <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={(v) => compact(Number(v))} />
             </>
           )}
-          <Tooltip
-            contentStyle={TOOLTIP_STYLE}
-            labelStyle={{ color: 'var(--color-text)' }}
-            cursor={{ fill: 'var(--color-surface-hover)' }}
-            formatter={(value) => [formatNumber(Number(value)), undefined]}
-          />
+          <Tooltip content={<NorthChartTooltip />} cursor={{ fill: 'var(--color-surface-hover)' }} />
           {series.map((s, index) => (
             <Bar
               key={s.key}
@@ -162,7 +127,7 @@ export function ShareDonut({ data, height = 224 }: { data: AggEntry[]; height?: 
                 <Cell key={entry.label} fill={CHART_PALETTE[index % CHART_PALETTE.length]} />
               ))}
             </Pie>
-            <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value) => [formatNumber(Number(value)), undefined]} />
+            <Tooltip content={<NorthChartTooltip />} />
           </PieChart>
         </ResponsiveContainer>
       </div>
