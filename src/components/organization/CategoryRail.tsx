@@ -1,5 +1,5 @@
-import { useState, type FocusEvent, type KeyboardEvent } from 'react';
-import { PanelLeftOpen, Pin, PinOff } from 'lucide-react';
+import { useState, type FocusEvent, type KeyboardEvent, type ReactNode } from 'react';
+import { PanelLeftOpen } from 'lucide-react';
 import { useCatalog } from '@/context/CatalogContext';
 import { useTabs } from '@/context/TabsContext';
 import { usePermissions } from '@/context/PermissionContext';
@@ -24,58 +24,71 @@ function readPinnedPreference() {
   }
 }
 
-export function CategoryRail() {
+/** Renders the category rail together with the panel that belongs to it (the
+ * subcategory sidebar, passed as `children`) as ONE flex group. When the rail
+ * widens on hover the sibling panel is carried with it, instead of staying behind
+ * at a stale offset. A temporary (hover/keyboard) expansion overlays the content
+ * through a negative end margin, so the main area is not re-laid-out on every
+ * hover; pinning grows the group's real width and the main area adapts. */
+export function CategoryRail({ children }: { children?: ReactNode }) {
   const { t } = useI18n();
   const { categories, isLoading } = useCatalog();
   const { activeTab, navigate } = useTabs();
   const { activeOrganization } = useOrganization();
   const { can } = usePermissions();
   const [pinned, setPinned] = useState(readPinnedPreference);
-  const [temporaryOpen, setTemporaryOpen] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [keyboardFocus, setKeyboardFocus] = useState(false);
+  const temporaryOpen = hovered || keyboardFocus;
   const expanded = pinned || temporaryOpen;
   const activeCategoryId = activeTab?.route.categoryId;
 
   const togglePinned = () => {
-    setPinned((current) => {
-      const next = !current;
-      try {
-        localStorage.setItem(PINNED_KEY, next ? '1' : '0');
-        localStorage.removeItem(LEGACY_EXPANDED_KEY);
-      } catch {
-        /* storage unavailable */
-      }
-      return next;
-    });
+    const next = !pinned;
+    setPinned(next);
+    // Unpinning returns to the normal collapsed state right away. The pointer is
+    // still over the rail (it just clicked the button), so the hover/focus state
+    // that accumulated while pinned must not keep it open until a click outside.
+    if (!next) {
+      setHovered(false);
+      setKeyboardFocus(false);
+    }
+    try {
+      localStorage.setItem(PINNED_KEY, next ? '1' : '0');
+      localStorage.removeItem(LEGACY_EXPANDED_KEY);
+    } catch {
+      /* storage unavailable */
+    }
   };
 
   const closeAfterFocusLeaves = (event: FocusEvent<HTMLElement>) => {
-    if (!event.currentTarget.contains(event.relatedTarget)) setTemporaryOpen(false);
+    if (!event.currentTarget.contains(event.relatedTarget)) setKeyboardFocus(false);
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key === 'Escape' && !pinned) {
-      setTemporaryOpen(false);
+      setHovered(false);
+      setKeyboardFocus(false);
     }
   };
 
+  const growth = 'calc(var(--shell-category-rail-open) - var(--shell-category-rail))';
+
   return (
     <div
-      className="relative shrink-0 h-full transition-[width] duration-[var(--shell-motion)] ease-out"
-      style={{ width: pinned ? 'var(--shell-category-rail-open)' : 'var(--shell-category-rail)' }}
+      className={cn(
+        'relative z-30 flex h-full shrink-0 transition-[margin] duration-[var(--shell-motion)] ease-out motion-reduce:transition-none',
+        temporaryOpen && !pinned && 'shadow-pop'
+      )}
+      style={{ marginRight: temporaryOpen && !pinned ? `calc(${growth} * -1)` : 0 }}
     >
       <nav
         aria-label={t('shell.categories')}
-        className={cn(
-          'absolute inset-y-0 left-0 z-30 bg-surface border-r border-border flex flex-col py-2 gap-1 overflow-hidden',
-          'transition-[width,box-shadow] duration-[var(--shell-motion)] ease-out',
-          expanded && !pinned && 'shadow-pop'
-        )}
+        className="shrink-0 bg-surface border-r border-border flex flex-col py-2 gap-1 overflow-hidden transition-[width] duration-[var(--shell-motion)] ease-out motion-reduce:transition-none"
         style={{ width: expanded ? 'var(--shell-category-rail-open)' : 'var(--shell-category-rail)' }}
-        onPointerEnter={() => setTemporaryOpen(true)}
-        onPointerLeave={(event) => {
-          if (!pinned && !event.currentTarget.contains(document.activeElement)) setTemporaryOpen(false);
-        }}
-        onFocus={() => setTemporaryOpen(true)}
+        onPointerEnter={() => setHovered(true)}
+        onPointerLeave={() => setHovered(false)}
+        onFocus={(event) => { if ((event.target as HTMLElement).matches(':focus-visible')) setKeyboardFocus(true); }}
         onBlur={closeAfterFocusLeaves}
         onKeyDown={handleKeyDown}
       >
@@ -145,25 +158,24 @@ export function CategoryRail() {
           );
         })}
 
-        <div className={cn('mt-auto flex shrink-0 items-center py-1.5', expanded ? 'gap-1.5 px-2' : 'justify-center')}>
+        <div className={cn('mt-auto flex shrink-0 items-center py-1.5', expanded ? 'px-2' : 'justify-center')}>
+          {/* One button, one icon, one place: it only toggles the fixed state. */}
           <button
             type="button"
             title={pinned ? t('shell.unpinCategories') : t('shell.pinCategories')}
             aria-label={pinned ? t('shell.unpinCategories') : t('shell.pinCategories')}
             aria-pressed={pinned}
-            className="size-8 shrink-0 rounded-lg flex items-center justify-center text-text-muted hover:bg-surface-hover hover:text-text transition-colors duration-[var(--shell-motion-fast)]"
+            className={cn(
+              'size-8 shrink-0 rounded-lg flex items-center justify-center transition-colors duration-[var(--shell-motion-fast)]',
+              pinned ? 'bg-accent-soft text-accent' : 'text-text-muted hover:bg-surface-hover hover:text-text'
+            )}
             onClick={togglePinned}
           >
-            {pinned ? <PinOff className="size-4" /> : expanded ? <Pin className="size-4" /> : <PanelLeftOpen className="size-4" />}
+            <PanelLeftOpen className="size-4" />
           </button>
-          {expanded && !pinned && (
-            <span className="min-w-0 truncate text-[10px] text-text-muted">{t('shell.overlayHint')}</span>
-          )}
-          {expanded && pinned && (
-            <span className="min-w-0 truncate text-[10px] text-text-muted">{t('shell.pinned')}</span>
-          )}
         </div>
       </nav>
+      {children}
     </div>
   );
 }

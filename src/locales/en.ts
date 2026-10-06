@@ -173,8 +173,6 @@ const en: Dictionary = {
   'shell.categories': 'Categories',
   'shell.pinCategories': 'Pin categories',
   'shell.unpinCategories': 'Unpin categories',
-  'shell.overlayHint': 'Closes when you leave or press Esc',
-  'shell.pinned': 'Pinned',
   'shell.organizations': 'Workspaces and organizations',
   'sidebar.context': 'Context navigation',
   'tabs.openViews': 'Open views',

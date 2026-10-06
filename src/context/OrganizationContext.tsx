@@ -1,5 +1,5 @@
 /* oxlint-disable react/only-export-components */
-import { createContext, useCallback, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, useRef, useState, useEffect, type ReactNode } from 'react';
 import { getOrganizations } from '@/lib/organizations';
 import { hasEstablishedSession, markSessionEstablished } from '@/lib/sessionState';
 import { getDemoOrganizations, PERSONAL_ORG_ID, type DemoOrganization } from '@/lib/demo/store';
@@ -39,13 +39,21 @@ export function OrganizationProvider({
   const [activeOrganization, setActiveOrganization] = useState<Organization | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Parents recreate `onAuthError` on every render. Reading it through a ref keeps
+  // `loadOrganizations` stable; otherwise each parent render re-fetched the list
+  // and flipped `isLoading`, unmounting the whole shell (flashes / Profile loop).
+  const onAuthErrorRef = useRef(onAuthError);
+  useEffect(() => { onAuthErrorRef.current = onAuthError; }, [onAuthError]);
+  const loadedRef = useRef(false);
 
   const loadOrganizations = useCallback(async () => {
-    setIsLoading(true);
+    // Only the first load may blank the shell; later refreshes are silent.
+    if (!loadedRef.current) setIsLoading(true);
     setError(null);
     try {
       const apiOrgs = await getOrganizations();
       markSessionEstablished();
+      loadedRef.current = true;
       // Demo organizations must never stand in for an authoritative tenant list.
       const effective = ensurePersonalWorkspace(apiOrgs);
       setOrganizations(effective);
@@ -54,11 +62,12 @@ export function OrganizationProvider({
     } catch (err) {
       const status = (err as { status?: number }).status;
       if (status === 401 && !hasEstablishedSession()) {
-        onAuthError?.();
+        onAuthErrorRef.current?.();
         return [];
       }
       // The isolated personal workspace remains available offline. Do not invent
       // organization membership or organization data after an API failure.
+      loadedRef.current = true;
       const personalOnly = ensurePersonalWorkspace([]);
       setOrganizations(personalOnly);
       setActiveOrganization((current) => current?.id === PERSONAL_ORG_ID ? current : personalOnly[0] ?? null);
@@ -66,30 +75,27 @@ export function OrganizationProvider({
     } finally {
       setIsLoading(false);
     }
-  }, [onAuthError]);
+  }, []);
 
   useEffect(() => {
+    loadedRef.current = false;
     void loadOrganizations();
   }, [loadOrganizations, user.id]);
 
-  const switchOrganization = (orgId: string) => {
-    const org = organizations.find((o) => o.id === orgId);
-    if (org) {
-      setActiveOrganization(org);
-    }
-  };
+  const switchOrganization = useCallback((orgId: string) => {
+    setActiveOrganization((current) => {
+      if (current?.id === orgId) return current;
+      return organizations.find((o) => o.id === orgId) ?? current;
+    });
+  }, [organizations]);
+
+  const value = useMemo(
+    () => ({ organizations, activeOrganization, isLoading, error, switchOrganization, refresh: loadOrganizations }),
+    [organizations, activeOrganization, isLoading, error, switchOrganization, loadOrganizations],
+  );
 
   return (
-    <OrganizationContext.Provider
-      value={{
-        organizations,
-        activeOrganization,
-        isLoading,
-        error,
-        switchOrganization,
-        refresh: loadOrganizations,
-      }}
-    >
+    <OrganizationContext.Provider value={value}>
       {children}
     </OrganizationContext.Provider>
   );

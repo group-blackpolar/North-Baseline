@@ -16,6 +16,7 @@ import type { PublishedPanelBinding, PublishedPanelDocument } from '@/lib/organi
 import { useCatalog } from '@/context/CatalogContext';
 import { useOrganization } from '@/context/OrganizationContext';
 import { useI18n } from '@/lib/i18n';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ACCESS_SECTIONS, AccessAdminView } from '@/features/access-admin/AccessAdminView';
 
 const PERSONAL_CATEGORIES = new Set(['home', 'profile', 'billing', 'preferences', 'settings']);
@@ -244,7 +245,7 @@ function PublishedPanel({ title, document, locales, organizationId, panelId }: {
   };
   const clearFilters = () => { setDraftValues({}); setFiltersByBinding({}); };
   if (!document) return <div className="p-6 text-sm text-text-muted">Este panel publicado no tiene contenido disponible.</div>;
-  return <article className="mx-auto max-w-6xl space-y-6 p-6"><h1 className="font-display text-2xl font-semibold">{title}</h1>{filterControls.length ? <div className="space-y-2"><AnalyticsFilterControls filters={filterControls} onChange={(id, value) => setDraftValues((current) => ({ ...current, [id]: Array.isArray(value) ? value[0] ?? '' : value }))} /><div className="flex justify-end gap-2"><button type="button" onClick={clearFilters} className="h-8 rounded-md border border-border px-3 text-xs text-text-secondary hover:bg-surface-hover">{t('analytics.clearFilters')}</button><button type="button" onClick={applyFilters} className="h-8 rounded-md bg-accent px-3 text-xs font-medium text-white hover:opacity-90">{t('analytics.applyFilters')}</button></div></div> : null}{document.sections.slice().sort((a, b) => a.order - b.order).map((section) => <section key={section.id} className={`grid grid-cols-12 auto-rows-[minmax(2rem,auto)] ${GAP[section.layout.gap]}`}>{section.components.slice().sort((a, b) => a.order - b.order).map((component) => {
+  return <article className="north-enter mx-auto w-full max-w-[1680px] space-y-5 p-4 lg:p-5"><h1 className="font-display text-2xl font-semibold">{title}</h1>{filterControls.length ? <div className="space-y-2"><AnalyticsFilterControls filters={filterControls} onChange={(id, value) => setDraftValues((current) => ({ ...current, [id]: Array.isArray(value) ? value[0] ?? '' : value }))} /><div className="flex justify-end gap-2"><button type="button" onClick={clearFilters} className="h-8 rounded-md border border-border px-3 text-xs text-text-secondary hover:bg-surface-hover">{t('analytics.clearFilters')}</button><button type="button" onClick={applyFilters} className="h-8 rounded-md bg-accent px-3 text-xs font-medium text-white hover:opacity-90">{t('analytics.applyFilters')}</button></div></div> : null}{document.sections.slice().sort((a, b) => a.order - b.order).map((section) => <section key={section.id} className={`grid grid-cols-12 auto-rows-[minmax(2rem,auto)] ${GAP[section.layout.gap]}`}>{section.components.slice().sort((a, b) => a.order - b.order).map((component) => {
     const content = datasetBinding(component.bindings)
       ? <PublishedAnalyticsContent component={component} organizationId={organizationId} panelId={panelId} locales={locales} filters={filtersByBinding[datasetBinding(component.bindings)!.sourceId] ?? []} onFilterDefinitions={registerFilterDefinitions} />
       : SafeComponent({ type: component.type, props: component.props, locales });
@@ -253,8 +254,10 @@ function PublishedPanel({ title, document, locales, organizationId, panelId }: {
 }
 
 export function ViewRenderer({ user, tab }: { user: SessionUser; tab: Tab | null }) {
-  const { getCategory, getSubcategory } = useCatalog();
+  const { getCategory, getSubcategory, isLoading: catalogLoading } = useCatalog();
   const { activeOrganization } = useOrganization();
+  // Keep the shell stable while the catalog resolves: only this region shows a quiet skeleton.
+  if (!tab && catalogLoading) return <div className="w-full space-y-3 p-4 lg:p-5" aria-busy="true"><Skeleton className="h-6 w-48" /><Skeleton className="h-40 w-full rounded-xl" /></div>;
   if (!tab) return <div className="flex flex-1 items-center justify-center text-sm text-text-muted">Selecciona una categoría para comenzar</div>;
   const category = getCategory(tab.route.categoryId);
   const subcategory = getSubcategory(tab.route.categoryId, tab.route.subcategoryId);

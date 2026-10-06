@@ -19,7 +19,7 @@ export function ReportInfo() {
   const dataset = useMemo(() => sharkService.portReport(EMPTY_FILTERS), []);
 
   return (
-    <div className="p-6 space-y-5 max-w-5xl">
+    <div className="p-4 lg:p-5 space-y-5 max-w-[1680px]">
       {/* Header */}
       <header className="flex items-center gap-4">
         <div className="size-14 rounded-2xl bg-text text-background flex items-center justify-center shadow-soft">

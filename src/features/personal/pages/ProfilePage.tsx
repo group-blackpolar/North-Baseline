@@ -17,7 +17,7 @@ function ReadOnly({ label, value, mono }: { label: string; value: string; mono?:
 
 function Page({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="w-full max-w-3xl p-4 lg:p-5 space-y-4">
+    <div className="w-full max-w-5xl p-4 lg:p-5 space-y-4">
       <h1 className="text-xl font-display font-semibold text-text">{title}</h1>
       {children}
     </div>
