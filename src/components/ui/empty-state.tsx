@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { IconComponent } from '@/components/ui/icon';
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 
 interface EmptyStateProps {
@@ -7,10 +8,11 @@ interface EmptyStateProps {
   title: string;
   body?: string;
   action?: ReactNode;
+  secondaryAction?: ReactNode;
   className?: string;
 }
 
-export function EmptyState({ icon: Icon, title, body, action, className }: EmptyStateProps) {
+export function EmptyState({ icon: Glyph, title, body, action, secondaryAction, className }: EmptyStateProps) {
   return (
     <div
       className={cn(
@@ -19,11 +21,11 @@ export function EmptyState({ icon: Icon, title, body, action, className }: Empty
       )}
     >
       <div className="size-10 rounded-xl bg-surface-active flex items-center justify-center">
-        <Icon className="w-5 h-5 text-text-muted" />
+        <Icon icon={Glyph} size="lg" weight="duotone" className="text-text-muted" />
       </div>
       <p className="text-sm font-medium text-text">{title}</p>
       {body && <p className="text-xs text-text-secondary max-w-60 leading-relaxed">{body}</p>}
-      {action && <div className="pt-2">{action}</div>}
+      {(action || secondaryAction) && <div className="flex flex-wrap justify-center gap-2 pt-2">{action}{secondaryAction}</div>}
     </div>
   );
 }

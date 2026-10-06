@@ -1,8 +1,9 @@
 import { forwardRef, type HTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
 
-const Card = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn('np-card', className)} {...props} />
+/** `selected` adds the accent ring; clickable cards should be `a`/`button` or `role="button"` (hover lift lives in `.np-card`). */
+const Card = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement> & { selected?: boolean }>(({ className, selected, ...props }, ref) => (
+  <div ref={ref} className={cn('np-card', selected && 'border-(--color-border-selected) ring-1 ring-(--color-border-selected)', className)} {...props} />
 ));
 Card.displayName = 'Card';
 

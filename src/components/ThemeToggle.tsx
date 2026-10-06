@@ -31,7 +31,7 @@ export function ThemeToggle({ language = 'es' }: { language?: 'es' | 'en' }) {
       className="h-8 px-2 rounded-full border border-border bg-surface flex items-center gap-2 text-[11px] font-mono text-text-secondary hover:text-text transition-colors"
     >
       <span className={theme === 'light' ? 'text-text' : ''} aria-hidden="true">☼</span>
-      <span className="w-px h-3 bg-line" aria-hidden="true" />
+      <span className="w-px h-3 bg-border" aria-hidden="true" />
       <span className={theme === 'dark' ? 'text-text' : ''} aria-hidden="true">☾</span>
     </button>
   )

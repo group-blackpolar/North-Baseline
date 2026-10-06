@@ -298,7 +298,7 @@ export function Login({ onSuccess, onOnboardingIssue, initialMode = 'login' }: L
               <h1 className="font-display text-2xl font-bold text-text mb-6">{t('auth.signInTitle')}</h1>
               <button type="button" onClick={handleGoogleLogin} disabled={loading || !googleEnabled} title={!googleEnabled ? t('auth.googleUnavailable') : undefined} className="w-full h-10 rounded-md border border-border flex items-center justify-center gap-2 text-sm font-medium text-text hover:bg-surface-hover transition-colors mb-3 disabled:opacity-50"><GoogleIcon />{t('auth.googleLogin')}</button>
               <button type="button" onClick={() => switchMode('admin-secret')} disabled={loading || !adminSecretAvailable} title={!adminSecretAvailable ? t('auth.adminSecretWebOnly') : undefined} className="w-full h-10 rounded-md border border-border flex items-center justify-center gap-2 text-sm font-medium text-text hover:bg-surface-hover transition-colors mb-5 disabled:opacity-50"><ShieldIcon />{adminSecretAvailable ? t('auth.adminSecretLogin') : t('auth.adminSecretWebOnly')}</button>
-              <div className="w-full flex items-center gap-3 mb-5"><div className="flex-1 h-px bg-line" /><span className="text-xs text-text-secondary">{t('auth.or')}</span><div className="flex-1 h-px bg-line" /></div>
+              <div className="w-full flex items-center gap-3 mb-5"><div className="flex-1 h-px bg-border" /><span className="text-xs text-text-secondary">{t('auth.or')}</span><div className="flex-1 h-px bg-border" /></div>
               <form onSubmit={handleEmailLogin} className="w-full space-y-4">
                 <Field label={t('auth.email')}><Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" /></Field>
                 <PasswordField label={t('auth.password')} value={pass} onChange={setPass} visible={showPass} setVisible={setShowPass} showLabel={t('auth.showPassword')} hideLabel={t('auth.hidePassword')} autoComplete="current-password" />
@@ -308,7 +308,7 @@ export function Login({ onSuccess, onOnboardingIssue, initialMode = 'login' }: L
                 </div>
                 {notice && <div role="status" className="text-xs text-accent font-mono">{notice}</div>}
                 {error && <div role="alert" className="text-xs text-red-600 dark:text-red-400 font-mono">{error}</div>}
-                <Button type="submit" variant="dark" disabled={loading} className="north-primary w-full h-10">{loading ? t('auth.signingIn') : t('auth.signIn')}</Button>
+                <Button type="submit" variant="primary" disabled={loading} className="north-primary w-full h-10">{loading ? t('auth.signingIn') : t('auth.signIn')}</Button>
               </form>
               <div className="text-center text-sm text-text-secondary mt-6 space-y-1"><div>{t('auth.noAccount')} <button type="button" onClick={() => switchMode('signup')} className="text-accent hover:underline">{t('auth.createLink')}</button></div><div>{t('auth.help')} <a href={`https://blackpolar.org/${localePath}/contact`} className="text-accent hover:underline">{t('auth.contact')}</a></div></div>
             </>}
@@ -323,7 +323,7 @@ export function Login({ onSuccess, onOnboardingIssue, initialMode = 'login' }: L
                 <Field label={t('auth.email')}><Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></Field>
                 <Field label={t('auth.adminSecretLabel')} hint={t('auth.adminSecretHint')}><Input type="password" value={adminSecret} onChange={(event) => setAdminSecret(event.target.value)} autoComplete="current-password" minLength={12} maxLength={256} /></Field>
                 {error && <div role="alert" className="text-xs text-red-600 dark:text-red-400 font-mono">{error}</div>}
-                <Button type="submit" variant="dark" disabled={loading} className="north-primary w-full h-10">{loading ? t('auth.signingIn') : t('auth.adminSecretSubmit')}</Button>
+                <Button type="submit" variant="primary" disabled={loading} className="north-primary w-full h-10">{loading ? t('auth.signingIn') : t('auth.adminSecretSubmit')}</Button>
                 <button type="button" onClick={() => switchMode('login')} className="w-full text-sm text-text-secondary hover:text-text">{t('auth.backToLogin')}</button>
               </form>
             </>}
@@ -349,12 +349,12 @@ export function Login({ onSuccess, onOnboardingIssue, initialMode = 'login' }: L
                   <PasswordField label={t('auth.confirmPassword')} value={confirmPass} onChange={setConfirmPass} visible={showPass} setVisible={setShowPass} showLabel={t('auth.showPassword')} hideLabel={t('auth.hidePassword')} autoComplete="new-password" />
                 </div>
                 <div>
-                  <div className="grid grid-cols-4 gap-1" role="progressbar" aria-label={t('auth.password')} aria-valuemin={0} aria-valuemax={4} aria-valuenow={strength}>{[1, 2, 3, 4].map((level) => <span key={level} className={`h-1.5 rounded-full ${strength >= level ? (strength < 3 ? 'bg-orange-500' : 'bg-accent') : 'bg-line'}`} />)}</div>
+                  <div className="grid grid-cols-4 gap-1" role="progressbar" aria-label={t('auth.password')} aria-valuemin={0} aria-valuemax={4} aria-valuenow={strength}>{[1, 2, 3, 4].map((level) => <span key={level} className={`h-1.5 rounded-full ${strength >= level ? (strength < 3 ? 'bg-orange-500' : 'bg-accent') : 'bg-border'}`} />)}</div>
                   <div className="mt-1.5 flex justify-between gap-3 text-[11px] text-text-secondary"><span>{t('auth.passwordHelp')}</span><span className="font-medium text-text shrink-0">{strengthLabels[strength]}</span></div>
                 </div>
                 <label className="flex items-start gap-2.5 text-xs text-text-secondary cursor-pointer"><input type="checkbox" checked={acceptedLegal} onChange={(event) => setAcceptedLegal(event.target.checked)} className="mt-0.5 accent-[var(--color-accent)]" /><span>{t('auth.legalCheck')} <span className="font-mono text-[10px]">({termsVersion})</span></span></label>
                 {error && <div role="alert" className="text-xs text-red-600 dark:text-red-400 font-mono">{error}</div>}
-                <Button type="submit" variant="dark" disabled={loading} className="north-primary w-full h-10">{loading ? t('auth.creating') : t('auth.create')}</Button>
+                <Button type="submit" variant="primary" disabled={loading} className="north-primary w-full h-10">{loading ? t('auth.creating') : t('auth.create')}</Button>
                 <div className="relative py-1"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div><div className="relative flex justify-center"><span className="bg-surface px-3 text-xs text-text-secondary">{t('auth.or')}</span></div></div>
                 <button type="button" onClick={handleGoogleSignup} disabled={loading || !googleEnabled} title={!googleEnabled ? t('auth.googleUnavailable') : undefined} className="w-full h-10 rounded-md border border-border flex items-center justify-center gap-2 text-sm font-medium text-text hover:bg-surface-hover transition-colors disabled:opacity-50"><GoogleIcon />{t('auth.googleSignup')}</button>
                 <div className="text-center text-sm text-text-secondary">{t('auth.hasAccount')} <button type="button" onClick={() => switchMode('login')} className="text-accent hover:underline">{t('auth.signIn')}</button></div>
@@ -385,7 +385,7 @@ export function Login({ onSuccess, onOnboardingIssue, initialMode = 'login' }: L
                 </label>
                 {notice && <p role="status" className="text-center text-xs text-accent">{notice}</p>}
                 {error && <p role="alert" className="text-center text-xs text-red-600 dark:text-red-400">{error}</p>}
-                <Button type="submit" variant="dark" disabled={loading || verificationCode.length !== 6} className="north-primary h-10 w-full">{loading ? t('auth.verifyingCode') : t('auth.verifyCodeSubmit')}</Button>
+                <Button type="submit" variant="primary" disabled={loading || verificationCode.length !== 6} className="north-primary h-10 w-full">{loading ? t('auth.verifyingCode') : t('auth.verifyCodeSubmit')}</Button>
               </form>
               <div className="mt-5 text-center text-sm text-text-secondary">
                 <span>{t('auth.noVerificationCode')} </span>
@@ -400,23 +400,23 @@ export function Login({ onSuccess, onOnboardingIssue, initialMode = 'login' }: L
               <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent text-xl" aria-hidden="true">✓</div>
               <h1 className="font-display text-2xl font-bold text-text">{t('auth.verificationCompleteTitle')}</h1>
               <p className="mt-3 text-sm leading-relaxed text-text-secondary">{t('auth.verificationCompleteBody')}</p>
-              <Button type="button" variant="dark" onClick={() => switchMode('login')} className="north-primary mt-7 h-10 w-full">{t('auth.continueToSignIn')}</Button>
+              <Button type="button" variant="primary" onClick={() => switchMode('login')} className="north-primary mt-7 h-10 w-full">{t('auth.continueToSignIn')}</Button>
             </div>}
 
             {stage === 'ready' && mode === 'forgot' && <>
               <h1 className="font-display text-2xl font-bold text-text">{t('auth.recoveryTitle')}</h1>
               <p className="mt-2 mb-6 text-sm text-text-secondary">{t('auth.recoveryBody')}</p>
-              <form onSubmit={handleRecovery} className="space-y-4"><Field label={t('auth.email')}><Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></Field>{error && <p role="alert" className="text-xs text-red-600 dark:text-red-400">{error}</p>}<Button type="submit" variant="dark" disabled={loading} className="north-primary w-full h-10">{loading ? t('auth.creating') : t('auth.sendRecovery')}</Button><button type="button" onClick={() => switchMode('login')} className="w-full text-sm text-text-secondary hover:text-text">{t('auth.backToLogin')}</button></form>
+              <form onSubmit={handleRecovery} className="space-y-4"><Field label={t('auth.email')}><Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></Field>{error && <p role="alert" className="text-xs text-red-600 dark:text-red-400">{error}</p>}<Button type="submit" variant="primary" disabled={loading} className="north-primary w-full h-10">{loading ? t('auth.creating') : t('auth.sendRecovery')}</Button><button type="button" onClick={() => switchMode('login')} className="w-full text-sm text-text-secondary hover:text-text">{t('auth.backToLogin')}</button></form>
             </>}
 
-            {stage === 'ready' && mode === 'forgot-success' && <div className="text-center py-8"><div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent text-xl">✓</div><h1 className="font-display text-2xl font-bold text-text">{t('auth.recoverySent')}</h1><p className="mt-3 text-sm leading-relaxed text-text-secondary">{t('auth.recoverySentBody')}</p><Button type="button" variant="dark" onClick={() => switchMode('login')} className="north-primary w-full h-10 mt-7">{t('auth.backToLogin')}</Button></div>}
+            {stage === 'ready' && mode === 'forgot-success' && <div className="text-center py-8"><div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent text-xl">✓</div><h1 className="font-display text-2xl font-bold text-text">{t('auth.recoverySent')}</h1><p className="mt-3 text-sm leading-relaxed text-text-secondary">{t('auth.recoverySentBody')}</p><Button type="button" variant="primary" onClick={() => switchMode('login')} className="north-primary w-full h-10 mt-7">{t('auth.backToLogin')}</Button></div>}
 
             {stage === 'ready' && mode === 'reset' && <>
               <h1 className="font-display text-2xl font-bold text-text mb-6">{t('auth.resetTitle')}</h1>
-              <form onSubmit={handleReset} className="space-y-4"><PasswordField label={t('auth.password')} value={pass} onChange={setPass} visible={showPass} setVisible={setShowPass} showLabel={t('auth.showPassword')} hideLabel={t('auth.hidePassword')} autoComplete="new-password" /><PasswordField label={t('auth.confirmPassword')} value={confirmPass} onChange={setConfirmPass} visible={showPass} setVisible={setShowPass} showLabel={t('auth.showPassword')} hideLabel={t('auth.hidePassword')} autoComplete="new-password" /><div className="grid grid-cols-4 gap-1" role="progressbar" aria-label={t('auth.password')} aria-valuemin={0} aria-valuemax={4} aria-valuenow={strength}>{[1, 2, 3, 4].map((level) => <span key={level} className={`h-1.5 rounded-full ${strength >= level ? (strength < 3 ? 'bg-orange-500' : 'bg-accent') : 'bg-line'}`} />)}</div>{error && <p role="alert" className="text-xs text-red-600 dark:text-red-400">{error}</p>}<Button type="submit" variant="dark" disabled={loading} className="north-primary w-full h-10">{loading ? t('auth.creating') : t('auth.resetAction')}</Button></form>
+              <form onSubmit={handleReset} className="space-y-4"><PasswordField label={t('auth.password')} value={pass} onChange={setPass} visible={showPass} setVisible={setShowPass} showLabel={t('auth.showPassword')} hideLabel={t('auth.hidePassword')} autoComplete="new-password" /><PasswordField label={t('auth.confirmPassword')} value={confirmPass} onChange={setConfirmPass} visible={showPass} setVisible={setShowPass} showLabel={t('auth.showPassword')} hideLabel={t('auth.hidePassword')} autoComplete="new-password" /><div className="grid grid-cols-4 gap-1" role="progressbar" aria-label={t('auth.password')} aria-valuemin={0} aria-valuemax={4} aria-valuenow={strength}>{[1, 2, 3, 4].map((level) => <span key={level} className={`h-1.5 rounded-full ${strength >= level ? (strength < 3 ? 'bg-orange-500' : 'bg-accent') : 'bg-border'}`} />)}</div>{error && <p role="alert" className="text-xs text-red-600 dark:text-red-400">{error}</p>}<Button type="submit" variant="primary" disabled={loading} className="north-primary w-full h-10">{loading ? t('auth.creating') : t('auth.resetAction')}</Button></form>
             </>}
 
-            {stage === 'ready' && mode === 'reset-success' && <div className="text-center py-8"><div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent text-xl">✓</div><h1 className="font-display text-2xl font-bold text-text">{t('auth.resetDone')}</h1><p className="mt-3 text-sm text-text-secondary">{t('auth.resetDoneBody')}</p><Button type="button" variant="dark" onClick={() => switchMode('login')} className="north-primary w-full h-10 mt-7">{t('auth.signIn')}</Button></div>}
+            {stage === 'ready' && mode === 'reset-success' && <div className="text-center py-8"><div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent text-xl">✓</div><h1 className="font-display text-2xl font-bold text-text">{t('auth.resetDone')}</h1><p className="mt-3 text-sm text-text-secondary">{t('auth.resetDoneBody')}</p><Button type="button" variant="primary" onClick={() => switchMode('login')} className="north-primary w-full h-10 mt-7">{t('auth.signIn')}</Button></div>}
           </div>}
         </div>
         {!expanded && mode !== 'signup' && mode !== 'admin-secret' && <p className="max-w-[440px] w-full text-center text-xs text-text-secondary mt-6 leading-relaxed">{t('auth.agreement')} <a href={`https://blackpolar.org/${localePath}/legal/terms`} className="underline hover:text-text">{t('auth.terms')}</a> {t('auth.and')} <a href={`https://blackpolar.org/${localePath}/legal/privacy`} className="underline hover:text-text">{t('auth.privacy')}</a>.</p>}

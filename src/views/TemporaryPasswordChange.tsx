@@ -131,7 +131,7 @@ export function TemporaryPasswordChange({
 
             <Button
               type="submit"
-              variant="dark"
+              variant="primary"
               disabled={saving || desktopBlocked}
               className="north-primary h-10 w-full"
             >

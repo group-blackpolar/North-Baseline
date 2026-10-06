@@ -246,6 +246,25 @@
   }
 }
 
+/* Overlays (Radix mounts them until the exit animation ends) */
+@keyframes np-fade-in { from { opacity: 0; } }
+@keyframes np-fade-out { to { opacity: 0; } }
+@keyframes np-pop-in { from { opacity: 0; transform: translate(-50%, calc(-50% + 4px)) scale(0.98); } }
+@keyframes np-slide-in-left { from { transform: translateX(-100%); } }
+@keyframes np-slide-in-right { from { transform: translateX(100%); } }
+@keyframes np-slide-in-bottom { from { transform: translateY(100%); } }
+@keyframes np-tip-in { from { opacity: 0; transform: translateY(2px); } }
+.np-overlay[data-state="open"] { animation: np-fade-in var(--duration-normal) var(--ease-enter); }
+.np-overlay[data-state="closed"] { animation: np-fade-out var(--duration-fast) var(--ease-exit) forwards; }
+.np-dialog[data-state="open"] { animation: np-pop-in var(--duration-normal) var(--ease-enter); }
+.np-dialog[data-state="closed"] { animation: np-fade-out var(--duration-fast) var(--ease-exit) forwards; }
+.np-sheet[data-state="open"] { animation: var(--duration-slow) var(--ease-enter) both; }
+.np-sheet[data-side="left"][data-state="open"] { animation-name: np-slide-in-left; }
+.np-sheet[data-side="right"][data-state="open"] { animation-name: np-slide-in-right; }
+.np-sheet[data-side="bottom"][data-state="open"] { animation-name: np-slide-in-bottom; }
+.np-sheet[data-state="closed"] { animation: np-fade-out var(--duration-fast) var(--ease-exit) forwards; }
+.np-tooltip[data-state="delayed-open"], .np-tooltip[data-state="instant-open"] { animation: np-tip-in var(--duration-fast) var(--ease-enter); }
+
 @media (pointer: coarse) {
   :root { --touch-min: 44px; }
 }
