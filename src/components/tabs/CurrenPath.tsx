@@ -1,8 +1,10 @@
 import { ChevronRight } from 'lucide-react';
 import { useTabs } from '@/context/TabsContext';
 import { useCatalog } from '@/context/CatalogContext';
+import { useI18n } from '@/lib/i18n';
 
 export function CurrentPath() {
+  const { t } = useI18n();
   const { activeTab } = useTabs();
   const { getCategory, getSubcategory } = useCatalog();
 
@@ -17,7 +19,7 @@ export function CurrentPath() {
       {subcategory && (
         <>
           <ChevronRight className="w-3 h-3" />
-          <span className="text-text">{subcategory.name}</span>
+          <span className="text-text">{subcategory.labelKey ? t(subcategory.labelKey as never) : subcategory.name}</span>
         </>
       )}
     </div>

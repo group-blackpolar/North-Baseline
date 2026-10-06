@@ -16,6 +16,7 @@ import type { PublishedPanelBinding, PublishedPanelDocument } from '@/lib/organi
 import { useCatalog } from '@/context/CatalogContext';
 import { useOrganization } from '@/context/OrganizationContext';
 import { useI18n } from '@/lib/i18n';
+import { ACCESS_SECTIONS, AccessAdminView } from '@/features/access-admin/AccessAdminView';
 
 const PERSONAL_CATEGORIES = new Set(['home', 'profile', 'billing', 'preferences', 'settings']);
 const SHARK_CATEGORIES = new Set(['shark-home', 'master-house']);
@@ -257,6 +258,8 @@ export function ViewRenderer({ user, tab }: { user: SessionUser; tab: Tab | null
   if (!tab) return <div className="flex flex-1 items-center justify-center text-sm text-text-muted">Selecciona una categoría para comenzar</div>;
   const category = getCategory(tab.route.categoryId);
   const subcategory = getSubcategory(tab.route.categoryId, tab.route.subcategoryId);
+  const accessSection = ACCESS_SECTIONS.find((section) => subcategory?.id === `access-${section}`);
+  if (activeOrganization && category?.slug === 'admin' && accessSection) return <AccessAdminView section={accessSection} organizationId={activeOrganization.id} currentUserId={user.id} />;
   if (activeOrganization && category?.slug === 'admin' && subcategory?.slug === 'settings') return <ViewsAdminView key={activeOrganization.id} organizationId={activeOrganization.id} />;
   if (tab.publishedPanel) return <PublishedPanel title={tab.publishedPanel.title} document={tab.publishedPanel.document} locales={tab.publishedPanel.localeOrder} organizationId={activeOrganization?.id} panelId={tab.publishedPanel.id} />;
   if (PERSONAL_CATEGORIES.has(tab.route.categoryId)) return <PersonalView route={tab.route} user={user} />;

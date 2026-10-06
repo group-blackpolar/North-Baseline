@@ -164,7 +164,7 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
                       )}
                     >
                       <SubIcon className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate">{sub.name}</span>
+                      <span className="truncate">{sub.labelKey ? t(sub.labelKey as never) : sub.name}</span>
                     </button>
                   );
                 })}
