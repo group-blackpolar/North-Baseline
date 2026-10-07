@@ -12,7 +12,7 @@ Personal Workspace is not an organization. Client-side visibility, demo roles, f
 - Preserve the current organization-remount boundary (`key={activeOrganization.id}`) unless a Task explicitly redesigns state ownership; organization, workspace, catalog and tab state must not leak across tenants.
 - The shell is conceptually Organization Rail -> category/context sidebar -> subcategories -> tabs -> workspace content. Existing `CategoryRail` and `ContextSidebar` divide these responsibilities; do not silently merge or redesign them.
 - Category or subcategory changes must not create arbitrary new tabs. Use the established intentional tab/navigation flow and browser-like active/close behavior.
-- Keep feature screens under `src/features/<feature>` and reusable shell/UI under `src/components`. Reuse CSS tokens, shared primitives, Lucide icons, `cn()`, `@/` imports and current light/dark/midnight themes.
+- Keep feature screens under `src/features/<feature>` and reusable shell/UI under `src/components`. Reuse CSS tokens, shared primitives, Phosphor icons (`@/components/ui/icon`), `cn()`, `@/` imports and current light/dark/midnight themes.
 - Add both Spanish and English locale entries for user-facing shell text. Keep mock/demo behavior isolated and visibly non-authoritative.
 
 ## Contracts, tooling and validation

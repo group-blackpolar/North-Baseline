@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { NorthChartTooltip } from '@/components/charts'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { Card, CardHeader, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -55,23 +56,23 @@ export function ApiHealthView() {
       <div className="grid grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-5">
-            <div className="text-[10px] font-mono text-text-dim uppercase">Estado</div>
+            <div className="text-[10px] font-mono text-text-secondary uppercase">Estado</div>
             <div className="font-display text-xl mt-1 flex items-center gap-2">
-              <span className={status === 'up' ? 'text-accent' : status === 'down' ? 'text-accent-2' : 'text-text-dim'}>●</span>
+              <span className={status === 'up' ? 'text-accent' : status === 'down' ? 'text-warning' : 'text-text-secondary'}>●</span>
               {status === 'up' ? 'operativo' : status === 'down' ? 'caído' : 'verificando…'}
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-5">
-            <div className="text-[10px] font-mono text-text-dim uppercase">Latencia actual</div>
+            <div className="text-[10px] font-mono text-text-secondary uppercase">Latencia actual</div>
             <div className="font-display text-xl mt-1">{latest?.latencyMs ?? '—'} ms</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-5">
-            <div className="text-[10px] font-mono text-text-dim uppercase">Endpoint</div>
-            <div className="font-mono text-xs mt-1 text-text-dim">GET /health</div>
+            <div className="text-[10px] font-mono text-text-secondary uppercase">Endpoint</div>
+            <div className="font-mono text-xs mt-1 text-text-secondary">GET /health</div>
           </CardContent>
         </Card>
       </div>
@@ -86,10 +87,8 @@ export function ApiHealthView() {
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
               <XAxis dataKey="i" hide />
-              <YAxis stroke="var(--color-text-dim)" fontSize={11} unit="ms" />
-              <Tooltip
-                contentStyle={{ background: 'var(--color-panel)', border: '1px solid var(--color-line)', borderRadius: 8, fontSize: 12 }}
-              />
+              <YAxis stroke="var(--color-text-secondary)" fontSize={11} unit="ms" />
+              <Tooltip content={<NorthChartTooltip format={(v) => `${v} ms`} />} />
               <Line type="monotone" dataKey="latencia" stroke="var(--color-accent)" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>

@@ -1,8 +1,9 @@
 import type { ComponentType, PanelDocument, ResponsiveLayout } from '@/lib/northAdmin';
+import { uuid } from '@/lib/utils';
 
 const layout = (): ResponsiveLayout => ({ desktop: { x: 0, y: 0, w: 12, h: 2 }, tablet: { x: 0, y: 0, w: 12, h: 2 }, mobile: { x: 0, y: 0, w: 12, h: 2 } });
 const localized = (text: string) => ({ es: text, en: text });
-export const newId = () => crypto.randomUUID();
+export const newId = () => uuid();
 export function emptyDocument(): PanelDocument { return { schemaVersion: 1, defaultLocale: 'es', fallbackLocales: ['en'], sections: [{ id: newId(), order: 0, layout: { variant: 'grid', gap: 'md' }, components: [] }] }; }
 export function componentProps(type: ComponentType): Record<string, unknown> {
   switch (type) {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { LogIn } from 'lucide-react';
+import { SignIn } from '@phosphor-icons/react';
 import { NorthIcon } from '@/components/brand/NorthLogo';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -88,7 +88,7 @@ export function ShowcaseView({ route }: { route: ShowcaseRoute }) {
           <div className="ml-auto flex items-center gap-3">
             <LanguageSelector value={locale} onChange={(code) => setLocale(code as 'es' | 'en')} />
             <ThemeToggle language={locale === 'en' ? 'en' : 'es'} />
-            <Button variant="accent" size="sm" onClick={() => pushPath('/')}><LogIn className="size-4" />{t('showcase.signIn')}</Button>
+            <Button variant="accent" size="sm" onClick={() => pushPath('/')}><SignIn className="size-4" />{t('showcase.signIn')}</Button>
           </div>
         </header>
         <div className="flex min-h-0 flex-1">
@@ -102,7 +102,7 @@ export function ShowcaseView({ route }: { route: ShowcaseRoute }) {
                     return (
                       <button key={subcategory.id} type="button" aria-current={active ? 'page' : undefined}
                         onClick={() => pushPath(pathFor(slug, category.slug, subcategory.slug, subcategory.panels[0].slug))}
-                        className={cn('w-full truncate rounded-md px-2.5 py-1.5 text-left text-[13px] transition-colors duration-150', active ? 'bg-surface-active font-medium text-text' : 'text-text-secondary hover:bg-surface-hover hover:text-text')}>
+                        className={cn('w-full truncate rounded-md px-2.5 py-1.5 text-left text-[13px] transition-colors duration-(--duration-fast)', active ? 'bg-surface-active font-medium text-text' : 'text-text-secondary hover:bg-surface-hover hover:text-text')}>
                         {label(subcategory.name, locale)}
                       </button>
                     );

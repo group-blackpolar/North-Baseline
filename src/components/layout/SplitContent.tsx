@@ -2,6 +2,10 @@ import { useLayout } from '@/context/LayoutContext';
 import { useTabs, type Tab } from '@/context/TabsContext';
 import { ViewRenderer } from '@/views/ViewsRenderer';
 import { ResizeHandle } from '@/components/layout/ResizeHandle';
+import { useCatalog } from '@/context/CatalogContext';
+import { DelayedSkeleton, WorkspaceSkeleton } from '@/components/ui/skeleton';
+import { useScreenTransition } from '@/lib/useScreenTransition';
+import { useIsCompactShell } from '@/lib/responsive';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { SessionUser } from '@/lib/auth';
@@ -44,15 +48,22 @@ function Pane({ index, user }: { index: number; user: SessionUser }) {
 }
 
 export function SplitContent({ user }: { user: SessionUser }) {
-  const { mode, paneSize, dragging } = useLayout();
+  const { mode: storedMode, paneSize, dragging } = useLayout();
+  // Split panes make no sense on phone/portrait tablet: ignore the stored mode there (kept for desktop).
+  const mode = useIsCompactShell() ? 'single' : storedMode;
   const { activeTab } = useTabs();
+  const { categories, isLoading } = useCatalog();
+  // No tab yet: either the organization's navigation is still loading (org switch / first load) or
+  // CatalogSync is about to open the first view. Show the workspace skeleton instead of an empty view.
+  const screenRef = useScreenTransition<HTMLDivElement>(`${activeTab?.id}:${activeTab?.route.categoryId}:${activeTab?.route.subcategoryId}`);
+  const opening = !activeTab && (isLoading || categories.length > 0);
 
   const animated = cn('flex flex-col min-w-0 min-h-0', !dragging && 'transition-[width,height] duration-200 ease-out');
 
   const main = (
     <div className="flex-1 flex flex-col min-w-0 min-h-0">
-      <div className="flex-1 overflow-y-auto">
-        <ViewRenderer user={user} tab={activeTab} />
+      <div ref={screenRef} className="flex-1 overflow-y-auto">
+        {opening ? <DelayedSkeleton loading delay={0} fallback={<WorkspaceSkeleton />} /> : <ViewRenderer user={user} tab={activeTab} />}
       </div>
     </div>
   );

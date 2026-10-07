@@ -1,8 +1,13 @@
+import { DialogFrame } from '@/components/ui/dialog';
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { ArrowLeft, Download, Mail, MessageCircle, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, ChatCircle, DotsThreeVertical, DownloadSimple, Envelope, PencilSimple, Trash } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ResponsiveList } from '@/components/ui/responsive-list';
+import { Sheet } from '@/components/ui/sheet';
+import { ErrorState } from '@/components/ui/error-state';
+import { DelayedSkeleton, Skeleton, SkeletonDocumentDetail } from '@/components/ui/skeleton';
+import { useShellMode } from '@/lib/responsive';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import {
@@ -15,18 +20,13 @@ import { ErrorNote, StatusBadge, errorText, fieldLabel, formatDate, formatDateTi
 export type DocumentCan = { create: boolean; update: boolean; delete: boolean; download: boolean; send: boolean };
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 p-4 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <div role="dialog" aria-modal="true" aria-label={title} className="north-enter w-full max-w-lg space-y-4 rounded-2xl border border-border bg-surface p-5 shadow-pop">
+    <DialogFrame open onOpenChange={(open) => { if (!open) onClose(); }} label={title}>
+      <div className="space-y-4">
         <h3 className="font-display text-lg font-semibold text-text">{title}</h3>
         {children}
       </div>
-    </div>
+    </DialogFrame>
   );
 }
 
@@ -102,6 +102,8 @@ export function DocumentDetail({ organizationId, documentId, initial, can, chann
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [dialog, setDialog] = useState<'email' | 'whatsapp' | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const phone = useShellMode() === 'phone';
 
   const reload = useCallback(async () => {
     try {
@@ -117,8 +119,9 @@ export function DocumentDetail({ organizationId, documentId, initial, can, chann
   };
 
   if (!document) {
-    return error ? <div className="space-y-3"><Button variant="ghost" onClick={onBack}><ArrowLeft className="size-4" />{t('documents.back')}</Button><ErrorNote message={error} /></div>
-      : <div aria-busy="true" className="space-y-3"><Skeleton className="h-8 w-56" /><Skeleton className="h-40 w-full rounded-xl" /></div>;
+    return error
+      ? <div className="space-y-3"><Button variant="ghost" onClick={onBack}><ArrowLeft className="size-4" />{t('documents.back')}</Button><ErrorState message={error} onRetry={() => void reload()} /></div>
+      : <DelayedSkeleton loading minHeight={320} fallback={<SkeletonDocumentDetail />} />;
   }
 
   const eventLabel = (action: string) => {
@@ -141,24 +144,42 @@ export function DocumentDetail({ organizationId, documentId, initial, can, chann
           <div className="flex flex-wrap items-center gap-2"><h2 className="mono-data text-xl font-semibold text-text">{document.reference}</h2><StatusBadge status={document.status} label={t(`documents.status.${document.status}` as never)} /></div>
           <p className="text-xs text-text-muted">{localizedLabel(document.type.name, locale)} · {formatDate(document.date, locale)}</p>
         </div>
+        {phone ? (
+          <div className="flex w-full items-center gap-2">
+            {can.update && document.editable
+              ? <Button variant="primary" className="flex-1" onClick={() => onEdit(document)}><PencilSimple className="size-4" />{t('documents.edit')}</Button>
+              : can.download && <Button variant="primary" className="flex-1" disabled={busy === 'pdf'} onClick={() => void run('pdf', async () => { saveBlob(await fetchPdf(organizationId, document.id, locale === 'en' ? 'en' : 'es'), `${document.reference}.pdf`); await reload(); })}><DownloadSimple className="size-4" />{t('documents.downloadPdf')}</Button>}
+            <Button variant="secondary" size="icon" aria-label={t('documents.moreActions')} onClick={() => setMenuOpen(true)}><DotsThreeVertical className="size-5" /></Button>
+            <Sheet open={menuOpen} onOpenChange={setMenuOpen} side="bottom" title={t('documents.moreActions')}>
+              <div className="flex flex-col gap-1 [&>button]:justify-start [&>button]:text-left">
+                {can.download && <Button variant="ghost" disabled={busy === 'pdf'} onClick={() => { setMenuOpen(false); void run('pdf', async () => { saveBlob(await fetchPdf(organizationId, document.id, locale === 'en' ? 'en' : 'es'), `${document.reference}.pdf`); await reload(); }); }}><DownloadSimple className="size-4" />{t('documents.downloadPdf')}</Button>}
+                {can.send && sendable && <Button variant="ghost" onClick={() => { setMenuOpen(false); setDialog('email'); }}><Envelope className="size-4" />{t('documents.sendEmail')}</Button>}
+                {can.send && sendable && <Button variant="ghost" onClick={() => { setMenuOpen(false); setDialog('whatsapp'); }}><ChatCircle className="size-4" />{t('documents.sendWhatsApp')}</Button>}
+                {transitions.map((status) => <Button key={status} variant="ghost" disabled={busy === 'status'} onClick={() => { setMenuOpen(false); changeStatus(status); }}>{t('documents.changeStatus')}: {t(`documents.status.${status}` as never)}</Button>)}
+                {can.delete && document.status === 'DRAFT' && <Button variant="ghost" className="text-error" disabled={busy === 'delete'} onClick={() => { setMenuOpen(false); if (window.confirm(t('documents.confirmDelete'))) void run('delete', async () => { await deleteDocument(organizationId, document.id); onDeleted(); }); }}><Trash className="size-4" />{t('documents.delete')}</Button>}
+              </div>
+            </Sheet>
+          </div>
+        ) : (
         <div className="flex flex-wrap items-center gap-2">
-          {can.update && document.editable && <Button variant="secondary" onClick={() => onEdit(document)}><Pencil className="size-4" />{t('documents.edit')}</Button>}
-          {can.download && <Button variant="secondary" disabled={busy === 'pdf'} onClick={() => void run('pdf', async () => { saveBlob(await fetchPdf(organizationId, document.id, locale === 'en' ? 'en' : 'es'), `${document.reference}.pdf`); await reload(); })}><Download className="size-4" />{t('documents.downloadPdf')}</Button>}
-          {can.send && sendable && <Button variant="secondary" onClick={() => setDialog('email')}><Mail className="size-4" />{t('documents.sendEmail')}</Button>}
-          {can.send && sendable && <Button variant="secondary" onClick={() => setDialog('whatsapp')}><MessageCircle className="size-4" />{t('documents.sendWhatsApp')}</Button>}
+          {can.update && document.editable && <Button variant="secondary" onClick={() => onEdit(document)}><PencilSimple className="size-4" />{t('documents.edit')}</Button>}
+          {can.download && <Button variant="secondary" disabled={busy === 'pdf'} onClick={() => void run('pdf', async () => { saveBlob(await fetchPdf(organizationId, document.id, locale === 'en' ? 'en' : 'es'), `${document.reference}.pdf`); await reload(); })}><DownloadSimple className="size-4" />{t('documents.downloadPdf')}</Button>}
+          {can.send && sendable && <Button variant="secondary" onClick={() => setDialog('email')}><Envelope className="size-4" />{t('documents.sendEmail')}</Button>}
+          {can.send && sendable && <Button variant="secondary" onClick={() => setDialog('whatsapp')}><ChatCircle className="size-4" />{t('documents.sendWhatsApp')}</Button>}
           {transitions.length > 0 && (
             <select aria-label={t('documents.changeStatus')} className={selectClass} value="" disabled={busy === 'status'} onChange={(event) => { if (event.target.value) changeStatus(event.target.value as DocumentStatus); }}>
               <option value="">{t('documents.changeStatus')}</option>
               {transitions.map((status) => <option key={status} value={status}>{t(`documents.status.${status}` as never)}</option>)}
             </select>
           )}
-          {can.delete && document.status === 'DRAFT' && <Button variant="ghost" aria-label={t('documents.delete')} title={t('documents.delete')} disabled={busy === 'delete'} onClick={() => { if (window.confirm(t('documents.confirmDelete'))) void run('delete', async () => { await deleteDocument(organizationId, document.id); onDeleted(); }); }}><Trash2 className="size-4" /></Button>}
+          {can.delete && document.status === 'DRAFT' && <Button variant="ghost" aria-label={t('documents.delete')} title={t('documents.delete')} disabled={busy === 'delete'} onClick={() => { if (window.confirm(t('documents.confirmDelete'))) void run('delete', async () => { await deleteDocument(organizationId, document.id); onDeleted(); }); }}><Trash className="size-4" /></Button>}
         </div>
+        )}
       </header>
       <ErrorNote message={error} />
       {notice && <p role="status" className="text-xs text-success">{notice}</p>}
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="space-y-4">
           <section className="np-card space-y-1 p-4 lg:p-5">
             <h3 className="ui-label">{t('documents.client')}</h3>
@@ -167,22 +188,27 @@ export function DocumentDetail({ organizationId, documentId, initial, can, chann
           </section>
 
           <section className="np-card overflow-x-auto p-0">
-            <table className="min-w-full border-separate border-spacing-0 text-sm">
-              <thead><tr className="text-left text-[11px] uppercase tracking-wide text-text-muted">
-                <th className="border-b border-border px-4 py-2 font-medium">{t('documents.item')}</th><th className="border-b border-border px-3 py-2 text-right font-medium">{t('documents.quantity')}</th>
-                <th className="border-b border-border px-3 py-2 text-right font-medium">{t('documents.price')}</th><th className="border-b border-border px-4 py-2 text-right font-medium">{t('documents.col.total')}</th>
-              </tr></thead>
-              <tbody>
-                {document.items.map((item) => (
-                  <tr key={item.id}>
-                    <td className="border-b border-border/60 px-4 py-2.5"><span className="block font-medium text-text">{item.name}</span>{item.description && <span className="block text-xs text-text-muted">{item.description}</span>}</td>
-                    <td className="border-b border-border/60 px-3 py-2.5 text-right tabular-nums">{item.quantity}</td>
-                    <td className="border-b border-border/60 px-3 py-2.5 text-right tabular-nums">{formatMoney(item.unitPrice, document.currency, locale)}</td>
-                    <td className="border-b border-border/60 px-4 py-2.5 text-right tabular-nums">{formatMoney(item.total, document.currency, locale)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <ResponsiveList items={document.items} getKey={(item) => item.id} renderCard={(item) => (
+              <div className="flex items-start justify-between gap-3 rounded-lg bg-surface-hover/50 px-3 py-2.5">
+                <span className="min-w-0"><span className="block font-medium text-text">{item.name}</span>{item.description && <span className="block text-xs text-text-muted">{item.description}</span>}</span>
+                <span className="shrink-0 text-right text-sm tabular-nums"><span className="block text-xs text-text-secondary">{item.quantity} × {formatMoney(item.unitPrice, document.currency, locale)}</span><span className="block text-text">{formatMoney(item.total, document.currency, locale)}</span></span>
+              </div>
+            )} table={<table className="min-w-full border-separate border-spacing-0 text-sm">
+                <thead><tr className="text-left text-[11px] uppercase tracking-wide text-text-muted">
+                  <th className="border-b border-border px-4 py-2 font-medium">{t('documents.item')}</th><th className="border-b border-border px-3 py-2 text-right font-medium">{t('documents.quantity')}</th>
+                  <th className="border-b border-border px-3 py-2 text-right font-medium">{t('documents.price')}</th><th className="border-b border-border px-4 py-2 text-right font-medium">{t('documents.col.total')}</th>
+                </tr></thead>
+                <tbody>
+                  {document.items.map((item) => (
+                    <tr key={item.id}>
+                      <td className="border-b border-border/60 px-4 py-2.5"><span className="block font-medium text-text">{item.name}</span>{item.description && <span className="block text-xs text-text-muted">{item.description}</span>}</td>
+                      <td className="border-b border-border/60 px-3 py-2.5 text-right tabular-nums">{item.quantity}</td>
+                      <td className="border-b border-border/60 px-3 py-2.5 text-right tabular-nums">{formatMoney(item.unitPrice, document.currency, locale)}</td>
+                      <td className="border-b border-border/60 px-4 py-2.5 text-right tabular-nums">{formatMoney(item.total, document.currency, locale)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>} />
             <dl className="ml-auto w-full max-w-xs space-y-1 p-4 text-sm">
               <div className="flex justify-between text-text-secondary"><dt>{t('documents.subtotal')}</dt><dd className="tabular-nums">{formatMoney(document.subtotal, document.currency, locale)}</dd></div>
               <div className="flex justify-between font-display text-base font-semibold text-text"><dt>{t('documents.col.total')}</dt><dd className="tabular-nums">{formatMoney(document.total, document.currency, locale)}</dd></div>

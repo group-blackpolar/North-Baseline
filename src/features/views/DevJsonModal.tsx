@@ -1,3 +1,4 @@
+import { DialogFrame } from '@/components/ui/dialog';
 import { useViewsEditor } from './ViewsEditorContext';
 import { useI18n } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
@@ -9,8 +10,8 @@ export function DevJsonModal() {
   if (!modal || modal.type !== 'dev_json') return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="w-full max-w-2xl rounded-2xl border border-border bg-surface p-5 shadow-xl">
+    <DialogFrame open onOpenChange={(open) => { if (!open) setModal(null); }} label={t('views.devJson.title')} size="lg">
+      <div>
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-text">{t('views.devJson.title')}</h2>
           <Button variant="outline" size="sm" onClick={() => setModal(null)}>
@@ -22,6 +23,6 @@ export function DevJsonModal() {
           {JSON.stringify(activeDocument, null, 2)}
         </pre>
       </div>
-    </div>
+    </DialogFrame>
   );
 }

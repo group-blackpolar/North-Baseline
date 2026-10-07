@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Filter } from 'lucide-react';
+import { Funnel } from '@phosphor-icons/react';
 import { listPlatformAudit, type PlatformAuditEvent, type PlatformAuditQuery } from '@/lib/platformAdmin';
 import { useI18n } from '@/lib/i18n';
 import { ResourceFailure, useCursorList } from '../resource';
@@ -37,7 +37,7 @@ export function AuditScreen() {
         type={type}
         value={draft[key] ?? ''}
         onChange={(event) => setDraft((current) => ({ ...current, [key]: event.target.value }))}
-        className="h-8 rounded-md border border-border bg-background px-2 text-xs text-text outline-none focus-visible:border-accent"
+        className="h-8 pointer-coarse:h-(--touch-min) rounded-md border border-border bg-background px-2 text-base md:text-xs text-text outline-none focus-visible:border-accent"
       />
     </label>
   );
@@ -78,7 +78,7 @@ export function AuditScreen() {
         }}
       >
         <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-text-muted" />
+          <Funnel className="h-4 w-4 text-text-muted" />
           <span className="text-sm font-medium text-text">{t('pa.audit.filters')}</span>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -89,7 +89,7 @@ export function AuditScreen() {
           {field('to', t('pa.audit.filterTo'), 'date')}
         </div>
         <div className="flex gap-2">
-          <button type="submit" className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover">
+          <button type="submit" className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover pointer-coarse:min-h-(--touch-min)">
             {t('pa.audit.apply')}
           </button>
           <button
@@ -98,7 +98,7 @@ export function AuditScreen() {
               setDraft(EMPTY);
               setFilters(EMPTY);
             }}
-            className="rounded-md border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-surface-hover"
+            className="rounded-md border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-surface-hover pointer-coarse:min-h-(--touch-min)"
           >
             {t('pa.audit.clear')}
           </button>

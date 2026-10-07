@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { ImagePlus, Plus, Save, Trash2, X } from 'lucide-react';
+import { FloppyDisk, ImageSquare, Plus, Trash, X } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useI18n } from '@/lib/i18n';
@@ -8,6 +8,7 @@ import {
   changeDocumentStatus, createDocument, fetchAttachment, removeAttachment, searchClients, updateDocument, uploadAttachment,
   type ClientSuggestion, type DocumentAttachment, type DocumentDetail, type DocumentType,
 } from './api';
+import { IMAGE_ACCEPT, imageMime } from './images';
 import { centsToText, formatMoney, isPrice, isQuantity, lineCents, sumCents } from './money';
 import { ErrorNote, errorText, fieldLabel, localizedLabel, toDateInput, useBlobUrl } from './shared';
 
@@ -89,7 +90,7 @@ export function DocumentEditor({ organizationId, type, existing, onSaved, onCanc
     const accepted: PendingFile[] = [];
     for (const file of files) {
       if (existingAttachments.length + pending.length + accepted.length >= MAX_FILES) { problems.push(t('documents.attach.limit')); break; }
-      if (!['image/jpeg', 'image/png'].includes(file.type)) { problems.push(`${file.name}: ${t('documents.attach.type')}`); continue; }
+      if (!imageMime(file)) { problems.push(`${file.name}: ${t('documents.attach.type')}`); continue; }
       if (file.size > MAX_BYTES) { problems.push(`${file.name}: ${t('documents.attach.size')}`); continue; }
       accepted.push({ key: newKey(), file, url: URL.createObjectURL(file) });
     }
@@ -191,7 +192,7 @@ export function DocumentEditor({ organizationId, type, existing, onSaved, onCanc
                 <Input inputMode="decimal" value={item.quantity} aria-label={t('documents.quantity')} aria-invalid={submitted && errors.quantity} className={cn('text-right tabular-nums', invalid(errors.quantity))} onChange={(event) => setItem(item.key, { quantity: event.target.value })} />
                 <Input inputMode="decimal" value={item.unitPrice} placeholder="0.00" aria-label={t('documents.price')} aria-invalid={submitted && errors.price} className={cn('text-right tabular-nums', invalid(errors.price))} onChange={(event) => setItem(item.key, { unitPrice: event.target.value })} />
                 <output aria-label={t('documents.col.total')} className="flex h-9 items-center justify-end text-sm tabular-nums text-text">{total === null || total === undefined ? '—' : formatMoney(centsToText(total), type.currency, locale)}</output>
-                <Button variant="ghost" size="icon" aria-label={t('documents.removeItem')} title={t('documents.removeItem')} disabled={items.length === 1} onClick={() => setItems((rows) => rows.filter((row) => row.key !== item.key))}><Trash2 className="size-4" /></Button>
+                <Button variant="ghost" size="icon" aria-label={t('documents.removeItem')} title={t('documents.removeItem')} disabled={items.length === 1} onClick={() => setItems((rows) => rows.filter((row) => row.key !== item.key))}><Trash className="size-4" /></Button>
               </li>
             );
           })}
@@ -221,8 +222,8 @@ export function DocumentEditor({ organizationId, type, existing, onSaved, onCanc
           ))}
           <li>
             <label className="flex size-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border-strong text-xs text-text-secondary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent focus-within:ring-2 focus-within:ring-accent/25">
-              <ImagePlus className="size-5" />{t('documents.addImage')}
-              <input type="file" accept="image/jpeg,image/png" multiple className="sr-only" onChange={addFiles} />
+              <ImageSquare className="size-5" />{t('documents.addImage')}
+              <input type="file" accept={IMAGE_ACCEPT} multiple className="sr-only" onChange={addFiles} />
             </label>
           </li>
         </ul>
@@ -231,8 +232,8 @@ export function DocumentEditor({ organizationId, type, existing, onSaved, onCanc
 
       <ErrorNote message={error} />
       {submitted && !valid && !error && <p role="alert" className="text-xs text-error">{t('documents.invalid')}</p>}
-      <div className="sticky bottom-0 -mx-1 flex flex-wrap justify-end gap-2 border-t border-border bg-background/90 px-1 py-3 backdrop-blur">
-        <Button variant="secondary" onClick={() => void save(false)} disabled={saving !== null}><Save className="size-4" />{saving === 'draft' ? t('documents.saving') : t('documents.saveDraft')}</Button>
+      <div data-bottom-bar className="sticky bottom-0 z-(--z-sticky) -mx-1 flex justify-end gap-2 border-t border-border bg-background/90 px-1 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur max-md:[&>button]:flex-1">
+        <Button variant="secondary" onClick={() => void save(false)} disabled={saving !== null}><FloppyDisk className="size-4" />{saving === 'draft' ? t('documents.saving') : t('documents.saveDraft')}</Button>
         <Button variant="accent" onClick={() => void save(true)} disabled={saving !== null}>{saving === 'final' ? t('documents.saving') : t('documents.finalize')}</Button>
       </div>
     </div>

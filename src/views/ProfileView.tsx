@@ -38,17 +38,17 @@ export function ProfileView({ user }: { user: SessionUser }) {
       <div className="max-w-2xl mx-auto space-y-6">
         <div>
           <h1 className="text-2xl font-display font-bold text-text">Perfil de Usuario</h1>
-          <p className="mt-1 text-sm text-text-dim">Gestiona tu cuenta y preferencias</p>
+          <p className="mt-1 text-sm text-text-secondary">Gestiona tu cuenta y preferencias</p>
         </div>
 
-        <div className="bg-panel border border-line rounded-lg p-6 space-y-4">
+        <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
           <div>
-            <label className="text-xs font-mono text-text-dim">Email</label>
+            <label className="text-xs font-mono text-text-secondary">Email</label>
             <p className="text-sm font-medium text-text mt-1">{user?.email}</p>
           </div>
 
           <div>
-            <label className="text-xs font-mono text-text-dim">{t('auth.profileVerificationStatus')}</label>
+            <label className="text-xs font-mono text-text-secondary">{t('auth.profileVerificationStatus')}</label>
             <div className="flex items-center gap-2 mt-1">
               <span
                 className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
@@ -76,7 +76,7 @@ export function ProfileView({ user }: { user: SessionUser }) {
                     : t('auth.profileResendVerificationCode')}
               </button>
               {message && (
-                <p role="status" aria-live="polite" className="mt-2 text-sm text-text-dim">{message}</p>
+                <p role="status" aria-live="polite" className="mt-2 text-sm text-text-secondary">{message}</p>
               )}
               {error && (
                 <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>
@@ -85,25 +85,25 @@ export function ProfileView({ user }: { user: SessionUser }) {
           )}
         </div>
 
-        <div className="bg-panel border border-line rounded-lg p-6 space-y-4">
+        <div className="bg-surface border border-border rounded-lg p-6 space-y-4">
           <h2 className="text-lg font-display font-semibold text-text">Información de la Cuenta</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-mono text-text-dim">Nombre</label>
+              <label className="text-xs font-mono text-text-secondary">Nombre</label>
               <p className="text-sm text-text mt-1">{user?.name || 'No especificado'}</p>
             </div>
             <div>
-              <label className="text-xs font-mono text-text-dim">Rol</label>
+              <label className="text-xs font-mono text-text-secondary">Rol</label>
               <p className="text-sm text-text mt-1">{user?.role}</p>
             </div>
             <div>
-              <label className="text-xs font-mono text-text-dim">Miembro desde</label>
+              <label className="text-xs font-mono text-text-secondary">Miembro desde</label>
               <p className="text-sm text-text mt-1">
                 {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
               </p>
             </div>
             <div>
-              <label className="text-xs font-mono text-text-dim">Términos aceptados</label>
+              <label className="text-xs font-mono text-text-secondary">Términos aceptados</label>
               <p className="text-sm text-text mt-1">
                 {user?.termsAcceptedAt
                   ? new Date(user.termsAcceptedAt).toLocaleDateString()

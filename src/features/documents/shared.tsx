@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { AlertCircle } from 'lucide-react';
+import { useEffect, useState, type ComponentProps } from 'react';
+import { WarningCircle } from '@phosphor-icons/react';
 import { ApiError } from '@/lib/api';
-import { cn } from '@/lib/utils';
+import { Status } from '@/components/ui/status';
 import type { DocumentStatus, Localized } from './api';
 
 export function errorText(error: unknown) {
@@ -18,21 +18,15 @@ export const toDateInput = (iso: string) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
 
-const TONE: Record<DocumentStatus, string> = {
-  DRAFT: 'border-border bg-surface-hover text-text-secondary',
-  READY: 'border-accent/30 bg-accent-soft text-accent',
-  SENT: 'border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300',
-  COMPLETED: 'border-success/30 bg-success/10 text-success',
-  CANCELLED: 'border-error/30 bg-error/10 text-error',
+const TONE: Record<DocumentStatus, NonNullable<ComponentProps<typeof Status>['tone']>> = {
+  DRAFT: 'neutral', READY: 'pending', SENT: 'info', COMPLETED: 'active', CANCELLED: 'error',
 };
 
-export function StatusBadge({ status, label }: { status: DocumentStatus; label: string }) {
-  return <span className={cn('inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium', TONE[status])}>{label}</span>;
-}
+export const StatusBadge = ({ status, label }: { status: DocumentStatus; label: string }) => <Status tone={TONE[status]}>{label}</Status>;
 
 export function ErrorNote({ message }: { message: string | null }) {
   if (!message) return null;
-  return <p role="alert" className="flex items-start gap-1.5 text-xs text-error"><AlertCircle className="mt-px size-3.5 shrink-0" />{message}</p>;
+  return <p role="alert" className="flex items-start gap-1.5 text-xs text-error"><WarningCircle className="mt-px size-3.5 shrink-0" />{message}</p>;
 }
 
 /** Loads an authenticated image into an object URL and releases it on unmount. */
@@ -61,5 +55,5 @@ export function saveBlob(blob: Blob, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-export const selectClass = 'h-9 rounded-md border border-border bg-surface px-2 text-sm text-text outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 disabled:opacity-50';
+export const selectClass = 'h-9 pointer-coarse:h-(--touch-min) rounded-md border border-border bg-surface px-2 text-base md:text-sm text-text outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 disabled:opacity-50';
 export const fieldLabel = 'ui-label';

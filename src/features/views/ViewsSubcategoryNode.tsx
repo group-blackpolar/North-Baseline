@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronRight, ChevronDown, FolderPlus, Plus, Edit2, Archive } from 'lucide-react';
+import { Archive, CaretDown, CaretRight, FolderPlus, PencilSimple, Plus } from '@phosphor-icons/react';
 import { useViewsEditor } from './ViewsEditorContext';
 import { useI18n } from '@/lib/i18n';
 import type { ManagementCategory } from '@/lib/northAdmin';
@@ -30,7 +30,7 @@ export function ViewsSubcategoryNode({
     <div>
       <div
         onClick={() => selectSubcategory(catId, sub.id)}
-        className={`group flex items-center justify-between px-2 py-1.5 rounded-md text-xs cursor-pointer transition-colors duration-150 ${
+        className={`group flex items-center justify-between px-2 py-1.5 rounded-md text-xs cursor-pointer transition-colors duration-(--duration-fast) ${
           isSubSelected ? 'bg-accent/10 text-accent font-medium' : 'text-text hover:bg-surface-hover'
         }`}
       >
@@ -43,7 +43,7 @@ export function ViewsSubcategoryNode({
             }}
             className="p-0.5 rounded text-text-muted hover:text-text"
           >
-            {collapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            {collapsed ? <CaretRight className="w-3 h-3" /> : <CaretDown className="w-3 h-3" />}
           </button>
           <FolderPlus className="w-3 h-3 text-text-muted shrink-0" />
           <span className="truncate">{localName(sub.name)}</span>
@@ -74,7 +74,7 @@ export function ViewsSubcategoryNode({
             }}
             className="p-1 rounded hover:bg-surface text-text-muted hover:text-text"
           >
-            <Edit2 className="w-3 h-3" />
+            <PencilSimple className="w-3 h-3" />
           </button>
           {sub.resourceKind !== 'SYSTEM' && (
             <button

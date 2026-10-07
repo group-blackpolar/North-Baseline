@@ -1,5 +1,6 @@
 import { API_BASE, ApiError, apiRequest } from '@/lib/api';
 import { authHeaders } from '@/lib/auth';
+import { imageMime } from './images';
 
 /** Typed adapters over the CORECROW /documents contracts. CORECROW authorizes and audits every call. */
 export type DocumentStatus = 'DRAFT' | 'READY' | 'SENT' | 'COMPLETED' | 'CANCELLED';
@@ -70,6 +71,6 @@ export async function fetchAttachment(o: string, id: string, attachmentId: strin
   return (await binary(`${org(o)}/documents/${encodeURIComponent(id)}/attachments/${encodeURIComponent(attachmentId)}`)).blob();
 }
 export async function uploadAttachment(o: string, id: string, file: File) {
-  const response = await binary(`${org(o)}/documents/${encodeURIComponent(id)}/attachments?filename=${encodeURIComponent(file.name)}`, { method: 'POST', body: file, headers: { 'Content-Type': file.type } });
+  const response = await binary(`${org(o)}/documents/${encodeURIComponent(id)}/attachments?filename=${encodeURIComponent(file.name)}`, { method: 'POST', body: file, headers: { 'Content-Type': imageMime(file) ?? file.type } });
   return (await response.json()) as DocumentAttachment;
 }

@@ -1,6 +1,7 @@
-import { CreditCard } from 'lucide-react';
+import { CreditCard } from '@phosphor-icons/react';
 import { MetricCard } from '@/components/dashboard/primitives';
 import { Badge } from '@/components/ui/badge';
+import { DelayedSkeleton, SkeletonMetricCard } from '@/components/ui/skeleton';
 import { getPlatformBillingSummary } from '@/lib/platformAdmin';
 import { useI18n } from '@/lib/i18n';
 import { ResourceFailure, useResource } from '../resource';
@@ -12,8 +13,8 @@ export function BillingScreen() {
   const { t, locale } = useI18n();
   const billing = useResource(() => getPlatformBillingSummary(), []);
 
-  if (billing.status === 'loading') {
-    return <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-busy="true">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="np-card h-[92px] animate-pulse" />)}</div>;
+  if (billing.status === 'loading' && !billing.data) {
+    return <DelayedSkeleton loading minHeight={120} fallback={<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{Array.from({ length: 4 }, (_, index) => <SkeletonMetricCard key={index} />)}</div>} />;
   }
   if (billing.status === 'failed' && billing.error) return <ResourceFailure error={billing.error} onRetry={billing.reload} />;
   const value = billing.data;

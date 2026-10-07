@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ArrowUpRight, CalendarDays, Database, Globe2, Layers, Waves } from 'lucide-react';
+import { ArrowUpRight, CalendarBlank, Database, Globe, Stack, Waves } from '@phosphor-icons/react';
 import { useTabs } from '@/context/TabsContext';
 import { DashboardCard, MetricCard } from '@/components/dashboard/primitives';
 import { compact } from '@/components/dashboard/charts';
@@ -43,10 +43,10 @@ export function ReportInfo() {
 
       {/* KPIs del dataset */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-        <MetricCard label="CONTAINERS" value={compact(dataset.containers)} icon={Layers} />
+        <MetricCard label="CONTAINERS" value={compact(dataset.containers)} icon={Stack} />
         <MetricCard label="TEUS" value={compact(dataset.teus)} icon={Database} />
-        <MetricCard label="COVERAGE" value="2024 – 2026" icon={Globe2} />
-        <MetricCard label="LAST UPDATE" value="Jun 2026" icon={CalendarDays} />
+        <MetricCard label="COVERAGE" value="2024 – 2026" icon={Globe} />
+        <MetricCard label="LAST UPDATE" value="Jun 2026" icon={CalendarBlank} />
       </div>
 
       {/* Dataset information */}
@@ -75,12 +75,12 @@ export function ReportInfo() {
             <button
               key={section.sub}
               type="button"
-              className="np-card p-4 text-left group hover:bg-surface-hover transition-colors duration-150"
+              className="np-card p-4 text-left group hover:bg-surface-hover transition-colors duration-(--duration-fast)"
               onClick={() => navigate('master-house', section.sub)}
             >
               <p className="text-sm font-semibold text-text flex items-center gap-1.5">
                 {section.title}
-                <ArrowUpRight className="w-3.5 h-3.5 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
+                <ArrowUpRight className="w-3.5 h-3.5 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity duration-(--duration-fast)" />
               </p>
               <p className="text-xs text-text-secondary mt-0.5 leading-relaxed">{section.body}</p>
             </button>

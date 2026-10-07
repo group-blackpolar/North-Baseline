@@ -1,14 +1,13 @@
 import { useState, type FocusEvent, type KeyboardEvent, type ReactNode } from 'react';
-import { PanelLeftOpen } from 'lucide-react';
+import { SidebarSimple } from '@phosphor-icons/react';
 import { useCatalog } from '@/context/CatalogContext';
 import { useTabs } from '@/context/TabsContext';
 import { usePermissions } from '@/context/PermissionContext';
 import { resolveIcon } from '@/lib/iconMap';
-import { pushPath } from '@/lib/routes';
 import { useI18n } from '@/lib/i18n';
-import { useOrganization } from '@/context/OrganizationContext';
-import { navigateToPublishedTarget } from '@/lib/publishedNavigation';
+import { useCategoryNavigation } from '@/lib/shellNavigation';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 const PINNED_KEY = 'north-category-rail-pinned';
@@ -33,8 +32,8 @@ function readPinnedPreference() {
 export function CategoryRail({ children }: { children?: ReactNode }) {
   const { t } = useI18n();
   const { categories, isLoading } = useCatalog();
-  const { activeTab, navigate } = useTabs();
-  const { activeOrganization } = useOrganization();
+  const { activeTab } = useTabs();
+  const goToCategory = useCategoryNavigation();
   const { can } = usePermissions();
   const [pinned, setPinned] = useState(readPinnedPreference);
   const [hovered, setHovered] = useState(false);
@@ -77,7 +76,7 @@ export function CategoryRail({ children }: { children?: ReactNode }) {
   return (
     <div
       className={cn(
-        'relative z-30 flex h-full shrink-0 transition-[margin] duration-[var(--shell-motion)] ease-out motion-reduce:transition-none',
+        'relative z-(--z-navigation) flex h-full shrink-0 transition-[margin] duration-[var(--shell-motion)] ease-out motion-reduce:transition-none',
         temporaryOpen && !pinned && 'shadow-pop'
       )}
       style={{ marginRight: temporaryOpen && !pinned ? `calc(${growth} * -1)` : 0 }}
@@ -120,15 +119,14 @@ export function CategoryRail({ children }: { children?: ReactNode }) {
                   : category.name;
 
           return (
+            <Tooltip key={category.id} label={expanded ? '' : label} side="right">
             <button
-              key={category.id}
               type="button"
-              title={label}
               aria-label={label}
               disabled={disabled}
               aria-current={active ? 'page' : undefined}
               className={cn(
-                'mx-2 h-9 shrink-0 rounded-lg flex items-center gap-2.5 transition-colors duration-[var(--shell-motion-fast)]',
+                'np-press-flat mx-2 h-9 shrink-0 rounded-lg flex items-center gap-2.5 transition-colors duration-[var(--shell-motion-fast)]',
                 expanded ? 'w-[calc(100%_-_1rem)] px-2.5' : 'w-9 justify-center px-0',
                 disabled
                   ? 'text-text-muted opacity-40 cursor-not-allowed'
@@ -136,25 +134,12 @@ export function CategoryRail({ children }: { children?: ReactNode }) {
                     ? 'bg-surface-active text-text shadow-soft ring-1 ring-border'
                     : 'text-text-secondary hover:bg-surface-hover hover:text-text'
               )}
-              onClick={() => {
-                if (disabled) return;
-                if (category.id === 'platform-administration') {
-                  pushPath('/workspace/admin/dashboard');
-                  return;
-                }
-                const subcategory = category.subcategories[0];
-                void navigateToPublishedTarget({
-                  organizationSlug: activeOrganization?.slug,
-                  category,
-                  subcategory,
-                  navigate,
-                  history: 'push',
-                }).catch(() => navigate(category.id, subcategory?.id ?? null));
-              }}
+              onClick={() => { if (!disabled) goToCategory(category); }}
             >
               <Icon className="size-4 shrink-0" />
               {expanded && <span className="text-xs font-medium truncate">{label}</span>}
             </button>
+            </Tooltip>
           );
         })}
 
@@ -171,7 +156,7 @@ export function CategoryRail({ children }: { children?: ReactNode }) {
             )}
             onClick={togglePinned}
           >
-            <PanelLeftOpen className="size-4" />
+            <SidebarSimple className="size-4" />
           </button>
         </div>
       </nav>

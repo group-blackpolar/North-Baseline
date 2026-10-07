@@ -1,4 +1,4 @@
-import { Layers3, Plus } from 'lucide-react';
+import { Plus, Stack } from '@phosphor-icons/react';
 import { useViewsEditor } from './ViewsEditorContext';
 import { useI18n } from '@/lib/i18n';
 import { archiveResource, cloneTaxonomyResource } from '@/lib/northAdmin';
@@ -45,7 +45,7 @@ export function ViewsStructurePane() {
     <aside className="w-80 max-[1599px]:w-72 max-[1399px]:w-48 shrink-0 border-r border-border bg-surface flex flex-col h-full select-none">
       <div className="flex items-center justify-between p-3 border-b border-border">
         <div className="flex items-center gap-2">
-          <Layers3 className="w-4 h-4 text-accent" />
+          <Stack className="w-4 h-4 text-accent" />
           <span className="text-xs font-semibold text-text uppercase tracking-wider">{t('views.structure')}</span>
         </div>
         <Button

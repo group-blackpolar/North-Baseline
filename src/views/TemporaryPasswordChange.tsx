@@ -71,11 +71,11 @@ export function TemporaryPasswordChange({
   };
 
   return (
-    <div className="fixed inset-0 min-h-screen flex flex-col overflow-y-auto bg-bg" lang={locale}>
+    <div className="fixed inset-0 min-h-screen flex flex-col overflow-y-auto bg-background" lang={locale}>
       <header className="flex items-center justify-between px-5 sm:px-8 py-5">
         <div className="flex items-center gap-2">
           <NorthIcon className="size-7" />
-          <span className="font-display text-xs tracking-[0.25em] text-text-dim">NORTH</span>
+          <span className="font-display text-xs tracking-[0.25em] text-text-secondary">NORTH</span>
         </div>
         <div className="flex items-center gap-3">
           <ThemeToggle language={locale} />
@@ -85,13 +85,13 @@ export function TemporaryPasswordChange({
 
       <main className="flex-1 flex items-center justify-center px-4 py-8">
         <section
-          className="w-full max-w-[440px] rounded-2xl border border-line bg-panel px-6 py-10 shadow-sm sm:px-10"
+          className="w-full max-w-[440px] rounded-2xl border border-border bg-surface px-6 py-10 shadow-sm sm:px-10"
           aria-labelledby="temporary-password-title"
         >
           <h1 id="temporary-password-title" className="font-display text-2xl font-bold text-text">
             {t('auth.temporaryPasswordTitle')}
           </h1>
-          <p className="mt-2 text-sm leading-relaxed text-text-dim">
+          <p className="mt-2 text-sm leading-relaxed text-text-secondary">
             {t('auth.temporaryPasswordBody')}
           </p>
           <p className="mt-3 truncate text-xs font-mono text-text-muted" title={user.email}>
@@ -131,7 +131,7 @@ export function TemporaryPasswordChange({
 
             <Button
               type="submit"
-              variant="dark"
+              variant="primary"
               disabled={saving || desktopBlocked}
               className="north-primary h-10 w-full"
             >
@@ -141,7 +141,7 @@ export function TemporaryPasswordChange({
               type="button"
               onClick={onLogout}
               disabled={saving}
-              className="w-full text-sm text-text-dim hover:text-text disabled:opacity-50"
+              className="w-full text-sm text-text-secondary hover:text-text disabled:opacity-50"
             >
               {t('auth.signOut')}
             </button>

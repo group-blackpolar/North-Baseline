@@ -1,5 +1,6 @@
 /* oxlint-disable react/only-export-components */
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { uuid } from '@/lib/utils';
 
 export interface TabRoute {
   categoryId: string;
@@ -43,7 +44,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       if (!current) {
         // No hay tabs: crear una nueva
         const newTab: Tab = {
-          id: crypto.randomUUID(),
+          id: uuid(),
           route: { categoryId, subcategoryId: subcategoryId ?? null }, publishedPanel,
         };
         setActiveId(newTab.id);
@@ -63,7 +64,7 @@ export function TabsProvider({ children }: { children: ReactNode }) {
       const current = prev.find((t) => t.id === activeId) ?? prev[0];
       const categoryId = current?.route.categoryId ?? 'home';
       const newTab: Tab = {
-        id: crypto.randomUUID(),
+        id: uuid(),
         route: { categoryId, subcategoryId: null },
       };
       setActiveId(newTab.id);

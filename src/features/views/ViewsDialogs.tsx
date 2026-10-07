@@ -1,3 +1,4 @@
+import { DialogFrame } from '@/components/ui/dialog';
 import { useState } from 'react';
 import { useViewsEditor } from './ViewsEditorContext';
 import { useI18n } from '@/lib/i18n';
@@ -121,8 +122,8 @@ export function ViewsDialogs() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl animate-in fade-in duration-150">
+    <DialogFrame open onOpenChange={(open) => { if (!open) handleClose(); }} label={t('views.title')}>
+      <div>
         {modal.type === 'create_category' && (
           <form onSubmit={handleCreateCategory} className="space-y-4">
             <h2 className="text-base font-semibold text-text">{t('views.createCategoryTitle')}</h2>
@@ -234,6 +235,6 @@ export function ViewsDialogs() {
           </form>
         )}
       </div>
-    </div>
+    </DialogFrame>
   );
 }

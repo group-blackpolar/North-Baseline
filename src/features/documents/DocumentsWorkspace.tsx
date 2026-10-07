@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { FileText, ShieldAlert } from 'lucide-react';
+import { FileText, ShieldWarning } from '@phosphor-icons/react';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Skeleton } from '@/components/ui/skeleton';
+import { DelayedSkeleton, SkeletonDocumentCard } from '@/components/ui/skeleton';
 import { usePermissions } from '@/context/PermissionContext';
 import { useI18n } from '@/lib/i18n';
 import { useShowcaseSlug } from '@/features/showcase/ShowcaseContext';
@@ -45,10 +45,10 @@ export function DocumentsWorkspace({ organizationId, typeKey }: { organizationId
     delete: can('documents.delete'), download: can('documents.download'), send: can('documents.send'),
   };
 
-  if (error) return <div className="mx-auto max-w-md p-6"><EmptyState icon={ShieldAlert} title={t('documents.unavailable')} body={error} /></div>;
-  if (!config || permissionsLoading) return <div aria-busy="true" className="space-y-3 p-1"><Skeleton className="h-8 w-48" /><Skeleton className="h-9 w-full" /><Skeleton className="h-40 w-full rounded-xl" /></div>;
+  if (error) return <div className="mx-auto max-w-md p-6"><EmptyState icon={ShieldWarning} title={t('documents.unavailable')} body={error} /></div>;
+  if (!config || permissionsLoading) return <DelayedSkeleton loading minHeight={320} fallback={<div className="space-y-3 p-1">{[0, 1, 2].map((i) => <SkeletonDocumentCard key={i} />)}</div>} />;
   if (!type) return <div className="mx-auto max-w-md p-6"><EmptyState icon={FileText} title={t('documents.noType')} body={t('documents.noTypeHint')} /></div>;
-  if (!permissions.read) return <div className="mx-auto max-w-md p-6"><EmptyState icon={ShieldAlert} title={t('documents.noAccess')} body={t('documents.noAccessHint')} /></div>;
+  if (!permissions.read) return <div className="mx-auto max-w-md p-6"><EmptyState icon={ShieldWarning} title={t('documents.noAccess')} body={t('documents.noAccessHint')} /></div>;
 
   return (
     <section aria-label={localizedLabel(type.name, locale)} className="space-y-4">

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { ResponsiveFilters } from '@/components/ui/responsive-filters';
 import { cn } from '@/lib/utils';
 
 export function MetricCard({ label, value, delta, icon: Icon }: { label: string; value: string; delta?: string; icon?: React.ComponentType<{ className?: string }> }) {
@@ -30,7 +31,7 @@ export function DashboardCard({ title, description, actions, children, className
 }
 
 export function FilterBar({ children }: { children: ReactNode }) {
-  return <div className="np-card px-3 py-2 flex flex-wrap items-center gap-2">{children}</div>;
+  return <div className="np-card px-3 py-2 flex flex-wrap items-center gap-2"><ResponsiveFilters>{children}</ResponsiveFilters></div>;
 }
 
 export function FilterSelect({ label, value, options, onChange }: { label: string; value: string; options: Array<{ value: string; label: string }>; onChange: (value: string) => void }) {
@@ -40,7 +41,7 @@ export function FilterSelect({ label, value, options, onChange }: { label: strin
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-8 rounded-md border border-border bg-surface px-2 text-xs font-medium text-text outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 transition-[border-color,box-shadow] duration-150"
+        className="h-8 rounded-md border border-border bg-surface px-2 text-xs font-medium text-text outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 transition-[border-color,box-shadow] duration-(--duration-fast)"
       >
         {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
@@ -57,7 +58,7 @@ export function SimpleTable({ columns, rows }: { columns: string[]; rows: Array<
         </thead>
         <tbody>
           {rows.map((row, index) => (
-            <tr key={index} className="border-t border-border/60 hover:bg-surface-hover/50 transition-colors duration-150">
+            <tr key={index} className="border-t border-border/60 hover:bg-surface-hover/50 transition-colors duration-(--duration-fast)">
               {row.map((cell, cellIndex) => (
                 <td key={cellIndex} className={cn('px-3 py-2 whitespace-nowrap', cellIndex === 0 ? 'text-text font-medium' : 'mono-data text-text-secondary')}>{cell}</td>
               ))}

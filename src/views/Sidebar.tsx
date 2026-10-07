@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, Search } from 'lucide-react';
+import { CaretDown, CaretRight, MagnifyingGlass } from '@phosphor-icons/react';
 import { useCatalog } from '@/context/CatalogContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useTabs } from '@/context/TabsContext';
@@ -9,9 +9,9 @@ import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { SessionUser } from '@/lib/auth';
 import type { SubcategoryModel } from '@/lib/models';
+import { Collapse } from '@/components/ui/collapse';
 import { ProfileMenu } from '@/components/sidebar/ProfileMenu';
-import { useOrganization } from '@/context/OrganizationContext';
-import { navigateToPublishedTarget } from '@/lib/publishedNavigation';
+import { useCategoryNavigation } from '@/lib/shellNavigation';
 
 const COLLAPSED_KEY = 'north-context-sidebar-collapsed';
 
@@ -23,8 +23,8 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
   const { t } = useI18n();
   const { categories } = useCatalog();
   const { workspaces, activeWorkspace, switchWorkspace } = useWorkspace();
-  const { navigate, activeTab } = useTabs();
-  const { activeOrganization } = useOrganization();
+  const { activeTab } = useTabs();
+  const goToCategory = useCategoryNavigation();
   const { can } = usePermissions();
   const [collapsed, setCollapsed] = useState(readCollapsedPreference);
   const [search, setSearch] = useState('');
@@ -67,9 +67,9 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
           aria-label={t('sidebar.expand')}
           title={t('sidebar.expand')}
           onClick={() => setCollapsedPreference(false)}
-          className="h-8 w-8 rounded-lg hover:bg-surface-hover flex items-center justify-center text-text-muted hover:text-text transition-colors duration-150"
+          className="h-8 w-8 rounded-lg hover:bg-surface-hover flex items-center justify-center text-text-muted hover:text-text transition-colors duration-(--duration-fast)"
         >
-          <ChevronRight className="w-4 h-4" />
+          <CaretRight className="w-4 h-4" />
         </button>
       </aside>
     );
@@ -84,16 +84,16 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
           aria-label={t('sidebar.collapse')}
           title={t('sidebar.collapse')}
           onClick={() => setCollapsedPreference(true)}
-          className="w-full flex items-center justify-end text-text-muted hover:text-text transition-colors duration-150"
+          className="w-full flex items-center justify-end text-text-muted hover:text-text transition-colors duration-(--duration-fast)"
         >
-          <ChevronDown className="w-4 h-4" />
+          <CaretDown className="w-4 h-4" />
         </button>
 
         {workspaces.length > 1 && (
           <select
             value={activeWorkspace?.id ?? ''}
             onChange={(event) => switchWorkspace(event.target.value)}
-            className="w-full h-8 rounded-md border border-border bg-surface px-2 text-xs font-medium text-text outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 transition-[border-color,box-shadow] duration-150"
+            className="w-full h-8 rounded-md border border-border bg-surface px-2 text-xs font-medium text-text outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 transition-[border-color,box-shadow] duration-(--duration-fast)"
           >
             {workspaces.map((ws) => (
               <option key={ws.id} value={ws.id}>
@@ -104,13 +104,13 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
         )}
 
         <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
+          <MagnifyingGlass className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
           <input
             type="text"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder={t('sidebar.search') || 'Search...'}
-            className="w-full h-8 pl-7 pr-2 rounded-md border border-border bg-surface text-xs text-text placeholder:text-text-muted outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 transition-[border-color,box-shadow] duration-150"
+            className="w-full h-8 pl-7 pr-2 rounded-md border border-border bg-surface text-xs text-text placeholder:text-text-muted outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 transition-[border-color,box-shadow] duration-(--duration-fast)"
           />
         </div>
       </header>
@@ -128,15 +128,16 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
             <div key={group.name} className="space-y-0.5">
               <button
                 type="button"
-                className="w-full flex items-center gap-1.5 px-2 py-1.5 ui-label text-[10px] text-text-muted hover:text-text transition-colors duration-150"
+                className="w-full flex items-center gap-1.5 px-2 py-1.5 ui-label text-[10px] text-text-muted hover:text-text transition-colors duration-(--duration-fast)"
                 onClick={() => toggleGroup(group.name)}
               >
-                {groupCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                {groupCollapsed ? <CaretRight className="w-3 h-3" /> : <CaretDown className="w-3 h-3" />}
                 <span className="truncate">{group.name}</span>
               </button>
 
-              {!groupCollapsed &&
-                group.items.map((sub) => {
+              <Collapse open={!groupCollapsed}>
+                <div className="space-y-0.5">
+                {group.items.map((sub) => {
                   const SubIcon = resolveIcon(sub.icon);
                   const disabled = Boolean(sub.requiredPermission && !can(sub.requiredPermission));
                   const active = activeTab?.route.subcategoryId === sub.id;
@@ -146,18 +147,9 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
                       key={sub.id}
                       type="button"
                       disabled={disabled}
-                      onClick={() => {
-                        if (!activeCategory) return;
-                        void navigateToPublishedTarget({
-                          organizationSlug: activeOrganization?.slug,
-                          category: activeCategory,
-                          subcategory: sub,
-                          navigate,
-                          history: 'push',
-                        }).catch(() => navigate(activeCategory.id, sub.id));
-                      }}
+                      onClick={() => { if (activeCategory) goToCategory(activeCategory, sub); }}
                       className={cn(
-                        'w-full flex items-center gap-2 pl-6 pr-2 py-1.5 rounded-md text-[13px] transition-colors duration-[var(--shell-motion-fast)]',
+                        'np-press-flat w-full flex items-center gap-2 pl-6 pr-2 py-1.5 rounded-md text-[13px] transition-colors duration-[var(--shell-motion-fast)]',
                         disabled
                           ? 'text-text-muted cursor-not-allowed opacity-50'
                           : active
@@ -170,6 +162,8 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
                     </button>
                   );
                 })}
+                </div>
+              </Collapse>
             </div>
           );
         })}

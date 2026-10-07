@@ -1,4 +1,4 @@
-import { ChevronRight } from 'lucide-react';
+import { CaretRight } from '@phosphor-icons/react';
 import { useTabs } from '@/context/TabsContext';
 import { useCatalog } from '@/context/CatalogContext';
 import { useI18n } from '@/lib/i18n';
@@ -18,7 +18,7 @@ export function CurrentPath() {
       <span className="font-medium text-text-secondary">{category?.name ?? activeTab.route.categoryId}</span>
       {subcategory && (
         <>
-          <ChevronRight className="w-3 h-3" />
+          <CaretRight className="w-3 h-3" />
           <span className="text-text">{subcategory.labelKey ? t(subcategory.labelKey as never) : subcategory.name}</span>
         </>
       )}

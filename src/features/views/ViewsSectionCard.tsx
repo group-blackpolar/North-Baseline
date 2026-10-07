@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash } from '@phosphor-icons/react';
 import { useViewsEditor } from './ViewsEditorContext';
 import { useI18n } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
@@ -55,7 +55,7 @@ export function ViewsSectionCard({
             }}
             className="h-6 px-2 text-red-500"
           >
-            <Trash2 className="h-3 w-3" />
+            <Trash className="h-3 w-3" />
           </Button>
         </div>
       </div>

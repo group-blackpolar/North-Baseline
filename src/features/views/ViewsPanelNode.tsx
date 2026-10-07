@@ -1,4 +1,4 @@
-import { FileText, Copy, Edit2, Archive } from 'lucide-react';
+import { Archive, Copy, FileText, PencilSimple } from '@phosphor-icons/react';
 import { useViewsEditor } from './ViewsEditorContext';
 import { useI18n } from '@/lib/i18n';
 import type { TaxonomyPanel } from '@/lib/northAdmin';
@@ -28,7 +28,7 @@ export function ViewsPanelNode({
   return (
     <div
       onClick={() => selectPanel(catId, subId, panel.id)}
-      className={`group flex items-center justify-between px-2 py-1.5 rounded-md text-xs cursor-pointer transition-colors duration-150 ${
+      className={`group flex items-center justify-between px-2 py-1.5 rounded-md text-xs cursor-pointer transition-colors duration-(--duration-fast) ${
         isPanelSelected ? 'bg-accent/10 text-accent font-medium' : 'text-text-secondary hover:bg-surface-hover hover:text-text'
       }`}
     >
@@ -75,7 +75,7 @@ export function ViewsPanelNode({
             }}
             className="p-1 rounded hover:bg-surface text-text-muted hover:text-text"
           >
-            <Edit2 className="w-3 h-3" />
+            <PencilSimple className="w-3 h-3" />
           </button>
           {panel.resourceKind !== 'SYSTEM' && (
             <button

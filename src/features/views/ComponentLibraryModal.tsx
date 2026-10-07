@@ -1,24 +1,25 @@
+import { DialogFrame } from '@/components/ui/dialog';
 import { useState } from 'react';
 import { useViewsEditor } from './ViewsEditorContext';
 import { useI18n } from '@/lib/i18n';
 import { componentTypes, type ComponentType } from '@/lib/northAdmin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Type, AlignLeft, Gauge, Table2, Link2, List, CreditCard, Minus, Image, Video, FileText, Code2 } from 'lucide-react';
+import { Code, CreditCard, FileText, Gauge, Image, Link, List, Minus, Table, TextAlignLeft, TextT, Video } from '@phosphor-icons/react';
 
-const icons: Record<ComponentType, typeof Type> = {
-  heading: Type,
-  rich_text: AlignLeft,
+const icons: Record<ComponentType, typeof TextT> = {
+  heading: TextT,
+  rich_text: TextAlignLeft,
   metric: Gauge,
-  table: Table2,
-  link: Link2,
+  table: Table,
+  link: Link,
   list: List,
   card: CreditCard,
   divider: Minus,
   image: Image,
   video: Video,
   file: FileText,
-  embed: Code2,
+  embed: Code,
 };
 
 export function ComponentLibraryModal() {
@@ -32,8 +33,8 @@ export function ComponentLibraryModal() {
   const items = componentTypes.filter((type) => (q ? type.includes(q) : true));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="w-full max-w-lg rounded-2xl border border-border bg-surface p-5 shadow-xl">
+    <DialogFrame open onOpenChange={(open) => { if (!open) setModal(null); }} label={t('views.library.title')}>
+      <div>
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-text">{t('views.library.title')}</h2>
           <Button variant="outline" size="sm" onClick={() => setModal(null)}>
@@ -50,7 +51,7 @@ export function ComponentLibraryModal() {
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2 max-h-80 overflow-y-auto pr-1">
           {items.map((type) => {
-            const Icon = icons[type] ?? Type;
+            const Icon = icons[type] ?? TextT;
             return (
               <button
                 key={type}
@@ -70,6 +71,6 @@ export function ComponentLibraryModal() {
           })}
         </div>
       </div>
-    </div>
+    </DialogFrame>
   );
 }

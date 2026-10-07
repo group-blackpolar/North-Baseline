@@ -1,54 +1,32 @@
-import {
-  Accessibility,
-  Activity,
-  Bell,
-  ChartBar,
-  Database,
-  FileText,
-  Folder,
-  GitBranch,
-  Key,
-  Languages,
-  LayoutDashboard,
-  NotebookText,
-  Palette,
-  ScrollText,
-  Settings,
-  Shield,
-  Ship,
-  ShieldCheck,
-  User,
-  Users,
-  Wrench,
-  type LucideIcon,
-} from 'lucide-react';
+import { Bell, Boat, ChartBar, Database, FileText, Folder, Gear, GitBranch, Key, Notebook, Palette, PersonSimpleCircle, Pulse, Scroll, Shield, ShieldCheck, SquaresFour, Translate, User, Users, Wrench } from '@phosphor-icons/react';
+import type { IconComponent } from '@/components/ui/icon';
 
 /** Mapa canónico de iconos por nombre (catálogos, rail, sidebar, tabs). */
-export const ICON_MAP: Record<string, LucideIcon> = {
-  layout: LayoutDashboard,
+export const ICON_MAP: Record<string, IconComponent> = {
+  layout: SquaresFour,
   user: User,
   users: Users,
   chart: ChartBar,
   shield: Shield,
   'shield-check': ShieldCheck,
-  settings: Settings,
-  scroll: ScrollText,
+  settings: Gear,
+  scroll: Scroll,
   branch: GitBranch,
   db: Database,
-  pulse: Activity,
+  pulse: Pulse,
   key: Key,
-  note: NotebookText,
+  note: Notebook,
   palette: Palette,
-  languages: Languages,
+  languages: Translate,
   bell: Bell,
-  accessibility: Accessibility,
+  accessibility: PersonSimpleCircle,
   wrench: Wrench,
   // Names stored by CORECROW navigation (compared case-insensitively).
-  ship: Ship,
+  ship: Boat,
   folder: Folder,
   filetext: FileText,
 };
 
-export function resolveIcon(name?: string): LucideIcon {
-  return ICON_MAP[(name ?? '').toLowerCase()] ?? LayoutDashboard;
+export function resolveIcon(name?: string): IconComponent {
+  return ICON_MAP[(name ?? '').toLowerCase()] ?? SquaresFour;
 }

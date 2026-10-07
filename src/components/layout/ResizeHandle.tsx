@@ -35,7 +35,7 @@ export function ResizeHandle({ axis, sign }: { axis: 'x' | 'y'; sign: 1 | -1 }) 
   return (
     <div
       className={cn(
-        'shrink-0 bg-border/50 hover:bg-accent/50 transition-colors duration-150',
+        'shrink-0 bg-border/50 hover:bg-accent/50 transition-colors duration-(--duration-fast)',
         axis === 'x' ? 'w-1 h-full cursor-col-resize' : 'h-1 w-full cursor-row-resize'
       )}
       onMouseDown={handleMouseDown}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Building2 } from 'lucide-react';
+import { Buildings } from '@phosphor-icons/react';
 import { Login } from '@/views/Login';
 import { TemporaryPasswordChange } from '@/views/TemporaryPasswordChange';
 import { OrganizationRail } from '@/components/organization/OrganizationRail';
@@ -20,7 +20,9 @@ import { SessionGuard } from '@/components/session/SessionGuard';
 import { ErrorProvider } from '@/context/ErrorContext';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Skeleton } from '@/components/ui/skeleton';
+import { MobileHeader } from '@/components/mobile/MobileHeader';
+import { useIsCompactShell } from '@/lib/responsive';
+import { Skeleton, WorkspaceSkeleton } from '@/components/ui/skeleton';
 import {
   clearLocalSession,
   clearSessionKilled,
@@ -65,11 +67,11 @@ function savePendingRouteInvitation(value: PendingRouteInvitation | null) {
 function ShellSkeleton() {
   return (
     <div className="north-app-shell flex bg-background">
-      <div className="w-14 border-r border-border bg-surface p-2 space-y-2">
+      <div className="hidden md:block w-14 border-r border-border bg-surface p-2 space-y-2">
         <Skeleton className="h-9 w-9 rounded-xl" />
         <Skeleton className="h-9 w-9 rounded-xl" />
       </div>
-      <div className="w-64 border-r border-border bg-surface p-3 space-y-3">
+      <div className="hidden md:block w-64 border-r border-border bg-surface p-3 space-y-3">
         <Skeleton className="h-8 w-full" />
         <Skeleton className="h-8 w-full" />
         <Skeleton className="h-8 w-2/3" />
@@ -82,12 +84,32 @@ function ShellSkeleton() {
   );
 }
 
+/** Transition frame when the URL names another organization than the active one: the real organization rail
+ *  stays put and the workspace area shows its skeleton, instead of a generic grey shell (no blank/flash). */
+function SwitchingShell() {
+  const compact = useIsCompactShell();
+  return (
+    <>
+      <div className="north-app-shell flex bg-background text-text" aria-busy="true">
+        {!compact && <OrganizationRail />}
+        {!compact && (
+          <div className="flex h-full shrink-0 border-r border-border bg-surface" style={{ width: 'calc(var(--shell-category-rail) + var(--shell-context-sidebar))' }}>
+            <div className="w-(--shell-category-rail) space-y-2 p-2"><Skeleton className="size-9 rounded-lg" /><Skeleton className="size-9 rounded-lg" /></div>
+            <div className="flex-1 space-y-3 border-l border-border p-3"><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-2/3" /></div>
+          </div>
+        )}
+        <div className="min-w-0 flex-1"><WorkspaceSkeleton /></div>
+      </div>
+    </>
+  );
+}
+
 function NoOrganizationState() {
   const { t } = useI18n();
   return (
     <div className="north-app-shell flex items-center justify-center bg-background p-6">
       <EmptyState
-        icon={Building2}
+        icon={Buildings}
         title={t('empty.org.title')}
         body={t('empty.org.body')}
         className="w-full max-w-sm"
@@ -160,6 +182,7 @@ function WorkspaceGate({
 }) {
   const { activeWorkspace } = useWorkspace();
   const activeWorkspaceId = activeWorkspace?.id ?? null;
+  const compact = useIsCompactShell();
 
   return (
     <CatalogProvider workspaceId={activeWorkspaceId} organizationId={organizationId} platformRole={user.role}>
@@ -168,25 +191,27 @@ function WorkspaceGate({
       >
         <TabsProvider>
           <LayoutProvider>
-            <NotificationProvider>
-              <CatalogSync>
-                <PublishedRouteIntent route={route} />
-                <div className="north-app-shell flex bg-background text-text">
-                  <OrganizationRail />
+            <CatalogSync>
+              <PublishedRouteIntent route={route} />
+              {/* The organization rail and the shell frame live outside this keyed subtree (see AppShell), so
+                  switching organization keeps them on screen while the tenant-scoped state below remounts. */}
+              <div className="flex min-w-0 flex-1">
+                {/* Conditional siblings keep the content column at a stable position, so a resize never remounts the workspace. */}
+                {!compact && (
                   <CategoryRail>
                     <ContextSidebar user={user} />
                   </CategoryRail>
-                  <div className="flex-1 flex flex-col min-w-0">
-                    <CurrentPath />
-                    <TabBar />
-                    <div className="flex-1 flex flex-col min-h-0">
-                      <SplitContent user={user} />
-                    </div>
+                )}
+                <div className="flex-1 flex flex-col min-w-0">
+                  {compact ? <MobileHeader user={user} /> : <CurrentPath />}
+                  {!compact && <TabBar />}
+                  <div className="flex-1 flex flex-col min-h-0">
+                    <SplitContent user={user} />
                   </div>
-                  <LayoutSwitcher />
                 </div>
-              </CatalogSync>
-            </NotificationProvider>
+                {!compact && <LayoutSwitcher />}
+              </div>
+            </CatalogSync>
           </LayoutProvider>
         </TabsProvider>
       </PermissionProvider>
@@ -208,26 +233,32 @@ function AppShell({
   route: NorthRoute;
 }) {
   const { activeOrganization, isLoading } = useOrganization();
+  const compact = useIsCompactShell();
 
   if (isLoading) return <ShellSkeleton />;
   if (!activeOrganization) return <NoOrganizationState />;
 
   return (
-    // FIX CLAVE: key={activeOrganization.id} fuerza re-mount completo del subtree
-    // cuando cambia la org. Esto reinicia workspaces, tabs y catálogo desde cero,
-    // exactamente igual que un full reload. Sin el key, React solo re-renderiza
-    // y el estado viejo persiste (que era el bug original).
-    <WorkspaceProvider
-      key={activeOrganization.id}
-      organizationId={activeOrganization.id}
-      onAuthError={onAuthError}
-    >
-      <WorkspaceGate
-        organizationId={activeOrganization.id}
-        user={user}
-        route={route}
-      />
-    </WorkspaceProvider>
+    <>
+      <div className="north-app-shell flex bg-background text-text">
+        {!compact && <OrganizationRail />}
+        {/* FIX CLAVE: key={activeOrganization.id} fuerza re-mount completo del subtree
+           cuando cambia la org. Esto reinicia workspaces, tabs y catálogo desde cero,
+           exactamente igual que un full reload. Sin el key, React solo re-renderiza
+           y el estado viejo persiste (que era el bug original). */}
+        <WorkspaceProvider
+          key={activeOrganization.id}
+          organizationId={activeOrganization.id}
+          onAuthError={onAuthError}
+        >
+          <WorkspaceGate
+            organizationId={activeOrganization.id}
+            user={user}
+            route={route}
+          />
+        </WorkspaceProvider>
+      </div>
+    </>
   );
 }
 
@@ -328,8 +359,9 @@ function AppInner() {
 
   if (checkingSession) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background text-text-muted font-display text-xs">
-        {t('app.checkingSession')}
+      <div className="fixed inset-0" role="status" aria-busy="true">
+        <span className="sr-only">{t('app.checkingSession')}</span>
+        <ShellSkeleton />
       </div>
     );
   }
@@ -392,9 +424,12 @@ function AppInner() {
   return (
     <ErrorProvider onLogout={handleLogout}>
       <SessionGuard onLogout={handleLogout}>
+        {/* Notifications and toasts are user-scoped (localStorage), so they sit above every organization switch. */}
+        <NotificationProvider>
         <OrganizationProvider user={user} onAuthError={handleLogout}>
           <AuthenticatedRouter user={user} onAuthError={handleLogout} route={route} pendingInvitation={pendingRouteInvitation} onInvitationHandled={() => { savePendingRouteInvitation(null); setPendingRouteInvitation(null); }} onInvitationBound={(userId) => setPendingRouteInvitation((current) => { if (!current || current.userId) return current; const next = { ...current, userId }; savePendingRouteInvitation(next); return next; })} />
         </OrganizationProvider>
+        </NotificationProvider>
       </SessionGuard>
     </ErrorProvider>
   );
@@ -447,7 +482,7 @@ function TermsAcceptance({
           type="button"
           onClick={() => void handleAccept()}
           disabled={loading}
-          className="w-full h-10 rounded-lg bg-accent hover:bg-accent-hover text-white font-medium text-sm transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+          className="w-full h-10 rounded-lg bg-accent hover:bg-accent-hover text-white font-medium text-sm transition-colors duration-(--duration-fast) disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {loading ? '…' : (t('terms.accept') || 'Aceptar y continuar')}
         </button>
@@ -507,7 +542,7 @@ function PublishedRouteIntent({ route }: { route: NorthRoute }) {
   }, [alreadyResolved, isLoading, navigate, route]);
 
   if (!missing) return null;
-  return <div className="fixed inset-0 z-[100] bg-background"><GenericNotFound /></div>;
+  return <div className="fixed inset-0 z-(--z-modal) bg-background"><GenericNotFound /></div>;
 }
 
 function AuthenticatedRouter({ user, onAuthError, route, pendingInvitation, onInvitationHandled, onInvitationBound }: { user: SessionUser; onAuthError: () => void; route: NorthRoute; pendingInvitation: PendingRouteInvitation | null; onInvitationHandled: () => void; onInvitationBound: (userId: string) => void }) {
@@ -574,7 +609,7 @@ function AuthenticatedRouter({ user, onAuthError, route, pendingInvitation, onIn
       }}
     />;
   }
-  if (activeOrganization?.id !== member.id) return <ShellSkeleton />;
+  if (activeOrganization?.id !== member.id) return <SwitchingShell />;
   return <AppShell user={user} onAuthError={onAuthError} route={route} />;
 }
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type DependencyList, type ReactNode } from 'react';
-import { CircleAlert, RotateCw, ShieldAlert } from 'lucide-react';
+import { ArrowClockwise, ShieldWarning, WarningCircle } from '@phosphor-icons/react';
 import { ApiError } from '@/lib/api';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useAppErrorSafe } from '@/context/ErrorContext';
@@ -78,7 +78,7 @@ export function ResourceFailure({ error, onRetry }: { error: ApiError; onRetry?:
   const { t } = useI18n();
   const kind = failureKind(error);
   const denied = kind === 'denied' || kind === 'unauthorized';
-  const icon = denied ? ShieldAlert : kind === 'missing' ? CircleAlert : RotateCw;
+  const icon = denied ? ShieldWarning : kind === 'missing' ? WarningCircle : ArrowClockwise;
   const title = denied ? t('pa.state.deniedTitle') : kind === 'missing' ? t('pa.state.notFoundTitle') : t('pa.state.errorTitle');
   const body = denied
     ? t('pa.state.deniedBody')
@@ -94,7 +94,7 @@ export function ResourceFailure({ error, onRetry }: { error: ApiError; onRetry?:
         onClick={onRetry}
         className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text hover:bg-surface-hover"
       >
-        <RotateCw className="h-3.5 w-3.5" />
+        <ArrowClockwise className="h-3.5 w-3.5" />
         {t('pa.state.retry')}
       </button>
     ) : undefined;
@@ -116,7 +116,8 @@ export type CursorListState<T> = {
  *
  * The backend owns paging (`limit` + `nextCursor`); the client only appends the
  * next page and never re-fetches the whole collection to paginate locally. A
- * filter change resets the list. Failures drop the loaded rows. */
+ * filter change reloads while keeping the previous rows visible until the new
+ * page replaces them. Failures drop the loaded rows (fail closed). */
 export function useCursorList<T>(
   fetcher: (cursor?: string) => Promise<{ items: T[]; nextCursor: string | null }>,
   deps: DependencyList
@@ -135,7 +136,8 @@ export function useCursorList<T>(
   useEffect(() => {
     let alive = true;
     cursorRef.current = null;
-    setItems([]);
+    // Keep the rows on screen while a filter change reloads: they are replaced when the new page arrives
+    // (and dropped on failure, below). The table shows a subtle busy state meanwhile.
     setLoading(true);
     setError(null);
     fetcherRef

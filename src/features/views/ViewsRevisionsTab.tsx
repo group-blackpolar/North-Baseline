@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { History, Loader2, Eye } from 'lucide-react';
+import { CircleNotch, ClockCounterClockwise, Eye } from '@phosphor-icons/react';
 import { useViewsEditor } from './ViewsEditorContext';
 import { useI18n } from '@/lib/i18n';
 import {
@@ -73,12 +73,12 @@ export function ViewsRevisionsTab() {
     <div className="max-w-4xl mx-auto space-y-4">
       <div className="rounded-2xl border border-border bg-surface p-6">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-text">
-          <History className="h-4 w-4 text-accent" />
+          <ClockCounterClockwise className="h-4 w-4 text-accent" />
           {t('views.revisions.title')} ({items.length})
         </h2>
         {loading && (
           <div className="mt-4 flex items-center gap-2 text-xs text-text-muted">
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <CircleNotch className="h-4 w-4 animate-spin" />
             {t('admin.loading')}
           </div>
         )}

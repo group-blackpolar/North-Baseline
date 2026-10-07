@@ -1,6 +1,6 @@
 import { useViewsEditor } from './ViewsEditorContext';
 import { useI18n } from '@/lib/i18n';
-import { Sliders, Plus, Trash2, Copy, ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowDown, ArrowUp, Copy, Plus, SlidersHorizontal, Trash } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { InspectorComponentForm } from './InspectorComponentForm';
 
@@ -27,7 +27,7 @@ export function ViewsInspectorPane() {
   return (
     <aside className="w-80 max-[1599px]:w-72 max-[1399px]:w-48 shrink-0 border-l border-border bg-surface flex flex-col h-full select-none">
       <div className="flex items-center gap-2 p-3 border-b border-border">
-        <Sliders className="w-4 h-4 text-accent" />
+        <SlidersHorizontal className="w-4 h-4 text-accent" />
         <span className="text-xs font-semibold text-text uppercase tracking-wider">{t('views.inspector.title')}</span>
       </div>
 
@@ -82,7 +82,7 @@ export function ViewsInspectorPane() {
                     onClick={() => removeComponent(section.id, selection.componentId!)}
                     className="h-7 px-2 text-red-500 hover:text-red-600"
                   >
-                    <Trash2 className="h-3 w-3" />
+                    <Trash className="h-3 w-3" />
                   </Button>
                 </div>
               </div>
@@ -112,7 +112,7 @@ export function ViewsInspectorPane() {
                     onClick={() => removeSection(section.id)}
                     className="h-7 px-2 text-red-500"
                   >
-                    <Trash2 className="h-3 w-3" />
+                    <Trash className="h-3 w-3" />
                   </Button>
                 </div>
               </div>

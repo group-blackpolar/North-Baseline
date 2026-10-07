@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
-import { ArrowRight, Building2, Clock3, Search, Settings, ShieldCheck, UserRound } from 'lucide-react';
+import { ArrowRight, Buildings, Clock, Gear, MagnifyingGlass, ShieldCheck, User } from '@phosphor-icons/react';
 import { useOrganization } from '@/context/OrganizationContext';
 import { useCatalog } from '@/context/CatalogContext';
 import { useTabs } from '@/context/TabsContext';
@@ -43,14 +43,14 @@ export function PersonalHome({ user }: { user: SessionUser }) {
         id: 'profile',
         label: t('personal.profile'),
         description: t('home.profileHint'),
-        icon: UserRound,
+        icon: User,
         action: () => navigate('profile', 'personal-information'),
       },
       {
         id: 'settings',
         label: t('home.settings'),
         description: t('home.settingsHint'),
-        icon: Settings,
+        icon: Gear,
         action: () => navigate('settings', 'appearance'),
       },
     ];
@@ -73,7 +73,7 @@ export function PersonalHome({ user }: { user: SessionUser }) {
       id: `organization-${organization.id}`,
       label: organization.name,
       description: t('home.organizationResult'),
-      icon: Building2,
+      icon: Buildings,
       action: () => {
         switchOrganization(organization.id);
         if (organization.slug) pushPath(`/${encodeURIComponent(organization.slug)}`);
@@ -97,7 +97,7 @@ export function PersonalHome({ user }: { user: SessionUser }) {
       </header>
 
       <section aria-label={t('home.searchLabel')} className="relative mx-auto max-w-3xl">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-muted" />
+        <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-muted" />
         <input
           ref={searchRef}
           value={query}
@@ -106,7 +106,7 @@ export function PersonalHome({ user }: { user: SessionUser }) {
           aria-label={t('home.searchLabel')}
           className="h-11 w-full rounded-xl border border-border-strong bg-surface pl-10 pr-16 text-sm text-text shadow-soft outline-none placeholder:text-text-muted focus-visible:border-accent"
         />
-        <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border bg-background px-1.5 py-0.5 text-[10px] text-text-muted">Ctrl K</kbd>
+        <kbd className="pointer-events-none max-md:hidden absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border bg-background px-1.5 py-0.5 text-[10px] text-text-muted">Ctrl K</kbd>
         {query.trim() && (
           <div className="absolute inset-x-0 top-[calc(100%+6px)] z-20 rounded-xl border border-border bg-surface p-1.5 shadow-pop">
             {searchResults.length > 0 ? searchResults.map((item) => (
@@ -159,7 +159,7 @@ export function PersonalHome({ user }: { user: SessionUser }) {
       <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
         <section className="rounded-xl border border-border bg-surface p-3 shadow-soft">
           <div className="mb-2 flex items-center gap-2">
-            <Clock3 className="size-4 text-text-muted" />
+            <Clock className="size-4 text-text-muted" />
             <h2 className="text-sm font-semibold text-text">{t('home.continueWorking')}</h2>
           </div>
           {openTabs.length > 0 ? (
@@ -188,7 +188,7 @@ export function PersonalHome({ user }: { user: SessionUser }) {
 
         <section className="rounded-xl border border-border bg-surface p-3 shadow-soft">
           <div className="mb-2 flex items-center gap-2">
-            <Building2 className="size-4 text-text-muted" />
+            <Buildings className="size-4 text-text-muted" />
             <h2 className="text-sm font-semibold text-text">{t('home.organizations')}</h2>
           </div>
           {orgs.length > 0 ? (

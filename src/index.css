@@ -1,5 +1,41 @@
 @import "tailwindcss";
 
+/* Self-hosted variable fonts (public/fonts, SIL OFL 1.1 - licences next to the files). Latin subset: covers
+   Spanish (accents, n-tilde, inverted marks) and English; official Google Fonts builds of Manrope v20 / Geist Mono v6. */
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("/fonts/manrope-latin-var.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Geist Mono";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/geist-mono-latin-var.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Metric-matched fallbacks: while the fonts load (font-display: swap) text is set in
+   Arial / Courier New adjusted to the same width and line metrics, so the swap does not reflow the page.
+   Measured in-browser: Manrope ~1.02x Arial width; ascent 1.066 / descent 0.30 em (divided by size-adjust). */
+@font-face {
+  font-family: "Manrope Fallback";
+  src: local("Arial");
+  size-adjust: 102%;
+  ascent-override: 104.5%;
+  descent-override: 29.4%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "Geist Mono Fallback";
+  src: local("Courier New");
+  size-adjust: 100%;
+}
+
 @theme {
   /* ── Paleta NORTH: neutros fríos, sin negro/blanco puros ── */
   --color-background: #F6F7F9;
@@ -19,28 +55,57 @@
   --color-warning: #F79009;
   --color-error: #F04438;
 
-  /* Aliases legacy — remover en TASK de migración (no usar en código nuevo) */
-  --color-bg: #F6F7F9;
-  --color-panel: #FBFCFD;
-  --color-panel-2: #F2F4F7;
-  --color-line: #E4E7EC;
-  --color-text-dim: #5A6472;
-  --color-accent-2: #EA580C;
+  /* Surfaces: L0 background · L1 surface (rails, body) · L2 card (.np-card) · L3 floating (shadow-pop/overlay) */
+  --color-border-hover: #D0D5DD;
+  --color-border-selected: color-mix(in srgb, var(--color-accent) 40%, transparent);
+  --color-card-highlight: rgb(255 255 255 / 0.6);
 
   /* Tipografía */
-  --font-display: "Manrope", "Inter", system-ui, sans-serif;
-  --font-sans: "Manrope", "Inter", system-ui, sans-serif;
-  --font-mono: "Geist Mono", "SFMono-Regular", Consolas, monospace;
+  --font-display: "Manrope", "Manrope Fallback", system-ui, sans-serif;
+  --font-sans: "Manrope", "Manrope Fallback", system-ui, sans-serif;
+  --font-mono: "Geist Mono", "Geist Mono Fallback", "SFMono-Regular", Consolas, monospace;
 
   /* Radius */
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 10px;
   --radius-xl: 14px;
+  --radius-2xl: 16px;
 
   /* Elevación sutil */
+  --shadow-xs: 0 1px 2px rgb(16 24 40 / 0.05);
   --shadow-soft: 0 1px 2px rgb(16 24 40 / 0.04), 0 1px 3px rgb(16 24 40 / 0.06);
   --shadow-pop: 0 4px 6px -2px rgb(16 24 40 / 0.05), 0 12px 16px -4px rgb(16 24 40 / 0.10);
+  --shadow-overlay: 0 8px 12px -4px rgb(16 24 40 / 0.08), 0 24px 48px -12px rgb(16 24 40 / 0.22);
+
+  /* Chart series colours (categorical). Consumed through components/charts/palette.ts */
+  --chart-1: var(--color-accent);
+  --chart-2: #60A5FA;
+  --chart-3: #FBBF24;
+  --chart-4: #A78BFA;
+  --chart-5: #F87171;
+  --chart-6: #34D399;
+  --chart-7: #F472B6;
+  --chart-8: #94A3B8;
+
+  /* Z-index scale (use z-(--z-modal), never literal z-50/z-[100]) */
+  --z-sticky: 10;
+  --z-navigation: 20;
+  --z-drawer: 40;
+  --z-popover: 50;
+  --z-modal: 60;
+  --z-toast: 70;
+
+  /* Motion: CSS for hover/press/color, Motion lib for enter/exit/layout */
+  --duration-fast: 120ms;
+  --duration-normal: 180ms;
+  --duration-slow: 280ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Minimum interactive target; 44px on coarse pointers (see media query below) */
+  --touch-min: 32px;
 
   /* Application density — matches the requested 70% desktop workspace scale. */
   --north-ui-density: 0.7;
@@ -78,13 +143,9 @@
     --color-success: #34D399;
     --color-warning: #FBBF24;
     --color-error: #F87171;
-    /* aliases legacy dark */
-    --color-bg: #0D0F13;
-    --color-panel: #14171C;
-    --color-panel-2: #1A1E24;
-    --color-line: #262B33;
-    --color-text-dim: #A6AFBA;
-    --color-accent-2: #FB7A3D;
+    --color-border-hover: #343B45;
+    --color-card-highlight: rgb(255 255 255 / 0.03);
+    --shadow-overlay: 0 8px 12px -4px rgb(0 0 0 / 0.4), 0 24px 48px -12px rgb(0 0 0 / 0.6);
   }
 
   body {
@@ -127,19 +188,13 @@
     --color-accent: #3ecfba;
     --color-accent-hover: #5adcc8;
     --color-accent-soft: rgba(62, 207, 186, 0.14);
+    --color-border-hover: #2e3f6b;
+    --color-card-highlight: rgb(255 255 255 / 0.03);
+    --shadow-overlay: 0 8px 12px -4px rgb(0 0 0 / 0.4), 0 24px 48px -12px rgb(0 0 0 / 0.6);
   }
 }
 
 @layer components {
-  /* Icons: one stroke weight and size rhythm for every Lucide/own SVG icon.
-     Colour is inherited (currentColor), so hover/active states are plain CSS. */
-  svg.lucide {
-    stroke-width: 1.75;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    flex-shrink: 0;
-  }
-
   /* Cards: depth from border + background + a soft shadow, lifted on hover only
      when the card is interactive. */
   .np-card {
@@ -147,7 +202,7 @@
     transition: border-color var(--shell-motion-fast) ease, box-shadow var(--shell-motion-fast) ease;
   }
   a.np-card:hover, button.np-card:hover, .np-card[role="button"]:hover {
-    border-color: var(--color-border-strong);
+    border-color: var(--color-border-hover);
     box-shadow: var(--shadow-pop);
   }
 
@@ -196,7 +251,7 @@
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-soft);
+    box-shadow: var(--shadow-soft), inset 0 1px 0 var(--color-card-highlight);
   }
 }
 
@@ -233,8 +288,51 @@
   :root {
     --north-ui-density: 1;
     --north-ui-density-compensated-width: 100vw;
-    --north-ui-density-compensated-height: 100vh;
+    --north-ui-density-compensated-height: 100dvh;
   }
+}
+
+/* Overlays (Radix mounts them until the exit animation ends) */
+@keyframes np-fade-in { from { opacity: 0; } }
+@keyframes np-fade-out { to { opacity: 0; } }
+@keyframes np-pop-in { from { opacity: 0; transform: translate(-50%, calc(-50% + 4px)) scale(0.98); } }
+@keyframes np-slide-in-left { from { transform: translateX(-100%); } }
+@keyframes np-slide-in-right { from { transform: translateX(100%); } }
+@keyframes np-slide-in-bottom { from { transform: translateY(100%); } }
+@keyframes np-tip-in { from { opacity: 0; transform: translateY(2px); } }
+.np-overlay[data-state="open"] { animation: np-fade-in var(--duration-normal) var(--ease-enter); }
+.np-overlay[data-state="closed"] { animation: np-fade-out var(--duration-fast) var(--ease-exit) forwards; }
+.np-dialog[data-state="open"] { animation: np-pop-in var(--duration-normal) var(--ease-enter); }
+.np-dialog[data-state="closed"] { animation: np-fade-out var(--duration-fast) var(--ease-exit) forwards; }
+.np-sheet[data-state="open"] { animation: var(--duration-slow) var(--ease-enter) both; }
+.np-sheet[data-side="left"][data-state="open"] { animation-name: np-slide-in-left; }
+.np-sheet[data-side="right"][data-state="open"] { animation-name: np-slide-in-right; }
+.np-sheet[data-side="bottom"][data-state="open"] { animation-name: np-slide-in-bottom; }
+.np-sheet[data-state="closed"] { animation: np-fade-out var(--duration-fast) var(--ease-exit) forwards; }
+.np-tooltip[data-state="delayed-open"], .np-tooltip[data-state="instant-open"] { animation: np-tip-in var(--duration-fast) var(--ease-enter); }
+
+/* Content arrival, stagger, pressed feedback, collapse. All subtle; reduced motion collapses them (see the media rule below). */
+@keyframes np-fade { from { opacity: 0; } }
+@keyframes np-toast-in { from { opacity: 0; transform: translateY(12px); } }
+.np-toast { animation: np-toast-in var(--duration-normal) var(--ease-enter) both; }
+@keyframes np-rise { from { opacity: 0; transform: translateY(6px); } }
+.np-fade-in { animation: np-fade var(--duration-normal) var(--ease-enter) both; }
+/* Stagger: set style={{ '--i': index }} on each item; capped so long lists do not wait. */
+.np-stagger { animation: np-rise var(--duration-normal) var(--ease-enter) both; animation-delay: calc(min(var(--i, 0), 8) * 40ms); }
+
+/* Pressed feedback for anything tappable: background gets stronger, optional slight scale. */
+.np-press { transition: transform var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard); }
+.np-press:active:not(:disabled) { transform: scale(0.98); background-color: var(--color-surface-active); }
+.np-press-flat:active:not(:disabled) { background-color: var(--color-surface-active); }
+a.np-card:active, button.np-card:active, .np-card[role="button"]:active { transform: scale(0.985); background: var(--color-surface-active); border-color: var(--color-border-hover); }
+
+/* Height collapse without measuring: grid rows 0fr <-> 1fr. */
+.np-collapse { display: grid; grid-template-rows: 1fr; opacity: 1; transition: grid-template-rows var(--duration-normal) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard); }
+.np-collapse[data-open="false"] { grid-template-rows: 0fr; opacity: 0; }
+.np-collapse > .np-collapse-inner { min-height: 0; overflow: hidden; }
+
+@media (pointer: coarse) {
+  :root { --touch-min: 44px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -244,6 +342,7 @@
     scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
     transition-duration: 0.01ms !important;
   }
 }

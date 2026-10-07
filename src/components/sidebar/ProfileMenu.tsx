@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Loader2, LogOut } from 'lucide-react';
+import { CircleNotch, SignOut } from '@phosphor-icons/react';
 import { useI18n } from '@/lib/i18n';
 import { useNotifications } from '@/context/NotificationContext';
 import { useLogout } from '@/hooks/useLogout';
@@ -45,7 +45,7 @@ export function ProfileMenu({ user }: { user: SessionUser }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left hover:bg-surface-hover transition-colors duration-150"
+        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left hover:bg-surface-hover transition-colors duration-(--duration-fast)"
       >
         <div className="size-7 rounded-lg bg-accent-soft text-accent flex items-center justify-center font-display text-xs font-semibold shrink-0">
           {initials}
@@ -57,7 +57,7 @@ export function ProfileMenu({ user }: { user: SessionUser }) {
       </button>
 
       {open && (
-        <div className="absolute bottom-full left-0 right-0 mb-1 np-card p-1.5 space-y-0.5 shadow-pop z-50">
+        <div className="absolute bottom-full left-0 right-0 mb-1 np-card p-1.5 space-y-0.5 shadow-pop z-(--z-popover)">
           <div className="px-2 py-2 border-b border-border">
             <p className="text-xs font-semibold text-text">{displayName}</p>
             <p className="text-[11px] text-text-muted mono-data truncate">{user.role}</p>
@@ -66,9 +66,9 @@ export function ProfileMenu({ user }: { user: SessionUser }) {
             type="button"
             disabled={isLoggingOut}
             onClick={() => void handleLogout()}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-text hover:bg-error/10 hover:text-error transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-text hover:bg-error/10 hover:text-error transition-colors duration-(--duration-fast) disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {isLoggingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
+            {isLoggingOut ? <CircleNotch className="w-4 h-4 animate-spin" /> : <SignOut className="w-4 h-4" />}
             {isLoggingOut
               ? (t('profile.loggingOut') || 'Cerrando sesión…')
               : (t('profile.logout') || 'Cerrar sesión')}

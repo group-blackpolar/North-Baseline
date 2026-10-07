@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react';
+import { Check } from '@phosphor-icons/react';
 import { useTheme, type ThemeName } from '@/lib/theme';
 import { useI18n } from '@/lib/i18n';
 import { DashboardCard } from '@/components/dashboard/primitives';
@@ -54,7 +54,7 @@ export function AppearanceSection() {
               type="button"
               aria-pressed={selected}
               className={cn(
-                'np-card p-3 text-left space-y-2.5 transition-[border-color,box-shadow] duration-150',
+                'np-card p-3 text-left space-y-2.5 transition-[border-color,box-shadow] duration-(--duration-fast)',
                 selected ? 'border-accent ring-2 ring-accent/25' : 'hover:border-border-strong'
               )}
               onClick={() => setTheme(option.id)}

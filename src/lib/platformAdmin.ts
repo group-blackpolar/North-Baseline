@@ -175,6 +175,16 @@ export function listPlatformUsers(params: { q?: string; limit?: number; cursor?:
   return apiRequest<Page<PlatformUser>>(`/v1/platform/users${query({ limit: 25, ...params })}`)
 }
 
+/** Superadmin only (CORECROW enforces it): account created already verified, with the password the caller chose. */
+export function createPlatformUser(input: { name: string; email: string; password: string; role: 'ADMIN' | 'DEVELOPER' | 'USER'; passwordChangeRequired: boolean }) {
+  return apiRequest<PlatformUser>('/v1/platform/users', { method: 'POST', body: JSON.stringify(input) })
+}
+
+/** Superadmin only: mark an account as verified without its emailed code. Idempotent. */
+export function verifyPlatformUserEmail(id: string) {
+  return apiRequest<PlatformUser>(`/v1/platform/users/${encodeURIComponent(id)}/verify-email`, { method: 'POST' })
+}
+
 export function getPlatformUser(id: string) {
   return apiRequest<PlatformUserDetail>(`/v1/platform/users/${encodeURIComponent(id)}`)
 }

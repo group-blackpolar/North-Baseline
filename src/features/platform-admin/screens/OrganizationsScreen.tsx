@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search } from 'lucide-react';
+import { MagnifyingGlass } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/badge';
 import { getPlatformOrganization, listPlatformOrganizations, type PlatformOrganization, type PlatformOrganizationDetail } from '@/lib/platformAdmin';
 import { useI18n } from '@/lib/i18n';
@@ -29,7 +29,7 @@ export function OrganizationsScreen() {
       key: 'organization',
       header: t('pa.col.organization'),
       render: (row) => (
-        <button type="button" onClick={() => setSelectedId(row.id)} className="text-left font-medium text-accent hover:underline">
+        <button type="button" onClick={() => setSelectedId(row.id)} className="text-left font-medium text-accent hover:underline pointer-coarse:min-h-(--touch-min)">
           {row.name}
           <span className="block text-xs font-normal text-text-muted">/{row.slug}</span>
         </button>
@@ -69,15 +69,15 @@ export function OrganizationsScreen() {
           setSelectedId(null);
         }}
       >
-        <Search className="h-4 w-4 text-text-muted" />
+        <MagnifyingGlass className="h-4 w-4 text-text-muted" />
         <input
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           placeholder={t('pa.orgs.searchPlaceholder')}
           aria-label={t('pa.orgs.search')}
-          className="h-8 min-w-52 flex-1 rounded-md border border-border bg-background px-2 text-sm text-text outline-none focus-visible:border-accent"
+          className="h-8 pointer-coarse:h-(--touch-min) min-w-52 flex-1 rounded-md border border-border bg-background px-2 text-base md:text-sm text-text outline-none focus-visible:border-accent"
         />
-        <button type="submit" className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover">
+        <button type="submit" className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover pointer-coarse:min-h-(--touch-min)">
           {t('pa.orgs.search')}
         </button>
       </form>
@@ -91,7 +91,7 @@ export function OrganizationsScreen() {
                 {t('pa.orgs.invitations')}: {detail.data.invitationCount} · {t('pa.orgs.groups')}: {detail.data.groups.length}
               </p>
             </div>
-            <button type="button" onClick={() => setSelectedId(null)} className="rounded-md border border-border px-2 py-1 text-xs text-text-secondary hover:bg-surface-hover">
+            <button type="button" onClick={() => setSelectedId(null)} className="rounded-md border border-border px-2 py-1 text-xs pointer-coarse:min-h-(--touch-min) text-text-secondary hover:bg-surface-hover">
               {t('pa.close')}
             </button>
           </header>
