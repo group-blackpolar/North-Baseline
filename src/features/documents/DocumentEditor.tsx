@@ -8,6 +8,7 @@ import {
   changeDocumentStatus, createDocument, fetchAttachment, removeAttachment, searchClients, updateDocument, uploadAttachment,
   type ClientSuggestion, type DocumentAttachment, type DocumentDetail, type DocumentType,
 } from './api';
+import { IMAGE_ACCEPT, imageMime } from './images';
 import { centsToText, formatMoney, isPrice, isQuantity, lineCents, sumCents } from './money';
 import { ErrorNote, errorText, fieldLabel, localizedLabel, toDateInput, useBlobUrl } from './shared';
 
@@ -89,7 +90,7 @@ export function DocumentEditor({ organizationId, type, existing, onSaved, onCanc
     const accepted: PendingFile[] = [];
     for (const file of files) {
       if (existingAttachments.length + pending.length + accepted.length >= MAX_FILES) { problems.push(t('documents.attach.limit')); break; }
-      if (!['image/jpeg', 'image/png'].includes(file.type)) { problems.push(`${file.name}: ${t('documents.attach.type')}`); continue; }
+      if (!imageMime(file)) { problems.push(`${file.name}: ${t('documents.attach.type')}`); continue; }
       if (file.size > MAX_BYTES) { problems.push(`${file.name}: ${t('documents.attach.size')}`); continue; }
       accepted.push({ key: newKey(), file, url: URL.createObjectURL(file) });
     }
@@ -222,7 +223,7 @@ export function DocumentEditor({ organizationId, type, existing, onSaved, onCanc
           <li>
             <label className="flex size-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border-strong text-xs text-text-secondary transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent focus-within:ring-2 focus-within:ring-accent/25">
               <ImageSquare className="size-5" />{t('documents.addImage')}
-              <input type="file" accept="image/jpeg,image/png" multiple className="sr-only" onChange={addFiles} />
+              <input type="file" accept={IMAGE_ACCEPT} multiple className="sr-only" onChange={addFiles} />
             </label>
           </li>
         </ul>
