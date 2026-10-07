@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Buildings } from '@phosphor-icons/react';
 import { Login } from '@/views/Login';
 import { TemporaryPasswordChange } from '@/views/TemporaryPasswordChange';
@@ -45,6 +45,8 @@ import { isTauri } from '@/lib/tauri';
 import { acceptInvitation, resolvePublicOrganization, resolvePublishedPanel, type PublicOrganization } from '@/lib/organizations';
 import { currentNorthRoute, replacePath, type NorthRoute } from '@/lib/routes';
 import { GenericNotFound, OrganizationAccessGate } from '@/components/organization/OrganizationAccessGate';
+import { InspectionBanner } from '@/components/organization/InspectionBanner';
+import { useInspection } from '@/lib/inspection';
 import { PlatformAdminView } from '@/features/platform-admin/PlatformAdminView';
 import { ShowcaseView } from '@/features/showcase/ShowcaseView';
 import { navigateToPublishedTarget } from '@/lib/publishedNavigation';
@@ -234,13 +236,17 @@ function AppShell({
 }) {
   const { activeOrganization, isLoading } = useOrganization();
   const compact = useIsCompactShell();
+  const inspection = useInspection();
 
   if (isLoading) return <ShellSkeleton />;
   if (!activeOrganization) return <NoOrganizationState />;
+  const inspecting = inspection && inspection.id === activeOrganization.id ? inspection : null;
 
   return (
     <>
-      <div className="north-app-shell flex bg-background text-text">
+      <div className="north-app-shell flex flex-col bg-background text-text">
+        {inspecting && <InspectionBanner organization={inspecting} />}
+        <div className="flex min-h-0 flex-1">
         {!compact && <OrganizationRail />}
         {/* FIX CLAVE: key={activeOrganization.id} fuerza re-mount completo del subtree
            cuando cambia la org. Esto reinicia workspaces, tabs y catálogo desde cero,
@@ -257,6 +263,7 @@ function AppShell({
             route={route}
           />
         </WorkspaceProvider>
+        </div>
       </div>
     </>
   );
@@ -500,6 +507,7 @@ function PublishedRouteIntent({ route }: { route: NorthRoute }) {
   const { activeTab, navigate } = useTabs();
   const { categories, isLoading } = useCatalog();
   const [missing, setMissing] = useState(false);
+  const resolvedPathRef = useRef<string | null>(null);
 
   const knownCategory = route.kind === 'panel' ? categories.find((category) => category.slug === route.categorySlug) : undefined;
   const knownSubcategory = route.kind === 'panel' ? knownCategory?.subcategories.find((subcategory) => subcategory.slug === route.subcategorySlug) : undefined;
@@ -507,8 +515,11 @@ function PublishedRouteIntent({ route }: { route: NorthRoute }) {
   // The organization Views editor (admin/settings) is rendered from the catalog
   // route, never from a published panel document. Resolving its system panel can
   // 404 and would cover a valid OWNER session with the not-found overlay.
-  const isViewsAdminTarget = knownCategory?.slug === 'admin' && knownSubcategory?.slug === 'settings'
-    && activeTab?.route.subcategoryId === knownSubcategory.id;
+  // The access screens (settings, users, invitations, groups, permissions, audit) are catalog routes too and do not
+  // change the URL, so any admin tab in this category counts as already resolved.
+  const isViewsAdminTarget = knownCategory?.slug === 'admin' && activeTab?.route.categoryId === knownCategory.id
+    && ((knownSubcategory?.slug === 'settings' && activeTab.route.subcategoryId === knownSubcategory.id)
+      || Boolean(activeTab.route.subcategoryId?.startsWith('access-')));
   const alreadyResolved = Boolean(
     isViewsAdminTarget
     || (knownPanelId && activeTab?.publishedPanel?.id === knownPanelId),
@@ -522,11 +533,15 @@ function PublishedRouteIntent({ route }: { route: NorthRoute }) {
     // already-authorized content with the generic not-found overlay.
     if (alreadyResolved) { setMissing(false); return; }
     if (isLoading) return;
+    // A URL is resolved once. Catalog refreshes (e.g. after saving organization settings) re-run this effect while the
+    // user is on a screen whose route is not in the URL; resolving again would hijack that tab or flash not-found.
+    if (resolvedPathRef.current === route.path) return;
     let live = true;
     setMissing(false);
     void resolvePublishedPanel(route)
       .then((result) => {
         if (!live) return;
+        resolvedPathRef.current = route.path;
         if (result.canonicalPath) replacePath(result.canonicalPath);
         const localeOrder = result.revision ? [result.revision.locale.resolved, ...result.revision.locale.fallbackChain, result.revision.defaultLocale] : [];
         // A direct, user-requested deep link is an intentional tab navigation.
@@ -537,7 +552,7 @@ function PublishedRouteIntent({ route }: { route: NorthRoute }) {
           localeOrder,
         });
       })
-      .catch(() => { if (live) setMissing(true); });
+      .catch(() => { if (live) { resolvedPathRef.current = route.path; setMissing(true); } });
     return () => { live = false; };
   }, [alreadyResolved, isLoading, navigate, route]);
 

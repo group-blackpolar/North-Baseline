@@ -3,14 +3,15 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 import baseEs, { type Dictionary as BaseDictionary } from '@/locales/es';
 import baseEn from '@/locales/en';
 import { authEs, authEn, type AuthDictionary } from '@/locales/auth';
+import { adminEs, adminEn, type AdminDictionary } from '@/locales/admin';
 
-export type Dictionary = BaseDictionary & AuthDictionary;
+export type Dictionary = BaseDictionary & AuthDictionary & AdminDictionary;
 export type Locale = 'es' | 'en';
 
 /** Registrar un idioma nuevo = añadir su archivo base + auth */
 const REGISTRIES: Record<Locale, Dictionary> = {
-  es: { ...baseEs, ...authEs },
-  en: { ...baseEn, ...authEn },
+  es: { ...baseEs, ...authEs, ...adminEs },
+  en: { ...baseEn, ...authEn, ...adminEn },
 };
 
 const STORAGE_KEY = 'north-locale';

@@ -5,6 +5,8 @@ import { NorthIcon } from '@/components/brand/NorthLogo'
 import { LanguageSelector } from '@/components/LanguageSelector'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { expandWindow, isTauri } from '@/lib/tauri'
+import { isInvitationCredential, useInvitationPreview } from '@/lib/invitationKey'
+import { OrganizationAvatar } from '@/components/organization/OrganizationAvatar'
 import { useI18n, type Locale } from '@/lib/i18n'
 import {
   completePendingOnboarding,
@@ -82,6 +84,7 @@ export function Login({ onSuccess, onOnboardingIssue, initialMode = 'login' }: L
   const [googleEnabled, setGoogleEnabled] = useState(false)
   const [resetToken] = useState(() => new URLSearchParams(window.location.search).get('token') ?? '')
   const adminSecretAvailable = !isTauri()
+  const invitationPreview = useInvitationPreview(invitationCode, hasOrganization && mode === 'signup')
   const localePath = lang === 'es' ? 'es-lat' : 'en-us'
   const strength = useMemo(() => passwordScore(pass, email, firstName, lastName), [pass, email, firstName, lastName])
   const strengthLabels = ['', t('auth.weak'), t('auth.fair'), t('auth.good'), t('auth.strong')]
@@ -128,7 +131,7 @@ export function Login({ onSuccess, onOnboardingIssue, initialMode = 'login' }: L
   }, [resendIn])
 
   const validEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
-  const validInvitation = (value: string) => /^[a-f0-9]{64}$/.test(value.trim().toLowerCase())
+  const validInvitation = (value: string) => isInvitationCredential(value)
 
   function validateSignup(includePassword: boolean) {
     setError('')
@@ -343,7 +346,10 @@ export function Login({ onSuccess, onOnboardingIssue, initialMode = 'login' }: L
                     {[false, true].map((value) => <button key={String(value)} type="button" onClick={() => setHasOrganization(value)} aria-pressed={hasOrganization === value} className={`h-9 rounded-md text-sm font-medium transition-colors ${hasOrganization === value ? 'bg-surface text-text shadow-sm' : 'text-text-secondary hover:text-text'}`}>{value ? t('auth.yes') : t('auth.no')}</button>)}
                   </div>
                 </fieldset>
-                {hasOrganization && <Field label={t('auth.invitation')} hint={t('auth.invitationHint')}><Input value={invitationCode} onChange={(event) => setInvitationCode(event.target.value.replace(/\s/g, '').toLowerCase())} autoComplete="off" maxLength={64} className="tracking-wide" /></Field>}
+                {hasOrganization && <Field label={t('auth.invitation')} hint={t('auth.invitationHint')}><Input value={invitationCode} onChange={(event) => setInvitationCode(event.target.value.replace(/\s/g, ''))} autoComplete="off" maxLength={64} className="font-mono tracking-wide" />
+                  {invitationPreview.status === 'checking' && <p className="mt-1 text-xs text-text-muted">{t('auth.invitationChecking')}</p>}
+                  {invitationPreview.status === 'invalid' && <p role="alert" className="mt-1 text-xs text-error">{t('auth.invitationUnavailable')}</p>}
+                  {invitationPreview.preview && <div className="mt-2 flex items-center gap-2 rounded-lg border border-border bg-surface-hover p-2"><OrganizationAvatar name={invitationPreview.preview.organization.name} iconData={invitationPreview.preview.organization.iconData} className="size-8" /><div className="min-w-0"><p className="truncate text-sm font-medium text-text">{invitationPreview.preview.organization.name}</p><p className="text-xs text-text-secondary">{t('auth.invitationFor')}</p></div></div>}</Field>}
                 <div className="grid sm:grid-cols-2 gap-4">
                   <PasswordField label={t('auth.password')} value={pass} onChange={setPass} visible={showPass} setVisible={setShowPass} showLabel={t('auth.showPassword')} hideLabel={t('auth.hidePassword')} autoComplete="new-password" />
                   <PasswordField label={t('auth.confirmPassword')} value={confirmPass} onChange={setConfirmPass} visible={showPass} setVisible={setShowPass} showLabel={t('auth.showPassword')} hideLabel={t('auth.hidePassword')} autoComplete="new-password" />

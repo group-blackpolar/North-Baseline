@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import { MagnifyingGlass } from '@phosphor-icons/react';
+import { Eye } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/badge';
-import { getPlatformOrganization, listPlatformOrganizations, type PlatformOrganization, type PlatformOrganizationDetail } from '@/lib/platformAdmin';
+import { Button } from '@/components/ui/button';
+import { OrganizationAvatar } from '@/components/organization/OrganizationAvatar';
+import { useNotifications } from '@/context/NotificationContext';
+import { setInspection } from '@/lib/inspection';
+import { pushPath } from '@/lib/routes';
+import { getPlatformOrganization, startOrganizationInspection, listPlatformOrganizations, type PlatformOrganization, type PlatformOrganizationDetail } from '@/lib/platformAdmin';
 import { useI18n } from '@/lib/i18n';
 import { ResourceFailure, useCursorList, useResource } from '../resource';
 import { PlatformTable, type PlatformColumn } from '../components/PlatformTable';
@@ -14,6 +20,19 @@ export function OrganizationsScreen() {
   const [draft, setDraft] = useState('');
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const { push } = useNotifications();
+  const [inspectingId, setInspectingId] = useState<string | null>(null);
+
+  const inspect = async (id: string) => {
+    setInspectingId(id);
+    try {
+      const target = await startOrganizationInspection(id);
+      setInspection(target);
+      pushPath(`/${encodeURIComponent(target.slug)}`);
+    } catch (reason) {
+      push({ type: 'error', title: t('adm.inspect.failed'), body: reason instanceof Error ? reason.message : undefined });
+    } finally { setInspectingId(null); }
+  };
 
   const organizations = useCursorList<PlatformOrganization>(
     (cursor) => listPlatformOrganizations({ q: query || undefined, cursor: cursor ?? undefined }),
@@ -29,10 +48,13 @@ export function OrganizationsScreen() {
       key: 'organization',
       header: t('pa.col.organization'),
       render: (row) => (
-        <button type="button" onClick={() => setSelectedId(row.id)} className="text-left font-medium text-accent hover:underline pointer-coarse:min-h-(--touch-min)">
-          {row.name}
-          <span className="block text-xs font-normal text-text-muted">/{row.slug}</span>
-        </button>
+        <span className="flex min-w-0 items-center gap-2">
+          <OrganizationAvatar name={row.name} iconData={row.iconData} className="size-7 rounded-lg text-[11px]" />
+          <button type="button" onClick={() => setSelectedId(row.id)} className="min-w-0 text-left font-medium text-accent hover:underline pointer-coarse:min-h-(--touch-min)">
+            <span className="block truncate">{row.name}</span>
+            <span className="block truncate text-xs font-normal text-text-muted">/{row.slug}</span>
+          </button>
+        </span>
       ),
     },
     {
@@ -57,6 +79,7 @@ export function OrganizationsScreen() {
       render: (row) => (row.billingStatus ? <Badge>{row.billingStatus}</Badge> : <span className="text-text-muted">—</span>),
     },
     { key: 'created', header: t('pa.col.created'), render: (row) => formatDate(row.createdAt, locale) },
+    { key: 'inspect', header: '', render: (row) => <Button size="sm" variant="outline" loading={inspectingId === row.id} onClick={() => void inspect(row.id)}><Eye className="size-4" />{t('adm.pa.inspect')}</Button> },
   ];
 
   return (

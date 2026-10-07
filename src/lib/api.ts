@@ -1,4 +1,5 @@
 import { authHeaders } from '@/lib/auth'
+import { inspectionHeadersFor } from '@/lib/inspection'
 
 export const API_BASE = import.meta.env.DEV
   ? ''
@@ -22,8 +23,10 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
     credentials: 'include',
     ...init,
     headers: {
-      'Content-Type': 'application/json',
+      // Fastify rejects a JSON content type with an empty body (bodyless POST/DELETE), so only declare it with a body.
+      ...(init?.body === undefined || init?.body === null ? {} : { 'Content-Type': 'application/json' }),
       ...authHeaders(),
+      ...inspectionHeadersFor(path, init?.method),
       ...(init?.headers ?? {}),
     },
   })

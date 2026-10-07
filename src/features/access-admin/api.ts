@@ -6,7 +6,7 @@ export type TenantRole = (typeof TENANT_ROLES)[number];
 export const INVITABLE_ROLES = ['ADMIN', 'BILLING_ADMIN', 'MEMBER', 'VIEWER'] as const;
 
 export const REGISTERED_PERMISSIONS = [
-  'organization.read', 'organization.update', 'members.read', 'members.manage', 'invitations.manage', 'groups.read',
+  'organization.read', 'organization.update', 'members.read', 'members.manage', 'invitations.read', 'invitations.manage', 'groups.read',
   'groups.manage', 'permissions.manage', 'audit.read', 'commerce.read', 'billing.read', 'billing.manage',
   'documents.read', 'documents.create', 'documents.update', 'documents.delete', 'documents.download', 'documents.send', 'documents.manage',
 ] as const;
@@ -16,6 +16,7 @@ export type Member = { id: string; organizationId: string; userId: string; role:
 export type Invitation = {
   id: string; kind: 'EMAIL' | 'CODE'; email: string | null; role: TenantRole; status: 'PENDING' | 'ACCEPTED' | 'REVOKED' | 'EXPIRED';
   expiresAt: string; acceptedAt: string | null; revokedAt: string | null; createdAt: string; groupIds: string[]; permissions: RegisteredPermission[];
+  maxUses: number; useCount: number; createdByUserId: string | null; keyHint: string | null;
 };
 export type IssuedInvitation = Invitation & { token?: string; delivery: 'sent' | 'failed' | 'not_applicable' };
 export type Group = { id: string; name: string; description: string | null; memberUserIds: string[]; permissions: RegisteredPermission[] };
@@ -30,6 +31,14 @@ export const removeMember = (o: string, userId: string) => apiRequest<void>(`${o
 export const listInvitations = (o: string) => apiRequest<Invitation[]>(`${org(o)}/invitations`);
 export const createInvitation = (o: string, input: { email: string; role: (typeof INVITABLE_ROLES)[number]; expiresInHours: number; groupIds: string[]; permissions: RegisteredPermission[] }) =>
   apiRequest<IssuedInvitation>(`${org(o)}/invitations`, { method: 'POST', body: json({ kind: 'EMAIL', ...input }) });
+export const createInvitationKey = (o: string, input: { role: (typeof INVITABLE_ROLES)[number]; expiresInHours: number; maxUses: number; groupIds: string[] }) =>
+  apiRequest<IssuedInvitation>(`${org(o)}/invitations`, { method: 'POST', body: json({ kind: 'CODE', ...input }) });
+export type UserLookup = { exists: boolean; user: { id: string; email: string; name: string | null; emailVerified: boolean } | null; alreadyMember: boolean };
+export const lookupUser = (o: string, email: string) => apiRequest<UserLookup>(`${org(o)}/user-lookup?email=${encodeURIComponent(email)}`);
+export const addMember = (o: string, input: { email: string; role: (typeof INVITABLE_ROLES)[number]; groupIds: string[] }) =>
+  apiRequest<Member>(`${org(o)}/members`, { method: 'POST', body: json(input) });
+export type AuditEvent = { id: string; action: string; actorId: string | null; targetType: string | null; targetId: string | null; createdAt: string };
+export const listAudit = (o: string, before?: string) => apiRequest<AuditEvent[]>(`${org(o)}/audit?limit=50${before ? `&before=${encodeURIComponent(before)}` : ''}`);
 export const revokeInvitation = (o: string, id: string) => apiRequest<void>(`${org(o)}/invitations/${encodeURIComponent(id)}`, { method: 'DELETE' });
 export const replaceInvitation = (o: string, id: string) => apiRequest<IssuedInvitation>(`${org(o)}/invitations/${encodeURIComponent(id)}/replace`, { method: 'POST' });
 

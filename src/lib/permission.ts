@@ -5,6 +5,7 @@ export const PERM = {
   organizationUpdate: 'organization.update',
   membersRead: 'members.read',
   membersManage: 'members.manage',
+  invitationsRead: 'invitations.read',
   invitationsManage: 'invitations.manage',
   groupsRead: 'groups.read',
   groupsManage: 'groups.manage',

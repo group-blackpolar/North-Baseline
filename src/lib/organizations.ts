@@ -5,6 +5,9 @@ export interface Organization {
   name: string;
   slug?: string;
   avatarUrl?: string | null;
+  iconData?: string | null;
+  description?: string | null;
+  status?: 'ACTIVE' | 'SUSPENDED' | 'ARCHIVED';
 }
 
 export interface PublicOrganization {
@@ -50,7 +53,12 @@ export interface Workspace {
 }
 
 export async function getOrganizations(): Promise<Organization[]> {
-  return apiRequest<Organization[]>('/v1/organizations');
+  const organizations = await apiRequest<Organization[]>('/v1/organizations');
+  return organizations.map((organization) => ({ ...organization, avatarUrl: organization.iconData ?? organization.avatarUrl ?? null }));
+}
+
+export function updateOrganization(organizationId: string, input: { name?: string; slug?: string; iconData?: string | null; description?: string | null }) {
+  return apiRequest<Organization>(`/v1/organizations/${encodeURIComponent(organizationId)}`, { method: 'PATCH', body: JSON.stringify(input) });
 }
 
 export function resolvePublicOrganization(slug: string) {
@@ -62,7 +70,9 @@ export function getOrganizationNavigation(organizationId: string) {
 }
 
 export function resolvePublishedPanel(input: { organizationSlug: string; categorySlug: string; subcategorySlug: string; panelSlug: string }) {
-  const query = new URLSearchParams(input);
+  // Only the four slugs: callers may pass a whole route object, and CORECROW rejects unknown query parameters.
+  const { organizationSlug, categorySlug, subcategorySlug, panelSlug } = input;
+  const query = new URLSearchParams({ organizationSlug, categorySlug, subcategorySlug, panelSlug });
   return apiRequest<ResolvedPanel>(`/v1/content/resolve?${query.toString()}`);
 }
 
