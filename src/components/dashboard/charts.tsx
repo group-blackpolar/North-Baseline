@@ -12,7 +12,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { AXIS_TICK, CHART_PALETTE, GRID, NorthChartTooltip, compact, formatNumber } from '@/components/charts';
+import { AXIS_TICK, CHART_PALETTE, GRID, NorthChartTooltip, compact, formatNumber, useLabelAxisWidth } from '@/components/charts';
 import type { AggEntry, SeriesRow } from '@/features/shark/data/types';
 
 /** Wrappers reutilizables de recharts con el lenguaje visual de NORTH.
@@ -82,6 +82,7 @@ export function GroupedBarChart({
   height?: number;
   horizontal?: boolean;
 }) {
+  const labelWidth = useLabelAxisWidth();
   return (
     <div style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
@@ -90,7 +91,7 @@ export function GroupedBarChart({
           {horizontal ? (
             <>
               <XAxis type="number" tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={(v) => compact(Number(v))} />
-              <YAxis type="category" dataKey="label" width={120} tick={AXIS_TICK} tickLine={false} axisLine={false} />
+              <YAxis type="category" dataKey="label" width={labelWidth} tick={AXIS_TICK} tickLine={false} axisLine={false} />
             </>
           ) : (
             <>

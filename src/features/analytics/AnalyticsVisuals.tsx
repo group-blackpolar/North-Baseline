@@ -16,7 +16,7 @@ import {
 } from 'recharts';
 import { ArrowDown, ArrowUp, CaretUpDown, CircleNotch, Funnel, WarningCircle } from '@phosphor-icons/react';
 import { useMemo, useState, type ReactNode } from 'react';
-import { AXIS_TICK, CHART_PALETTE, GRID, NorthChartTooltip } from '@/components/charts';
+import { AXIS_TICK, CHART_PALETTE, GRID, NorthChartTooltip, useLabelAxisWidth } from '@/components/charts';
 import { useI18n } from '@/lib/i18n';
 import type { AnalyticsColumn, AnalyticsData, AnalyticsFilter, AnalyticsResult, AnalyticsRow, AnalyticsSeries, AnalyticsValue } from './types';
 
@@ -143,7 +143,8 @@ function ChartState({ result, series, children }: { result: AnalyticsResult; ser
 }
 
 export function AnalyticsBarChart({ result, categoryKey, series, horizontal = false, stacked = false, height = 240 }: { result: AnalyticsResult; categoryKey: string; series: AnalyticsSeries[]; horizontal?: boolean; stacked?: boolean; height?: number }) {
-  return <ChartState result={result} series={series}>{(rows) => <div style={{ height }}><ResponsiveContainer width="100%" height="100%"><BarChart data={rows} layout={horizontal ? 'vertical' : 'horizontal'} margin={{ top: 8, right: 8, left: horizontal ? 20 : -12, bottom: 0 }}><CartesianGrid {...GRID} vertical={!horizontal} horizontal={horizontal} />{horizontal ? <><XAxis type="number" tick={AXIS_TICK} tickLine={false} axisLine={false} /><YAxis type="category" dataKey={categoryKey} width={120} tick={AXIS_TICK} tickLine={false} axisLine={false} /></> : <><XAxis dataKey={categoryKey} tick={AXIS_TICK} tickLine={false} axisLine={false} /><YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} /></>}<Tooltip content={<NorthChartTooltip />} />{series.map((item, index) => <Bar key={item.key} dataKey={item.key} name={item.label} stackId={stacked ? 'values' : undefined} fill={item.color ?? PALETTE[index % PALETTE.length]} radius={horizontal ? [0, 5, 5, 0] : [5, 5, 0, 0]} />)}</BarChart></ResponsiveContainer></div>}</ChartState>;
+  const labelWidth = useLabelAxisWidth();
+  return <ChartState result={result} series={series}>{(rows) => <div style={{ height }}><ResponsiveContainer width="100%" height="100%"><BarChart data={rows} layout={horizontal ? 'vertical' : 'horizontal'} margin={{ top: 8, right: 8, left: horizontal ? 20 : -12, bottom: 0 }}><CartesianGrid {...GRID} vertical={!horizontal} horizontal={horizontal} />{horizontal ? <><XAxis type="number" tick={AXIS_TICK} tickLine={false} axisLine={false} /><YAxis type="category" dataKey={categoryKey} width={labelWidth} tick={AXIS_TICK} tickLine={false} axisLine={false} /></> : <><XAxis dataKey={categoryKey} tick={AXIS_TICK} tickLine={false} axisLine={false} /><YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} /></>}<Tooltip content={<NorthChartTooltip />} />{series.map((item, index) => <Bar key={item.key} dataKey={item.key} name={item.label} stackId={stacked ? 'values' : undefined} fill={item.color ?? PALETTE[index % PALETTE.length]} radius={horizontal ? [0, 5, 5, 0] : [5, 5, 0, 0]} />)}</BarChart></ResponsiveContainer></div>}</ChartState>;
 }
 
 export function AnalyticsLineAreaChart({ result, categoryKey, series, variant = 'line', height = 240 }: { result: AnalyticsResult; categoryKey: string; series: AnalyticsSeries[]; variant?: 'line' | 'area'; height?: number }) {

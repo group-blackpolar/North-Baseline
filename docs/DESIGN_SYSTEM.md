@@ -52,6 +52,6 @@ before asserting on drawers/sheets.
 
 ## Known gaps
 - Tab indicator `layoutId` animation not done: Motion layout measurement and CSS `zoom: 0.7` need a dedicated spike.
-- Horizontal-bar chart Y-axis width (120 px) and tick density are not phone-tuned yet.
+- Horizontal-bar category axis is 84 px on phone (`useLabelAxisWidth`); tick density is not otherwise tuned.
 - Analytic tables (`AnalyticsDataGrid`, `SimpleTable`, `ViewsPreview`) keep horizontal scroll on phone by design.
 - No automated UI tests; verification is manual through the harness.
