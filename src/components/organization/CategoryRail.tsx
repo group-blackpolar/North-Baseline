@@ -126,7 +126,7 @@ export function CategoryRail({ children }: { children?: ReactNode }) {
               disabled={disabled}
               aria-current={active ? 'page' : undefined}
               className={cn(
-                'mx-2 h-9 shrink-0 rounded-lg flex items-center gap-2.5 transition-colors duration-[var(--shell-motion-fast)]',
+                'np-press-flat mx-2 h-9 shrink-0 rounded-lg flex items-center gap-2.5 transition-colors duration-[var(--shell-motion-fast)]',
                 expanded ? 'w-[calc(100%_-_1rem)] px-2.5' : 'w-9 justify-center px-0',
                 disabled
                   ? 'text-text-muted opacity-40 cursor-not-allowed'

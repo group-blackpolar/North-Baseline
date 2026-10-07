@@ -37,7 +37,7 @@ export function AuditScreen() {
         type={type}
         value={draft[key] ?? ''}
         onChange={(event) => setDraft((current) => ({ ...current, [key]: event.target.value }))}
-        className="h-8 rounded-md border border-border bg-background px-2 text-xs text-text outline-none focus-visible:border-accent"
+        className="h-8 pointer-coarse:h-(--touch-min) rounded-md border border-border bg-background px-2 text-base md:text-xs text-text outline-none focus-visible:border-accent"
       />
     </label>
   );
@@ -89,7 +89,7 @@ export function AuditScreen() {
           {field('to', t('pa.audit.filterTo'), 'date')}
         </div>
         <div className="flex gap-2">
-          <button type="submit" className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover">
+          <button type="submit" className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover pointer-coarse:min-h-(--touch-min)">
             {t('pa.audit.apply')}
           </button>
           <button
@@ -98,7 +98,7 @@ export function AuditScreen() {
               setDraft(EMPTY);
               setFilters(EMPTY);
             }}
-            className="rounded-md border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-surface-hover"
+            className="rounded-md border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-surface-hover pointer-coarse:min-h-(--touch-min)"
           >
             {t('pa.audit.clear')}
           </button>

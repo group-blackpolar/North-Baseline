@@ -34,7 +34,7 @@ export function OrganizationRail() {
         aria-label={t('personal.workspace.name')}
         aria-current={personalActive ? 'true' : undefined}
         className={cn(
-          'h-9 w-9 rounded-xl flex items-center justify-center transition-colors duration-(--duration-fast) shrink-0',
+          'np-press h-9 w-9 rounded-xl flex items-center justify-center transition-colors duration-(--duration-fast) shrink-0',
           personalActive
             ? 'bg-surface-active text-text shadow-soft ring-1 ring-border'
             : 'bg-surface-hover text-text-secondary hover:bg-surface-active hover:text-text'
@@ -67,7 +67,7 @@ export function OrganizationRail() {
                 aria-label={org.name}
                 aria-current={active ? 'true' : undefined}
                 className={cn(
-                  'h-9 w-9 rounded-xl overflow-hidden flex items-center justify-center font-display text-sm transition-[background-color,color,box-shadow] duration-(--duration-fast) shrink-0',
+                  'np-press h-9 w-9 rounded-xl overflow-hidden flex items-center justify-center font-display text-sm transition-[background-color,color,box-shadow] duration-(--duration-fast) shrink-0',
                   active
                     ? 'bg-surface-active text-text font-semibold shadow-soft ring-1 ring-border'
                     : 'bg-surface-hover text-text-secondary hover:bg-surface-active hover:text-text'
@@ -85,7 +85,7 @@ export function OrganizationRail() {
         <button
           type="button"
           aria-label={t('org.add')}
-          className="h-9 w-9 rounded-xl border border-dashed border-border-strong text-text-muted hover:text-accent hover:border-accent hover:bg-accent-soft flex items-center justify-center transition-colors duration-(--duration-fast) shrink-0"
+          className="np-press h-9 w-9 rounded-xl border border-dashed border-border-strong text-text-muted hover:text-accent hover:border-accent hover:bg-accent-soft flex items-center justify-center transition-colors duration-(--duration-fast) shrink-0"
           onClick={() => setModalOpen(true)}
         >
           <Plus className="w-4 h-4" />

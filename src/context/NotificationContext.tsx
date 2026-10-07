@@ -1,5 +1,7 @@
 /* oxlint-disable react/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { ToastHost } from '@/components/notifications/ToastHost';
+import { uuid } from '@/lib/utils';
 
 export type NotificationType = 'info' | 'success' | 'warning' | 'error';
 
@@ -38,6 +40,9 @@ function readStored(): AppNotification[] {
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<AppNotification[]>(readStored);
   const channelRef = useRef<BroadcastChannel | null>(null);
+  // Only notifications pushed from this tab become a transient toast; the stored list feeds the bell.
+  const [toast, setToast] = useState<AppNotification | null>(null);
+  const dismissToast = useCallback(() => setToast(null), []);
 
   useEffect(() => {
     if (typeof BroadcastChannel === 'undefined') return;
@@ -73,12 +78,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const push = useCallback(
     (notification: { type: NotificationType; title: string; body?: string }) => {
       const item: AppNotification = {
-        id: crypto.randomUUID(),
+        id: uuid(),
         createdAt: new Date().toISOString(),
         read: false,
         ...notification,
       };
       persist([item, ...readStored()].slice(0, MAX_STORED));
+      setToast(item);
     },
     [persist]
   );
@@ -105,7 +111,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     [notifications, unreadCount, push, markRead, markAllRead, remove]
   );
 
-  return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;
+  return (
+    <NotificationContext.Provider value={value}>
+      {children}
+      <ToastHost toast={toast} onDismiss={dismissToast} />
+    </NotificationContext.Provider>
+  );
 }
 
 export function useNotifications() {

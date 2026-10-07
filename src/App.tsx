@@ -22,7 +22,7 @@ import { NotificationProvider } from '@/context/NotificationContext';
 import { EmptyState } from '@/components/ui/empty-state';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
 import { useIsCompactShell } from '@/lib/responsive';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton, WorkspaceSkeleton } from '@/components/ui/skeleton';
 import {
   clearLocalSession,
   clearSessionKilled,
@@ -81,6 +81,26 @@ function ShellSkeleton() {
         <Skeleton className="h-40 w-full rounded-xl" />
       </div>
     </div>
+  );
+}
+
+/** Transition frame when the URL names another organization than the active one: the real organization rail
+ *  stays put and the workspace area shows its skeleton, instead of a generic grey shell (no blank/flash). */
+function SwitchingShell() {
+  const compact = useIsCompactShell();
+  return (
+    <>
+      <div className="north-app-shell flex bg-background text-text" aria-busy="true">
+        {!compact && <OrganizationRail />}
+        {!compact && (
+          <div className="flex h-full shrink-0 border-r border-border bg-surface" style={{ width: 'calc(var(--shell-category-rail) + var(--shell-context-sidebar))' }}>
+            <div className="w-(--shell-category-rail) space-y-2 p-2"><Skeleton className="size-9 rounded-lg" /><Skeleton className="size-9 rounded-lg" /></div>
+            <div className="flex-1 space-y-3 border-l border-border p-3"><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-2/3" /></div>
+          </div>
+        )}
+        <div className="min-w-0 flex-1"><WorkspaceSkeleton /></div>
+      </div>
+    </>
   );
 }
 
@@ -171,28 +191,27 @@ function WorkspaceGate({
       >
         <TabsProvider>
           <LayoutProvider>
-            <NotificationProvider>
-              <CatalogSync>
-                <PublishedRouteIntent route={route} />
-                <div className="north-app-shell flex bg-background text-text">
-                  {/* Conditional siblings keep the content column at a stable position, so a resize never remounts the workspace. */}
-                  {!compact && <OrganizationRail />}
-                  {!compact && (
-                    <CategoryRail>
-                      <ContextSidebar user={user} />
-                    </CategoryRail>
-                  )}
-                  <div className="flex-1 flex flex-col min-w-0">
-                    {compact ? <MobileHeader user={user} /> : <CurrentPath />}
-                    {!compact && <TabBar />}
-                    <div className="flex-1 flex flex-col min-h-0">
-                      <SplitContent user={user} />
-                    </div>
+            <CatalogSync>
+              <PublishedRouteIntent route={route} />
+              {/* The organization rail and the shell frame live outside this keyed subtree (see AppShell), so
+                  switching organization keeps them on screen while the tenant-scoped state below remounts. */}
+              <div className="flex min-w-0 flex-1">
+                {/* Conditional siblings keep the content column at a stable position, so a resize never remounts the workspace. */}
+                {!compact && (
+                  <CategoryRail>
+                    <ContextSidebar user={user} />
+                  </CategoryRail>
+                )}
+                <div className="flex-1 flex flex-col min-w-0">
+                  {compact ? <MobileHeader user={user} /> : <CurrentPath />}
+                  {!compact && <TabBar />}
+                  <div className="flex-1 flex flex-col min-h-0">
+                    <SplitContent user={user} />
                   </div>
-                  {!compact && <LayoutSwitcher />}
                 </div>
-              </CatalogSync>
-            </NotificationProvider>
+                {!compact && <LayoutSwitcher />}
+              </div>
+            </CatalogSync>
           </LayoutProvider>
         </TabsProvider>
       </PermissionProvider>
@@ -214,26 +233,32 @@ function AppShell({
   route: NorthRoute;
 }) {
   const { activeOrganization, isLoading } = useOrganization();
+  const compact = useIsCompactShell();
 
   if (isLoading) return <ShellSkeleton />;
   if (!activeOrganization) return <NoOrganizationState />;
 
   return (
-    // FIX CLAVE: key={activeOrganization.id} fuerza re-mount completo del subtree
-    // cuando cambia la org. Esto reinicia workspaces, tabs y catálogo desde cero,
-    // exactamente igual que un full reload. Sin el key, React solo re-renderiza
-    // y el estado viejo persiste (que era el bug original).
-    <WorkspaceProvider
-      key={activeOrganization.id}
-      organizationId={activeOrganization.id}
-      onAuthError={onAuthError}
-    >
-      <WorkspaceGate
-        organizationId={activeOrganization.id}
-        user={user}
-        route={route}
-      />
-    </WorkspaceProvider>
+    <>
+      <div className="north-app-shell flex bg-background text-text">
+        {!compact && <OrganizationRail />}
+        {/* FIX CLAVE: key={activeOrganization.id} fuerza re-mount completo del subtree
+           cuando cambia la org. Esto reinicia workspaces, tabs y catálogo desde cero,
+           exactamente igual que un full reload. Sin el key, React solo re-renderiza
+           y el estado viejo persiste (que era el bug original). */}
+        <WorkspaceProvider
+          key={activeOrganization.id}
+          organizationId={activeOrganization.id}
+          onAuthError={onAuthError}
+        >
+          <WorkspaceGate
+            organizationId={activeOrganization.id}
+            user={user}
+            route={route}
+          />
+        </WorkspaceProvider>
+      </div>
+    </>
   );
 }
 
@@ -399,9 +424,12 @@ function AppInner() {
   return (
     <ErrorProvider onLogout={handleLogout}>
       <SessionGuard onLogout={handleLogout}>
+        {/* Notifications and toasts are user-scoped (localStorage), so they sit above every organization switch. */}
+        <NotificationProvider>
         <OrganizationProvider user={user} onAuthError={handleLogout}>
           <AuthenticatedRouter user={user} onAuthError={handleLogout} route={route} pendingInvitation={pendingRouteInvitation} onInvitationHandled={() => { savePendingRouteInvitation(null); setPendingRouteInvitation(null); }} onInvitationBound={(userId) => setPendingRouteInvitation((current) => { if (!current || current.userId) return current; const next = { ...current, userId }; savePendingRouteInvitation(next); return next; })} />
         </OrganizationProvider>
+        </NotificationProvider>
       </SessionGuard>
     </ErrorProvider>
   );
@@ -581,7 +609,7 @@ function AuthenticatedRouter({ user, onAuthError, route, pendingInvitation, onIn
       }}
     />;
   }
-  if (activeOrganization?.id !== member.id) return <ShellSkeleton />;
+  if (activeOrganization?.id !== member.id) return <SwitchingShell />;
   return <AppShell user={user} onAuthError={onAuthError} route={route} />;
 }
 

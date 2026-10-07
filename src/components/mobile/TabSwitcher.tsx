@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { Plus, X } from '@phosphor-icons/react';
+import { Collapse } from '@/components/ui/collapse';
 import { Sheet } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -15,6 +17,13 @@ export function TabSwitcher({ open, onOpenChange }: { open: boolean; onOpenChang
   const { tabs, activeTab, setActiveTab, closeTab, openNewTab } = useTabs();
   const { getCategory, getSubcategory } = useCatalog();
   const go = useOverlayHistory(open, () => onOpenChange(false));
+  // Presentation only: the row fades and collapses first, then the unchanged closeTab() runs.
+  const [closing, setClosing] = useState<string[]>([]);
+  const requestClose = (id: string) => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { closeTab(id); return; }
+    setClosing((current) => [...current, id]);
+    window.setTimeout(() => { closeTab(id); setClosing((current) => current.filter((item) => item !== id)); }, 190);
+  };
 
   return (
     <Sheet open={open} onOpenChange={(next) => { if (!next) go(() => {}); }} side="bottom" title={t('tabs.openViews')}
@@ -24,13 +33,17 @@ export function TabSwitcher({ open, onOpenChange }: { open: boolean; onOpenChang
           const { title, Icon: TabIcon } = tabMeta(tab, getCategory, getSubcategory, (key) => t(key as never));
           const active = tab.id === activeTab?.id;
           return (
-            <li key={tab.id} className={cn('flex items-center rounded-lg', active ? 'bg-surface-active ring-1 ring-border' : 'hover:bg-surface-hover')}>
-              <button type="button" aria-current={active ? 'true' : undefined} className="flex min-h-(--touch-min) min-w-0 flex-1 items-center gap-3 px-3 text-left text-sm" onClick={() => go(() => setActiveTab(tab.id))}>
+            <li key={tab.id}>
+              <Collapse open={!closing.includes(tab.id)}>
+              <div className={cn('flex items-center rounded-lg', active ? 'bg-surface-active ring-1 ring-border' : 'hover:bg-surface-hover')}>
+              <button type="button" aria-current={active ? 'true' : undefined} className="np-press-flat flex min-h-(--touch-min) min-w-0 flex-1 items-center gap-3 rounded-lg px-3 text-left text-sm" onClick={() => go(() => setActiveTab(tab.id))}>
                 <Icon icon={TabIcon} size="md" className="text-text-secondary" /><span className="truncate">{title}</span>
               </button>
-              <button type="button" aria-label={t('tabs.close', { title })} className="flex size-(--touch-min) shrink-0 items-center justify-center text-text-muted hover:text-text" onClick={() => closeTab(tab.id)}>
+              <button type="button" aria-label={t('tabs.close', { title })} className="flex size-(--touch-min) shrink-0 items-center justify-center text-text-muted hover:text-text" onClick={() => requestClose(tab.id)}>
                 <Icon icon={X} size="sm" />
               </button>
+              </div>
+              </Collapse>
             </li>
           );
         })}

@@ -172,6 +172,7 @@ const en: Dictionary = {
   'personal.home': 'Home',
   'filters.apply': 'Apply',
   'documents.moreActions': 'More actions',
+  'state.loadError': 'Could not load the data',
   'shell.openMenu': 'Open menu',
   'common.close': 'Close',
   'tabs.switcher': 'Open views ({n})',

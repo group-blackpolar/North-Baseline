@@ -10,6 +10,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { Status } from '@/components/ui/status';
 import { PageHeader } from '@/components/ui/page-header';
 import { EmptyState } from '@/components/ui/empty-state';
+import { NotificationProvider, useNotifications } from '@/context/NotificationContext';
 import { I18nProvider } from '@/lib/i18n';
 import { Card } from '@/components/ui/card';
 import { SkeletonRows } from '@/components/ui/skeleton';
@@ -18,6 +19,7 @@ const theme = new URLSearchParams(location.search).get('theme') ?? 'light';
 document.documentElement.dataset.theme = theme;
 
 function Playground() {
+  const { push } = useNotifications();
   const [sheet, setSheet] = useState<'left' | 'right' | 'bottom' | null>(null);
   const [dialog, setDialog] = useState(false);
   return (
@@ -34,6 +36,8 @@ function Playground() {
       <div className="mt-4 flex flex-wrap gap-2">
         {(['left', 'right', 'bottom'] as const).map((s) => <Button key={s} onClick={() => setSheet(s)}>Sheet {s}</Button>)}
         <Button onClick={() => setDialog(true)}>Dialog</Button>
+        <Button onClick={() => push({ type: 'success', title: 'Operation completed', body: 'The form was saved.' })}>Toast success</Button>
+        <Button onClick={() => push({ type: 'error', title: 'Could not save', body: 'Network error (req-1042)' })}>Toast error</Button>
       </div>
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         <Card className="p-4">Static card</Card>
@@ -51,4 +55,4 @@ function Playground() {
   );
 }
 
-createRoot(document.getElementById('root')!).render(<I18nProvider><TooltipProvider><Playground /></TooltipProvider></I18nProvider>);
+createRoot(document.getElementById('root')!).render(<I18nProvider><NotificationProvider><TooltipProvider><Playground /></TooltipProvider></NotificationProvider></I18nProvider>);

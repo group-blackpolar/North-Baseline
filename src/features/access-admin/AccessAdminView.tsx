@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import { ResponsiveList } from '@/components/ui/responsive-list';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ErrorState } from '@/components/ui/error-state';
+import { DelayedSkeleton, SkeletonAdminCard, SkeletonTable } from '@/components/ui/skeleton';
+import { useShellMode } from '@/lib/responsive';
 import { usePermissions } from '@/context/PermissionContext';
 import { ApiError } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
@@ -54,9 +56,18 @@ function Shell({ title, hint, children }: { title: string; hint: string; childre
   );
 }
 
-function Loading() { return <div aria-busy="true" className="space-y-2"><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-2/3" /></div>; }
+/** Delayed, real-shape placeholder: cards on phone, table rows elsewhere; empty box of similar height during the delay. */
+function Loading() {
+  const phone = useShellMode() === 'phone';
+  return <DelayedSkeleton loading minHeight={200} fallback={phone ? <div className="space-y-2">{[0, 1, 2].map((i) => <SkeletonAdminCard key={i} lines={2} />)}</div> : <SkeletonTable rows={4} columns={4} />} />;
+}
 
-const selectClass = 'h-8 rounded-md border border-border bg-surface px-2 text-xs text-text outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 disabled:opacity-50';
+/** A list that failed to load and has nothing to show: block with Retry. (With data still on screen the Notice above is enough.) */
+function LoadError({ list }: { list: { error: string | null; data: unknown; loading: boolean; reload: () => unknown } }) {
+  return list.error && !list.data && !list.loading ? <ErrorState message={list.error} onRetry={() => void list.reload()} /> : null;
+}
+
+const selectClass = 'h-8 pointer-coarse:h-(--touch-min) rounded-md border border-border bg-surface px-2 text-base md:text-xs text-text outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 disabled:opacity-50';
 const th = 'border-b border-border px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-text-muted';
 const td = 'border-b border-border/60 px-3 py-2 text-xs text-text';
 const memberLabel = (member: Member) => member.name?.trim() || member.email || member.userId;
@@ -103,11 +114,12 @@ function UsersScreen({ organizationId, currentUserId }: { organizationId: string
   return (
     <Shell title={t('access.users.title')} hint={t('access.users.hint')}>
       <DashboardCard title={t('access.users.members')} description={manage ? undefined : t('access.readOnly')} actions={<Button size="sm" variant="ghost" onClick={() => void members.reload()}><ArrowsClockwise className="size-3.5" />{t('access.refresh')}</Button>}>
-        <Notice error={error ?? members.error} ok={ok} />
+        <Notice error={error ?? (members.data ? members.error : null)} ok={ok} />
+        <LoadError list={members} />
         {members.loading && !members.data ? <Loading /> : members.data && members.data.length === 0 ? <EmptyState icon={Users} title={t('access.users.empty')} /> : members.data && (
           <ResponsiveList items={members.data} getKey={(member) => member.id}
-            renderCard={(member) => (
-              <div className="np-card space-y-2 p-3">
+            renderCard={(member, index) => (
+              <div className="np-card np-stagger space-y-2 p-3" style={{ '--i': index } as React.CSSProperties}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0"><p className="truncate text-sm font-medium text-text">{memberLabel(member)}{you(member)}</p><p className="truncate text-xs text-text-secondary">{member.email ?? '—'}</p></div>
                   <span className="text-xs text-text-muted">{member.status ?? '—'}</span>
@@ -183,7 +195,7 @@ function InvitationsScreen({ organizationId }: { organizationId: string }) {
             {groups.data && groups.data.length > 0 && (
               <fieldset className="space-y-1"><legend className="ui-label">{t('access.nav.groups')}</legend>
                 <div className="flex flex-wrap gap-2">{groups.data.map((group) => (
-                  <label key={group.id} className="flex items-center gap-1.5 text-xs text-text-secondary"><input type="checkbox" disabled={!manage} checked={groupIds.includes(group.id)} onChange={(event) => setGroupIds((current) => event.target.checked ? [...current, group.id] : current.filter((id) => id !== group.id))} />{group.name}</label>
+                  <label key={group.id} className="flex items-center gap-1.5 text-xs text-text-secondary pointer-coarse:min-h-(--touch-min)"><input type="checkbox" disabled={!manage} checked={groupIds.includes(group.id)} onChange={(event) => setGroupIds((current) => event.target.checked ? [...current, group.id] : current.filter((id) => id !== group.id))} />{group.name}</label>
                 ))}</div>
               </fieldset>
             )}
@@ -194,11 +206,12 @@ function InvitationsScreen({ organizationId }: { organizationId: string }) {
         </DashboardCard>
 
         <DashboardCard title={t('access.inv.list')} actions={<Button size="sm" variant="ghost" onClick={() => void invitations.reload()}><ArrowsClockwise className="size-3.5" />{t('access.refresh')}</Button>}>
-          {invitations.error && <Notice error={invitations.error} />}
+          {invitations.error && invitations.data && <Notice error={invitations.error} />}
+          <LoadError list={invitations} />
           {invitations.loading && !invitations.data ? <Loading /> : invitations.data && invitations.data.length === 0 ? <EmptyState icon={EnvelopeSimple} title={t('access.inv.empty')} /> : invitations.data && (
             <ResponsiveList items={invitations.data} getKey={(invitation) => invitation.id}
-              renderCard={(invitation) => (
-                <div className="np-card space-y-2 p-3">
+              renderCard={(invitation, index) => (
+                <div className="np-card np-stagger space-y-2 p-3" style={{ '--i': index } as React.CSSProperties}>
                   <div className="flex items-start justify-between gap-2">
                     <p className="min-w-0 truncate text-sm font-medium text-text">{invitation.email ?? t('access.inv.code')}</p>
                     <span className={cn('text-xs', statusClass(invitation.status))}>{invitation.status}</span>
@@ -258,11 +271,12 @@ function GroupsScreen({ organizationId }: { organizationId: string }) {
             <Input value={name} onChange={(event) => setName(event.target.value)} placeholder={t('access.groups.name')} minLength={2} maxLength={100} required disabled={!manage} />
             <Button type="submit" variant="accent" disabled={!manage || busy === 'create'}>{t('access.groups.create')}</Button>
           </form>
-          <Notice error={error ?? groups.error} ok={ok} />
+          <Notice error={error ?? (groups.data ? groups.error : null)} ok={ok} />
+          <LoadError list={groups} />
           {groups.loading && !groups.data ? <Loading /> : groups.data && groups.data.length === 0 ? <EmptyState icon={Users} title={t('access.groups.empty')} /> : (
             <ul className="space-y-1" role="listbox" aria-label={t('access.nav.groups')}>
               {groups.data?.map((item) => (
-                <li key={item.id}><button type="button" role="option" aria-selected={item.id === group?.id} onClick={() => setSelected(item.id)} className={cn('flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-xs transition-colors duration-(--duration-fast)', item.id === group?.id ? 'bg-surface-active text-text' : 'text-text-secondary hover:bg-surface-hover')}>
+                <li key={item.id}><button type="button" role="option" aria-selected={item.id === group?.id} onClick={() => setSelected(item.id)} className={cn('np-press-flat flex w-full items-center justify-between rounded-md pointer-coarse:min-h-(--touch-min) px-2.5 py-2 text-left text-xs transition-colors duration-(--duration-fast)', item.id === group?.id ? 'bg-surface-active text-text' : 'text-text-secondary hover:bg-surface-hover')}>
                   <span className="truncate font-medium">{item.name}</span><span className="text-text-muted">{item.memberUserIds.length}</span></button></li>
               ))}
             </ul>
@@ -278,7 +292,7 @@ function GroupsScreen({ organizationId }: { organizationId: string }) {
                 {group.memberUserIds.map((userId) => (
                   <span key={userId} className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-hover px-2 py-0.5 text-xs">
                     {byId.get(userId) ? memberLabel(byId.get(userId)!) : userId}
-                    <button type="button" aria-label={t('access.groups.removeMember')} disabled={!manage} className="text-text-muted hover:text-error disabled:opacity-40" onClick={() => void mutate(userId, () => removeGroupMember(organizationId, group.id, userId))}>×</button>
+                    <button type="button" aria-label={t('access.groups.removeMember')} disabled={!manage} className="text-text-muted hover:text-error disabled:opacity-40 pointer-coarse:grid pointer-coarse:size-(--touch-min) pointer-coarse:place-items-center" onClick={() => void mutate(userId, () => removeGroupMember(organizationId, group.id, userId))}>×</button>
                   </span>
                 ))}
               </div>
@@ -306,7 +320,7 @@ function PermissionChecklist({ granted, disabled, onToggle }: { granted: Registe
     <div className="grid gap-1 sm:grid-cols-2 xl:grid-cols-3">
       {REGISTERED_PERMISSIONS.map((permission) => {
         const on = granted.includes(permission);
-        return <label key={permission} className="flex items-center gap-2 rounded-md px-2 py-1 text-xs text-text-secondary hover:bg-surface-hover"><input type="checkbox" checked={on} disabled={disabled} onChange={() => onToggle(permission, !on)} /><span className="mono-data">{permission}</span></label>;
+        return <label key={permission} className="flex items-center gap-2 rounded-md px-2 py-1 text-xs text-text-secondary hover:bg-surface-hover pointer-coarse:min-h-(--touch-min)"><input type="checkbox" checked={on} disabled={disabled} onChange={() => onToggle(permission, !on)} /><span className="mono-data">{permission}</span></label>;
       })}
     </div>
   );

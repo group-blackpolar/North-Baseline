@@ -1,3 +1,4 @@
+import { uuid } from '@/lib/utils';
 /** Capa demo: organizaciones/workspaces mock persistidos.
  *  TODO: CoreCrow Organization + Workspace API — sustituir getDemo* por fetch reales. */
 
@@ -127,7 +128,7 @@ export function createDemoOrganization(input: {
   description?: string;
   avatarUrl?: string | null;
 }): { org: DemoOrganization; workspace: DemoWorkspace; token: string } {
-  const id = `org-${crypto.randomUUID().slice(0, 8)}`;
+  const id = `org-${uuid().slice(0, 8)}`;
   const org: DemoOrganization = {
     id,
     name: input.name,

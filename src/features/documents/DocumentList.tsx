@@ -5,12 +5,14 @@ import { ResponsiveList } from '@/components/ui/responsive-list';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ErrorState } from '@/components/ui/error-state';
+import { DelayedSkeleton, SkeletonDocumentCard, SkeletonTable } from '@/components/ui/skeleton';
+import { useShellMode } from '@/lib/responsive';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { fetchPdf, listDocuments, type DocumentStatus, type DocumentSummary, type DocumentType } from './api';
 import { formatMoney } from './money';
-import { ErrorNote, StatusBadge, errorText, formatDate, saveBlob, selectClass } from './shared';
+import { StatusBadge, errorText, formatDate, saveBlob, selectClass } from './shared';
 
 const STATUSES: DocumentStatus[] = ['DRAFT', 'READY', 'SENT', 'COMPLETED', 'CANCELLED'];
 
@@ -34,6 +36,8 @@ export function DocumentList({ organizationId, type, can, refreshKey, onNew, onO
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const phone = useShellMode() === 'phone';
   const [busy, setBusy] = useState<string | null>(null);
   const requestRef = useRef(0);
 
@@ -45,9 +49,9 @@ export function DocumentList({ organizationId, type, can, refreshKey, onNew, onO
       if (request !== requestRef.current) return;
       setRows((current) => (append ? [...current, ...page.items] : page.items));
       setCursor(page.nextCursor);
-      setError(null);
+      setError(null); setLoadFailed(false);
     } catch (reason) {
-      if (request === requestRef.current) setError(errorText(reason));
+      if (request === requestRef.current) { setError(errorText(reason)); setLoadFailed(true); }
     } finally {
       if (request === requestRef.current) { setLoading(false); setLoadingMore(false); }
     }
@@ -90,17 +94,17 @@ export function DocumentList({ organizationId, type, can, refreshKey, onNew, onO
         <div className="ml-auto"><Button variant="accent" onClick={onNew} disabled={!can.create} title={can.create ? undefined : t('documents.noPermission')}><FilePlus className="size-4" />{t('documents.new')}</Button></div>
       </div>
 
-      <ErrorNote message={error} />
+      {error && <ErrorState compact={rows.length > 0 || !loadFailed} message={error} onRetry={loadFailed ? () => void load(null) : undefined} />}
 
       {loading && rows.length === 0 ? (
-        <div aria-busy="true" className="space-y-2"><Skeleton className="h-9 w-full" /><Skeleton className="h-9 w-full" /><Skeleton className="h-9 w-full" /></div>
-      ) : rows.length === 0 ? (
+        <DelayedSkeleton loading minHeight={phone ? 240 : 300} fallback={phone ? <div className="space-y-2">{[0, 1, 2, 3].map((i) => <SkeletonDocumentCard key={i} />)}</div> : <SkeletonTable rows={6} columns={6} />} />
+      ) : rows.length === 0 ? (error ? null : (
         <EmptyState icon={FileText} title={filtered ? t('documents.emptyFiltered') : t('documents.empty')} body={filtered ? undefined : t('documents.emptyHint')} className="mx-auto max-w-md"
           action={!filtered && can.create ? <Button variant="accent" onClick={onNew}><FilePlus className="size-4" />{t('documents.new')}</Button> : undefined} />
-      ) : (
-        <div className="md:overflow-x-auto md:rounded-xl md:border md:border-border md:bg-surface">
-          <ResponsiveList items={rows} getKey={(row) => row.id} renderCard={(row) => (
-            <button type="button" onClick={() => onOpen(row.id)} className="np-card flex w-full items-center gap-3 p-3 text-left active:scale-[0.99]">
+      )) : (
+        <div className={cn('np-fade-in transition-opacity duration-(--duration-fast) md:overflow-x-auto md:rounded-xl md:border md:border-border md:bg-surface', loading && 'opacity-60')} aria-busy={loading || undefined}>
+          <ResponsiveList items={rows} getKey={(row) => row.id} renderCard={(row, index) => (
+            <button type="button" onClick={() => onOpen(row.id)} style={{ '--i': index } as React.CSSProperties} className="np-card np-stagger flex w-full items-center gap-3 p-3 text-left">
               <span className="min-w-0 flex-1">
                 <span className="flex items-center justify-between gap-2"><span className="mono-data text-accent">{row.reference}</span><StatusBadge status={row.status} label={t(`documents.status.${row.status}` as never)} /></span>
                 <span className="mt-1 block truncate text-sm font-medium text-text">{row.clientName}</span>

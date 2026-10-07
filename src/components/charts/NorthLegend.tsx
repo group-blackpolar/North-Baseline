@@ -15,7 +15,7 @@ export function NorthLegend({ items, onToggle, className }: { items: LegendItem[
             {item.total ? <span className="mono-data tabular-nums text-text">{item.total}</span> : null}
           </>
         );
-        const cls = cn('flex items-center gap-1.5', item.hidden && 'opacity-40');
+        const cls = cn('flex items-center gap-1.5', onToggle && 'np-press-flat rounded-md px-1', item.hidden && 'opacity-40');
         return (
           <li key={item.label}>
             {onToggle ? <button type="button" aria-pressed={!item.hidden} onClick={() => onToggle(item.label)} className={cn(cls, 'min-h-6 pointer-coarse:min-h-(--touch-min)')}>{body}</button> : <span className={cls}>{body}</span>}

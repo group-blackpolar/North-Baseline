@@ -1,5 +1,41 @@
 @import "tailwindcss";
 
+/* Self-hosted variable fonts (public/fonts, SIL OFL 1.1 - licences next to the files). Latin subset: covers
+   Spanish (accents, n-tilde, inverted marks) and English; official Google Fonts builds of Manrope v20 / Geist Mono v6. */
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("/fonts/manrope-latin-var.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Geist Mono";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/geist-mono-latin-var.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Metric-matched fallbacks: while the fonts load (font-display: swap) text is set in
+   Arial / Courier New adjusted to the same width and line metrics, so the swap does not reflow the page.
+   Measured in-browser: Manrope ~1.02x Arial width; ascent 1.066 / descent 0.30 em (divided by size-adjust). */
+@font-face {
+  font-family: "Manrope Fallback";
+  src: local("Arial");
+  size-adjust: 102%;
+  ascent-override: 104.5%;
+  descent-override: 29.4%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "Geist Mono Fallback";
+  src: local("Courier New");
+  size-adjust: 100%;
+}
+
 @theme {
   /* ── Paleta NORTH: neutros fríos, sin negro/blanco puros ── */
   --color-background: #F6F7F9;
@@ -25,9 +61,9 @@
   --color-card-highlight: rgb(255 255 255 / 0.6);
 
   /* Tipografía */
-  --font-display: "Manrope", "Inter", system-ui, sans-serif;
-  --font-sans: "Manrope", "Inter", system-ui, sans-serif;
-  --font-mono: "Geist Mono", "SFMono-Regular", Consolas, monospace;
+  --font-display: "Manrope", "Manrope Fallback", system-ui, sans-serif;
+  --font-sans: "Manrope", "Manrope Fallback", system-ui, sans-serif;
+  --font-mono: "Geist Mono", "Geist Mono Fallback", "SFMono-Regular", Consolas, monospace;
 
   /* Radius */
   --radius-sm: 6px;
@@ -275,6 +311,26 @@
 .np-sheet[data-state="closed"] { animation: np-fade-out var(--duration-fast) var(--ease-exit) forwards; }
 .np-tooltip[data-state="delayed-open"], .np-tooltip[data-state="instant-open"] { animation: np-tip-in var(--duration-fast) var(--ease-enter); }
 
+/* Content arrival, stagger, pressed feedback, collapse. All subtle; reduced motion collapses them (see the media rule below). */
+@keyframes np-fade { from { opacity: 0; } }
+@keyframes np-toast-in { from { opacity: 0; transform: translateY(12px); } }
+.np-toast { animation: np-toast-in var(--duration-normal) var(--ease-enter) both; }
+@keyframes np-rise { from { opacity: 0; transform: translateY(6px); } }
+.np-fade-in { animation: np-fade var(--duration-normal) var(--ease-enter) both; }
+/* Stagger: set style={{ '--i': index }} on each item; capped so long lists do not wait. */
+.np-stagger { animation: np-rise var(--duration-normal) var(--ease-enter) both; animation-delay: calc(min(var(--i, 0), 8) * 40ms); }
+
+/* Pressed feedback for anything tappable: background gets stronger, optional slight scale. */
+.np-press { transition: transform var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard); }
+.np-press:active:not(:disabled) { transform: scale(0.98); background-color: var(--color-surface-active); }
+.np-press-flat:active:not(:disabled) { background-color: var(--color-surface-active); }
+a.np-card:active, button.np-card:active, .np-card[role="button"]:active { transform: scale(0.985); background: var(--color-surface-active); border-color: var(--color-border-hover); }
+
+/* Height collapse without measuring: grid rows 0fr <-> 1fr. */
+.np-collapse { display: grid; grid-template-rows: 1fr; opacity: 1; transition: grid-template-rows var(--duration-normal) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard); }
+.np-collapse[data-open="false"] { grid-template-rows: 0fr; opacity: 0; }
+.np-collapse > .np-collapse-inner { min-height: 0; overflow: hidden; }
+
 @media (pointer: coarse) {
   :root { --touch-min: 44px; }
 }
@@ -286,6 +342,7 @@
     scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
     transition-duration: 0.01ms !important;
   }
 }

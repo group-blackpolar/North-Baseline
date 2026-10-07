@@ -9,6 +9,7 @@ import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { SessionUser } from '@/lib/auth';
 import type { SubcategoryModel } from '@/lib/models';
+import { Collapse } from '@/components/ui/collapse';
 import { ProfileMenu } from '@/components/sidebar/ProfileMenu';
 import { useCategoryNavigation } from '@/lib/shellNavigation';
 
@@ -134,8 +135,9 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
                 <span className="truncate">{group.name}</span>
               </button>
 
-              {!groupCollapsed &&
-                group.items.map((sub) => {
+              <Collapse open={!groupCollapsed}>
+                <div className="space-y-0.5">
+                {group.items.map((sub) => {
                   const SubIcon = resolveIcon(sub.icon);
                   const disabled = Boolean(sub.requiredPermission && !can(sub.requiredPermission));
                   const active = activeTab?.route.subcategoryId === sub.id;
@@ -147,7 +149,7 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
                       disabled={disabled}
                       onClick={() => { if (activeCategory) goToCategory(activeCategory, sub); }}
                       className={cn(
-                        'w-full flex items-center gap-2 pl-6 pr-2 py-1.5 rounded-md text-[13px] transition-colors duration-[var(--shell-motion-fast)]',
+                        'np-press-flat w-full flex items-center gap-2 pl-6 pr-2 py-1.5 rounded-md text-[13px] transition-colors duration-[var(--shell-motion-fast)]',
                         disabled
                           ? 'text-text-muted cursor-not-allowed opacity-50'
                           : active
@@ -160,6 +162,8 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
                     </button>
                   );
                 })}
+                </div>
+              </Collapse>
             </div>
           );
         })}

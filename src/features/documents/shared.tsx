@@ -55,5 +55,5 @@ export function saveBlob(blob: Blob, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-export const selectClass = 'h-9 rounded-md border border-border bg-surface px-2 text-sm text-text outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 disabled:opacity-50';
+export const selectClass = 'h-9 pointer-coarse:h-(--touch-min) rounded-md border border-border bg-surface px-2 text-base md:text-sm text-text outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 disabled:opacity-50';
 export const fieldLabel = 'ui-label';

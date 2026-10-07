@@ -2,7 +2,7 @@
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
 const user = {
-  id: 'user-1', email: 'sam@blackpolar.org', name: 'Samuel Blanquicett', role: 'USER', emailVerified: true,
+  id: 'user-1', email: 'sam@blackpolar.org', name: 'Samuel Blanquicett', role: new URLSearchParams(window.location.search).get('role') ?? 'USER', emailVerified: true,
   passwordChangeRequired: false, termsAcceptedAt: '2026-09-16T00:00:00.000Z', termsVersion: '2026-09-16', createdAt: '2026-09-01T00:00:00.000Z',
 };
 const organizations = [
@@ -19,6 +19,9 @@ const navigation = [
     { id: 'sub-overview', name: label('Resumen', 'Overview'), icon: null, slug: 'resumen', panels: [] },
     { id: 'sub-monthly', name: label('Mensual', 'Monthly'), icon: null, slug: 'mensual', panels: [] },
     { id: 'sub-annual', name: label('Anual', 'Annual'), icon: null, slug: 'anual', panels: [] },
+  ] },
+  { id: 'cat-admin', name: label('Administración', 'Administration'), icon: 'shield', color: null, slug: 'admin', subcategories: [
+    { id: 'sub-settings', name: label('Configuración', 'Settings'), icon: null, slug: 'settings', panels: [] },
   ] },
   { id: 'cat-files', name: label('Archivos', 'Files'), icon: 'db', color: null, slug: 'archivos', subcategories: [
     { id: 'sub-all', name: label('Todos', 'All'), icon: null, slug: 'todos', panels: [] },
@@ -50,12 +53,56 @@ const events = [
   { id: 'e1', action: 'DOCUMENT_CREATED', actorId: 'user-1', actorName: 'Samuel Blanquicett', createdAt: new Date(Date.now() - 7200_000).toISOString(), metadata: {} },
 ];
 
+// ---- Administration fixtures (dummy data; development harness only) ----
+const ago = (hours: number) => new Date(Date.now() - hours * 3_600_000).toISOString();
+const people = [
+  ['Samuel Figueroa', 'samuel.figueroa@blackpolar.example', 'SUPERADMIN'], ['María Fernanda Castellanos-Villarreal de la Torre', 'maria.fernanda.castellanos.villarreal@distribuidora-norte-internacional.example', 'ADMIN'],
+  ['Luis Ortega', 'luis@xyz.example', 'USER'], ['Ana Paula Robles', 'ana.robles@hotelcostaazul.example', 'USER'], ['Carlos Medina', 'cmedina@constructoradelta.example', 'DEVELOPER'], ['Elena Ruiz', 'elena@farmaciasunidas.example', 'USER'],
+] as const;
+const platformUsers = people.map(([name, email, role], index) => ({ id: `u-${index}`, email, name, role, status: index === 4 ? 'SUSPENDED' : 'ACTIVE', emailVerified: index !== 3, passwordChangeRequired: false, termsAcceptedAt: ago(500), termsVersion: '2026-09-16', createdAt: ago(900 + index * 40) }));
+const platformOrgs = [['Seminsa', 'seminsa', 'ACTIVE'], ['SHARK', 'shark', 'ACTIVE'], ['Acme Logistics & Distribución Internacional de Carga Pesada S.A.', 'acme', 'SUSPENDED'], ['Hotel Costa Azul', 'costa-azul', 'ARCHIVED']].map(([name, slug, status], index) => ({
+  id: `o-${index}`, name, slug, status, createdAt: ago(2000 + index * 100), updatedAt: ago(30 + index), homePanelId: null, owner: { id: `u-${index}`, name: people[index]![0], email: people[index]![1] }, memberCount: 3 + index * 4, groupCount: index, billingStatus: ['ACTIVE', 'ACTIVE', 'PAST_DUE', 'CLOSED'][index], billingCurrency: 'USD',
+}));
+const tenantMembers = people.map(([name, email], index) => ({ id: `m-${index}`, organizationId: 'org-seminsa', userId: `u-${index}`, role: ['OWNER', 'ADMIN', 'MEMBER', 'VIEWER', 'BILLING_ADMIN', 'MEMBER'][index], createdAt: ago(800), email, name, status: index === 4 ? 'SUSPENDED' : 'ACTIVE' }));
+const tenantInvitations = [
+  { id: 'i-1', kind: 'EMAIL', email: 'nueva.persona.con.un.correo.demasiado.largo@subdominio.empresa-de-prueba.example', role: 'MEMBER', status: 'PENDING', expiresAt: ago(-60), acceptedAt: null, revokedAt: null, createdAt: ago(12), groupIds: [], permissions: [] },
+  { id: 'i-2', kind: 'CODE', email: null, role: 'VIEWER', status: 'EXPIRED', expiresAt: ago(10), acceptedAt: null, revokedAt: null, createdAt: ago(100), groupIds: [], permissions: [] },
+];
+const tenantGroups = [{ id: 'g-1', name: 'Facturación', description: 'Emite y envía formas', memberUserIds: ['u-0', 'u-2'], permissions: ['documents.read', 'documents.create'] }, { id: 'g-2', name: 'Solo lectura', description: null, memberUserIds: [], permissions: ['documents.read'] }];
+const audit = Array.from({ length: 8 }, (_, i) => ({ id: `a-${i}`, actorId: `u-${i % 3}`, organizationId: 'o-0', action: ['organization.member.role_changed', 'document.sent', 'auth.login', 'invitation.created'][i % 4], targetType: 'USER', targetId: `u-${i}`, requestId: `req-${1000 + i}`, metadata: {}, createdAt: ago(i * 5) }));
+const summary = { users: { total: 128, active: 120, suspended: 8, verified: 110, createdLast7Days: 6, createdLast30Days: 21 }, organizations: { total: 14, active: 12, suspended: 2, createdLast30Days: 3 }, memberships: { total: 96 }, sessions: { active: 17 }, storage: { usedBytes: '5368709120', limitBytes: '107374182400', reservedBytes: '1073741824' }, billing: { currency: 'USD', basePriceMinor: 4900, memberPriceMinor: 900, billableOrganizationCount: 12, billableMemberCount: 84, estimatedMonthlyMinor: 134400 }, generatedAt: ago(0) };
+const billing = { currency: 'USD', basePriceMinor: 4900, memberPriceMinor: 900, groupsCostMinor: 0, organizationCount: 14, billableMemberCount: 84, estimatedMonthlyMinor: 134400, byStatusScope: 'ALL_PROFILES', byStatus: [{ status: 'ACTIVE', count: 12 }, { status: 'PAST_DUE', count: 1 }, { status: 'CLOSED', count: 1 }] };
+const contacts = [{ id: 'c-1', name: 'Roberto Alvarado', email: 'roberto@empresa-con-dominio-largo.example', organization: 'Importadora Pacífico', country: 'PA', project: 'Control de contenedores', message: 'Nos gustaría una demostración.', locale: 'es-lat', createdAt: ago(20), consentAt: ago(20) }];
+const adminPage = (items: unknown[]) => json({ items, nextCursor: null });
+const adminMock = (path: string): Response | null => {
+  if (path === '/v1/platform/summary') return json(summary);
+  if (path === '/v1/platform/users') return adminPage(platformUsers);
+  if (/^\/v1\/platform\/users\/[^/]+\/north-capabilities$/.test(path)) return json([]);
+  if (/^\/v1\/platform\/users\/[^/]+$/.test(path)) return json({ ...platformUsers[0], memberships: [] });
+  if (path === '/v1/platform/organizations') return adminPage(platformOrgs);
+  if (/^\/v1\/platform\/organizations\/[^/]+$/.test(path)) return json({ ...platformOrgs[0], invitationCount: 2, groups: [], billingProfile: null });
+  if (path === '/v1/platform/audit') return adminPage(audit);
+  if (path === '/v1/platform/billing/summary') return json(billing);
+  if (path === '/v1/contact') return json(contacts);
+  if (path === '/v1/platform/north/templates') return json([]);
+  if (/\/members$/.test(path)) return json(tenantMembers);
+  if (/\/invitations$/.test(path)) return json(tenantInvitations);
+  if (/\/groups$/.test(path)) return json(tenantGroups);
+  if (/\/permission-grants$/.test(path)) return json([]);
+  return null;
+};
+
+const LATENCY = Number(new URLSearchParams(window.location.search).get('latency') ?? 120);
 const original = window.fetch.bind(window);
 window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url, window.location.origin);
   const path = url.pathname;
   if (!path.startsWith('/v1/')) return original(input, init);
-  await new Promise((resolve) => setTimeout(resolve, 120));
+  // ?latency=ms simulates a slow API (default 120) to inspect delayed skeletons and keep-previous-data.
+  await new Promise((resolve) => setTimeout(resolve, LATENCY));
+  if (path === '/v1/organizations' && init?.method === 'POST') return json({ id: 'org-new', name: 'Nueva org', slug: 'nueva-org' }, 201);
+  const admin = adminMock(path);
+  if (admin) return admin;
   if (path === '/v1/auth/get-session') return json({ user });
   if (path === '/v1/identity/config') return json({ termsVersion: '2026-09-16', passwordMinLength: 12, passwordMaxLength: 128, googleAuthEnabled: false, captchaRequired: false });
   if (path === '/v1/me') return json(user);

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { CaretDown, House, Plus } from '@phosphor-icons/react';
+import { Collapse } from '@/components/ui/collapse';
 import { Sheet } from '@/components/ui/sheet';
 import { Icon } from '@/components/ui/icon';
 import { OrganizationModal } from '@/components/organization/OrganizationModal';
@@ -16,7 +17,7 @@ import { useCategoryNavigation, useOrganizationNavigation } from '@/lib/shellNav
 import type { SessionUser } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 
-const row = 'flex min-h-(--touch-min) w-full items-center gap-3 rounded-lg px-3 text-left text-sm transition-colors duration-(--duration-fast)';
+const row = 'np-press flex min-h-(--touch-min) w-full items-center gap-3 rounded-lg px-3 text-left text-sm';
 const rowState = (active: boolean) => active ? 'bg-surface-active font-medium text-text' : 'text-text-secondary hover:bg-surface-hover hover:text-text';
 
 /** Phone / portrait-tablet navigation: organizations, categories with nested subcategories, profile. Same hooks as the desktop rails. */
@@ -81,7 +82,8 @@ export function NavigationDrawer({ open, onOpenChange, user }: { open: boolean; 
                   <span className="flex-1 truncate">{labels[category.id] ?? category.name}</span>
                   {nested && <Icon icon={CaretDown} size="xs" className={cn('transition-transform duration-(--duration-fast)', open && 'rotate-180')} />}
                 </button>
-                {open && (
+                {nested && (
+                  <Collapse open={open}>
                   <div className="ml-5 space-y-0.5 border-l border-border pl-2">
                     {category.subcategories.map((sub) => {
                       const SubIcon = resolveIcon(sub.icon);
@@ -94,6 +96,7 @@ export function NavigationDrawer({ open, onOpenChange, user }: { open: boolean; 
                       );
                     })}
                   </div>
+                  </Collapse>
                 )}
               </div>
             );

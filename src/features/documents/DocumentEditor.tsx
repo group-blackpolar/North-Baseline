@@ -231,7 +231,7 @@ export function DocumentEditor({ organizationId, type, existing, onSaved, onCanc
 
       <ErrorNote message={error} />
       {submitted && !valid && !error && <p role="alert" className="text-xs text-error">{t('documents.invalid')}</p>}
-      <div className="sticky bottom-0 z-(--z-sticky) -mx-1 flex justify-end gap-2 border-t border-border bg-background/90 px-1 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur max-md:[&>button]:flex-1">
+      <div data-bottom-bar className="sticky bottom-0 z-(--z-sticky) -mx-1 flex justify-end gap-2 border-t border-border bg-background/90 px-1 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur max-md:[&>button]:flex-1">
         <Button variant="secondary" onClick={() => void save(false)} disabled={saving !== null}><FloppyDisk className="size-4" />{saving === 'draft' ? t('documents.saving') : t('documents.saveDraft')}</Button>
         <Button variant="accent" onClick={() => void save(true)} disabled={saving !== null}>{saving === 'final' ? t('documents.saving') : t('documents.finalize')}</Button>
       </div>

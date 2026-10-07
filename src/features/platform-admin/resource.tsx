@@ -116,7 +116,8 @@ export type CursorListState<T> = {
  *
  * The backend owns paging (`limit` + `nextCursor`); the client only appends the
  * next page and never re-fetches the whole collection to paginate locally. A
- * filter change resets the list. Failures drop the loaded rows. */
+ * filter change reloads while keeping the previous rows visible until the new
+ * page replaces them. Failures drop the loaded rows (fail closed). */
 export function useCursorList<T>(
   fetcher: (cursor?: string) => Promise<{ items: T[]; nextCursor: string | null }>,
   deps: DependencyList
@@ -135,7 +136,8 @@ export function useCursorList<T>(
   useEffect(() => {
     let alive = true;
     cursorRef.current = null;
-    setItems([]);
+    // Keep the rows on screen while a filter change reloads: they are replaced when the new page arrives
+    // (and dropped on failure, below). The table shows a subtle busy state meanwhile.
     setLoading(true);
     setError(null);
     fetcherRef

@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ResponsiveList } from '@/components/ui/responsive-list';
 import { Sheet } from '@/components/ui/sheet';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ErrorState } from '@/components/ui/error-state';
+import { DelayedSkeleton, Skeleton, SkeletonDocumentDetail } from '@/components/ui/skeleton';
 import { useShellMode } from '@/lib/responsive';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -118,8 +119,9 @@ export function DocumentDetail({ organizationId, documentId, initial, can, chann
   };
 
   if (!document) {
-    return error ? <div className="space-y-3"><Button variant="ghost" onClick={onBack}><ArrowLeft className="size-4" />{t('documents.back')}</Button><ErrorNote message={error} /></div>
-      : <div aria-busy="true" className="space-y-3"><Skeleton className="h-8 w-56" /><Skeleton className="h-40 w-full rounded-xl" /></div>;
+    return error
+      ? <div className="space-y-3"><Button variant="ghost" onClick={onBack}><ArrowLeft className="size-4" />{t('documents.back')}</Button><ErrorState message={error} onRetry={() => void reload()} /></div>
+      : <DelayedSkeleton loading minHeight={320} fallback={<SkeletonDocumentDetail />} />;
   }
 
   const eventLabel = (action: string) => {

@@ -170,6 +170,7 @@ const es = {
   'personal.home': 'Inicio',
   'filters.apply': 'Aplicar',
   'documents.moreActions': 'Más acciones',
+  'state.loadError': 'No se pudieron cargar los datos',
   'shell.openMenu': 'Abrir menú',
   'common.close': 'Cerrar',
   'tabs.switcher': 'Vistas abiertas ({n})',

@@ -2,6 +2,7 @@
 import { Component, createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import { classifyError, type AppError, type AppErrorCode } from '@/lib/appErrors';
 import { ErrorOverlay } from '@/components/errors/ErrorOverlay';
+import { uuid } from '@/lib/utils';
 
 interface ErrorContextValue {
   raiseError: (code: AppErrorCode, detail?: string) => void;
@@ -36,7 +37,7 @@ export function ErrorProvider({ children, onLogout }: { children: ReactNode; onL
   const [resetToken, setResetToken] = useState(0);
 
   const raiseError = useCallback((code: AppErrorCode, detail?: string) => {
-    setActive({ id: crypto.randomUUID(), code, detail });
+    setActive({ id: uuid(), code, detail });
   }, []);
 
   const classifyAndRaise = useCallback((error: unknown) => {
@@ -44,7 +45,7 @@ export function ErrorProvider({ children, onLogout }: { children: ReactNode; onL
   }, [raiseError]);
 
   const handleCatch = useCallback((code: AppErrorCode, detail?: string) => {
-    setActive({ id: crypto.randomUUID(), code: code === 'UNEXPECTED' ? 'UNEXPECTED' : code, detail });
+    setActive({ id: uuid(), code: code === 'UNEXPECTED' ? 'UNEXPECTED' : code, detail });
   }, []);
 
   const retry = useCallback(() => {
