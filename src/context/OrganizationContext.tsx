@@ -2,6 +2,7 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, useEffect, type ReactNode } from 'react';
 import { getOrganizations } from '@/lib/organizations';
 import { hasEstablishedSession, markSessionEstablished } from '@/lib/sessionState';
+import { useInspection } from '@/lib/inspection';
 import { getDemoOrganizations, PERSONAL_ORG_ID, type DemoOrganization } from '@/lib/demo/store';
 
 type ApiOrganization = Awaited<ReturnType<typeof getOrganizations>>[number];
@@ -35,7 +36,15 @@ export function OrganizationProvider({
   onAuthError?: () => void;
   children: ReactNode;
 }) {
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [baseOrganizations, setOrganizations] = useState<Organization[]>([]);
+  const inspection = useInspection();
+  // A platform operator inspecting an organization sees it in the rail without any membership being created.
+  const organizations = useMemo<Organization[]>(
+    () => inspection && !baseOrganizations.some((org) => org.id === inspection.id)
+      ? [...baseOrganizations, { id: inspection.id, name: inspection.name, slug: inspection.slug, iconData: inspection.iconData, avatarUrl: inspection.iconData, status: inspection.status }]
+      : baseOrganizations,
+    [baseOrganizations, inspection],
+  );
   const [activeOrganization, setActiveOrganization] = useState<Organization | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -1,4 +1,5 @@
 import { isTauri } from './tauri'
+import { normalizeInvitationCredential } from '@/lib/invitationKey'
 
 const API_URL = (import.meta.env.DEV && !isTauri())
   ? ''
@@ -133,7 +134,7 @@ export function savePendingOnboarding(data: PendingOnboarding) {
     email: data.email.trim().toLowerCase(),
     termsVersion: data.termsVersion,
     ...(data.invitationCode
-      ? { invitationCode: data.invitationCode.trim().toLowerCase() }
+      ? { invitationCode: normalizeInvitationCredential(data.invitationCode) }
       : {}),
   }
   if (isTauri()) memoryOnboarding = normalized
@@ -436,7 +437,7 @@ export async function completePendingOnboarding(user: SessionUser): Promise<Onbo
 
 export async function loginWithAdminSecret(email: string, secret: string): Promise<SessionUser> {
   if (isTauri()) {
-    throw new Error('Admin secret sign-in requires a browser session')
+    throw new Error('AUID sign-in requires a browser session')
   }
 
   const response = await fetch(`${API_URL}/v1/admin/sign-in`, {

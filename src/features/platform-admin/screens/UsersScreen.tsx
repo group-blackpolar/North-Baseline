@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Icon } from '@/components/ui/icon';
 import { useNotifications } from '@/context/NotificationContext';
-import { getPlatformUser, listPlatformUsers, verifyPlatformUserEmail, type PlatformUser, type PlatformUserDetail } from '@/lib/platformAdmin';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { AuidPanel } from '../components/AuidPanel';
+import { deletePlatformUser, getPlatformUser, listPlatformUsers, setPlatformUserStatus, verifyPlatformUserEmail, type PlatformUser, type PlatformUserDetail } from '@/lib/platformAdmin';
 import { useI18n } from '@/lib/i18n';
 import { CreateAccountDialog } from '../components/CreateAccountDialog';
 import { ResourceFailure, useCursorList, useResource } from '../resource';
@@ -25,6 +27,12 @@ export function UsersScreen({ canManage = false }: { canManage?: boolean }) {
   const [draft, setDraft] = useState('');
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [statusTarget, setStatusTarget] = useState<PlatformUserDetail | null>(null);
+  const [reason, setReason] = useState('');
+  const [changing, setChanging] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<PlatformUserDetail | null>(null);
+  const [typedEmail, setTypedEmail] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   const users = useCursorList<PlatformUser>(
     (cursor) => listPlatformUsers({ q: query || undefined, cursor: cursor ?? undefined }),
@@ -47,6 +55,33 @@ export function UsersScreen({ canManage = false }: { canManage?: boolean }) {
     } finally {
       setVerifying(false);
     }
+  };
+
+  const changeStatus = async () => {
+    if (!statusTarget) return;
+    const suspending = statusTarget.status === 'ACTIVE';
+    setChanging(true);
+    try {
+      await setPlatformUserStatus(statusTarget.id, suspending ? 'SUSPENDED' : 'ACTIVE', reason.trim() || undefined);
+      push({ type: 'success', title: t(suspending ? 'adm.pa.banned' : 'adm.pa.unbanned'), body: statusTarget.email });
+      setStatusTarget(null); setReason('');
+      detail.reload(); users.reload();
+    } catch (failure) {
+      push({ type: 'error', title: failure instanceof Error ? failure.message : 'Request failed' });
+    } finally { setChanging(false); }
+  };
+
+  const remove = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deletePlatformUser(deleteTarget.id);
+      push({ type: 'success', title: t('adm.pa.deleted'), body: deleteTarget.email });
+      setDeleteTarget(null); setTypedEmail(''); setSelectedId(null);
+      users.reload();
+    } catch (failure) {
+      push({ type: 'error', title: failure instanceof Error ? failure.message : 'Request failed' });
+    } finally { setDeleting(false); }
   };
 
   const columns: PlatformColumn<PlatformUser>[] = [
@@ -72,6 +107,7 @@ export function UsersScreen({ canManage = false }: { canManage?: boolean }) {
         <span className={row.status === 'ACTIVE' ? 'text-success' : 'text-error'}>{row.status}</span>
       ),
     },
+    { key: 'orgs', header: t('adm.col.orgs'), render: (row) => (row.organizationCount ?? 0).toLocaleString(locale) },
     { key: 'verified', header: t('pa.col.verified'), render: (row) => (row.emailVerified ? t('pa.yes') : t('pa.no')) },
     { key: 'created', header: t('pa.col.created'), render: (row) => formatDate(row.createdAt, locale) },
     {
@@ -135,6 +171,14 @@ export function UsersScreen({ canManage = false }: { canManage?: boolean }) {
                 <Icon icon={SealCheck} size="sm" />{t('pa.users.verify')}
               </Button>
             )}
+            {canManage && detail.data.role !== 'SUPERADMIN' && (
+              <Button size="sm" variant={detail.data.status === 'ACTIVE' ? 'destructive' : 'outline'} onClick={() => { setReason(''); setStatusTarget(detail.data); }}>
+                {detail.data.status === 'ACTIVE' ? t('adm.pa.ban') : t('adm.pa.unban')}
+              </Button>
+            )}
+            {canManage && detail.data.role !== 'SUPERADMIN' && (
+              <Button size="sm" variant="outline" onClick={() => { setTypedEmail(''); setDeleteTarget(detail.data); }}>{t('adm.pa.delete')}</Button>
+            )}
             <button
               type="button"
               onClick={() => setSelectedId(null)}
@@ -155,6 +199,7 @@ export function UsersScreen({ canManage = false }: { canManage?: boolean }) {
               {t('pa.col.created')}: <span className="text-text">{formatDate(detail.data.createdAt, locale)}</span>
             </p>
           </div>
+          {(detail.data.role === 'ADMIN' || detail.data.role === 'SUPERADMIN') && <AuidPanel userId={detail.data.id} canManage={canManage} />}
           <div>
             <p className="ui-label pb-2">{t('pa.users.memberships')}</p>
             {detail.data.memberships.length === 0 ? (
@@ -179,6 +224,18 @@ export function UsersScreen({ canManage = false }: { canManage?: boolean }) {
       )}
       {detail.status === 'failed' && detail.error && <ResourceFailure error={detail.error} onRetry={detail.reload} />}
 
+      <ConfirmDialog open={Boolean(statusTarget)} destructive={statusTarget?.status === 'ACTIVE'} busy={changing}
+        title={statusTarget?.status === 'ACTIVE' ? t('adm.pa.banTitle') : t('adm.pa.unbanTitle')}
+        description={statusTarget?.status === 'ACTIVE' ? `${statusTarget.email} — ${t('adm.pa.banBody')}` : statusTarget?.email}
+        confirmLabel={statusTarget?.status === 'ACTIVE' ? t('adm.pa.ban') : t('adm.pa.unban')}
+        onCancel={() => setStatusTarget(null)} onConfirm={() => void changeStatus()}>
+        {statusTarget?.status === 'ACTIVE' && <label className="block space-y-1"><span className="ui-label">{t('adm.pa.banReason')}</span><input value={reason} maxLength={500} onChange={(event) => setReason(event.target.value)} className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm outline-none focus-visible:border-accent" /></label>}
+      </ConfirmDialog>
+      <ConfirmDialog open={Boolean(deleteTarget)} destructive busy={deleting} disabled={typedEmail.trim().toLowerCase() !== deleteTarget?.email.toLowerCase()}
+        title={t('adm.pa.deleteTitle')} description={t('adm.pa.deleteBody')} confirmLabel={t('adm.pa.delete')}
+        onCancel={() => setDeleteTarget(null)} onConfirm={() => void remove()}>
+        <label className="block space-y-1"><span className="ui-label">{t('adm.pa.deleteType')}</span><input autoComplete="off" value={typedEmail} placeholder={deleteTarget?.email} onChange={(event) => setTypedEmail(event.target.value)} className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm outline-none focus-visible:border-accent" /></label>
+      </ConfirmDialog>
       <CreateAccountDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={() => users.reload()} />
 
       <PlatformTable

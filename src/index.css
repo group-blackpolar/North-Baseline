@@ -107,12 +107,7 @@
   /* Minimum interactive target; 44px on coarse pointers (see media query below) */
   --touch-min: 32px;
 
-  /* Application density — matches the requested 70% desktop workspace scale. */
-  --north-ui-density: 0.7;
-  --north-ui-density-compensated-width: 142.857143vw;
-  --north-ui-density-compensated-height: 142.857143vh;
-
-  /* Shell dimensions are expressed before the application density is applied. */
+  /* Shell dimensions are real CSS pixels at 100% browser zoom. */
   --shell-org-rail: 56px;
   --shell-category-rail: 52px;
   --shell-category-rail-open: 188px;
@@ -206,29 +201,8 @@
     box-shadow: var(--shadow-pop);
   }
 
-  /*
-   * Keep the authenticated application physically viewport-sized while rendering
-   * its desktop UI at 70%. `zoom` preserves normal layout, pointer hit-testing,
-   * scrolling and resize handles better than transform scaling. The compensated
-   * logical dimensions prevent the reduced shell from leaving unused space.
-   */
-  .north-app-shell {
-    width: var(--north-ui-density-compensated-width);
-    height: var(--north-ui-density-compensated-height);
-    min-width: var(--north-ui-density-compensated-width);
-    min-height: var(--north-ui-density-compensated-height);
-    overflow: hidden;
-    zoom: var(--north-ui-density);
-  }
-
-  /* Platform Administration owns its own viewport-sized root. */
-  .north-app-shell-host > .h-screen {
-    height: var(--north-ui-density-compensated-height);
-  }
-
-  .north-app-shell-host > .w-screen {
-    width: var(--north-ui-density-compensated-width);
-  }
+  /* The shell fills the viewport; no zoom/transform scaling (browser zoom stays the user's). */
+  .north-app-shell { width: 100vw; height: 100dvh; min-width: 0; overflow: hidden; }
 
   /* Short enter for things that appear (tabs, published panels). */
   .north-enter { animation: north-enter var(--shell-motion-fast) ease-out both; }
@@ -280,15 +254,6 @@
   :root {
     --shell-category-rail-open: 176px;
     --shell-context-sidebar: 200px;
-  }
-}
-
-/* Preserve readable touch targets on compact/tablet viewports. */
-@media (max-width: 1023px) {
-  :root {
-    --north-ui-density: 1;
-    --north-ui-density-compensated-width: 100vw;
-    --north-ui-density-compensated-height: 100dvh;
   }
 }
 

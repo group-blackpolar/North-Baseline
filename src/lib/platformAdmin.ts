@@ -15,6 +15,7 @@ export type BillingStatus = 'ACTIVE' | 'PAST_DUE' | 'SUSPENDED' | 'CLOSED'
 export type Page<T> = { items: T[]; nextCursor: string | null }
 
 export type PlatformUser = {
+  organizationCount?: number
   id: string
   email: string
   name: string | null
@@ -37,6 +38,7 @@ export type PlatformMembership = {
 export type PlatformUserDetail = PlatformUser & { memberships: PlatformMembership[] }
 
 export type PlatformOrganization = {
+  iconData?: string | null
   id: string
   name: string
   slug: string
@@ -221,3 +223,38 @@ export function listUserNorthCapabilities(userId: string) {
   )
 }
 
+
+/** Superadmin only. Suspended accounts cannot sign in; data is kept for audit. */
+export function setPlatformUserStatus(id: string, status: AccountStatus, reason?: string) {
+  return apiRequest<PlatformUser>(`/v1/platform/users/${encodeURIComponent(id)}/status`, { method: 'PATCH', body: JSON.stringify({ status, ...(reason ? { reason } : {}) }) })
+}
+
+export type InspectionTarget = { id: string; name: string; slug: string; status: OrganizationStatus; iconData: string | null; inspectionSessionId: string }
+
+/** Audited start/end of a read-only organization inspection. No membership is created. */
+export function startOrganizationInspection(id: string) {
+  return apiRequest<InspectionTarget>(`/v1/platform/organizations/${encodeURIComponent(id)}/inspection`, { method: 'POST' })
+}
+export function endOrganizationInspection(id: string, inspectionSessionId: string) {
+  return apiRequest<InspectionTarget>(`/v1/platform/organizations/${encodeURIComponent(id)}/inspection`, { method: 'DELETE', headers: { 'X-Platform-Inspection-Session': inspectionSessionId } })
+}
+
+/** Whether an administrator has an AUID. The credential itself is never returned by this call. */
+export function getAuidState(id: string) {
+  return apiRequest<{ configured: boolean; revealable: boolean; encryptionAvailable: boolean; role: GlobalRole }>(`/v1/platform/users/${encodeURIComponent(id)}/auid`)
+}
+
+/** Superadmin re-enters their own password; the new AUID is returned once and must not be stored. */
+export function regenerateAuid(id: string, password: string) {
+  return apiRequest<{ auid: string }>(`/v1/platform/users/${encodeURIComponent(id)}/auid/regenerate`, { method: 'POST', cache: 'no-store', body: JSON.stringify({ password }) })
+}
+
+/** Superadmin re-enters their own password. POST so the secret response is never cached by GET semantics; held in memory only. */
+export function revealAuid(id: string, password: string) {
+  return apiRequest<{ auid: string }>(`/v1/platform/users/${encodeURIComponent(id)}/auid/reveal`, { method: 'POST', cache: 'no-store', body: JSON.stringify({ password }) })
+}
+
+/** Superadmin only. CORECROW refuses SUPERADMIN targets, the last SUPERADMIN and users who still have memberships. */
+export function deletePlatformUser(id: string) {
+  return apiRequest<null>(`/v1/users/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
