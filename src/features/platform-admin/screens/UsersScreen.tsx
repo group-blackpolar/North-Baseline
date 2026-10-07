@@ -1,18 +1,26 @@
 import { useState } from 'react';
 import { MagnifyingGlass, X } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/badge';
-import { getPlatformUser, listPlatformUsers, type PlatformUser, type PlatformUserDetail } from '@/lib/platformAdmin';
+import { Plus, SealCheck } from '@phosphor-icons/react';
+import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
+import { useNotifications } from '@/context/NotificationContext';
+import { getPlatformUser, listPlatformUsers, verifyPlatformUserEmail, type PlatformUser, type PlatformUserDetail } from '@/lib/platformAdmin';
 import { useI18n } from '@/lib/i18n';
+import { CreateAccountDialog } from '../components/CreateAccountDialog';
 import { ResourceFailure, useCursorList, useResource } from '../resource';
 import { PlatformTable, type PlatformColumn } from '../components/PlatformTable';
 import { formatDate } from '../format';
 
 /** Global identity table with server-side search and cursor pagination (§13).
  *
- * Read-only: suspension and pre-provisioning are 11P-C actions and are not
- * reachable from this screen. */
-export function UsersScreen() {
+ * Superadmins (`canManage`) can create verified accounts with an assigned
+ * password and verify pending ones; CORECROW authorizes both calls. */
+export function UsersScreen({ canManage = false }: { canManage?: boolean }) {
   const { t, locale } = useI18n();
+  const { push } = useNotifications();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const [draft, setDraft] = useState('');
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -25,6 +33,20 @@ export function UsersScreen() {
     async () => (selectedId ? getPlatformUser(selectedId) : null),
     [selectedId]
   );
+
+  const verify = async (id: string) => {
+    setVerifying(true);
+    try {
+      const user = await verifyPlatformUserEmail(id);
+      push({ type: 'success', title: t('pa.users.verified'), body: user.email });
+      detail.reload();
+      users.reload();
+    } catch (reason) {
+      push({ type: 'error', title: t('pa.users.verifyFailed'), body: reason instanceof Error ? reason.message : undefined });
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   const columns: PlatformColumn<PlatformUser>[] = [
     {
@@ -80,6 +102,11 @@ export function UsersScreen() {
         <button type="submit" className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover pointer-coarse:min-h-(--touch-min)">
           {t('pa.users.search')}
         </button>
+        {canManage && (
+          <Button type="button" variant="accent" size="sm" className="md:ml-auto" onClick={() => setCreateOpen(true)}>
+            <Icon icon={Plus} size="sm" />{t('pa.create.open')}
+          </Button>
+        )}
         {query && (
           <button
             type="button"
@@ -103,6 +130,12 @@ export function UsersScreen() {
               <p className="text-sm font-display font-semibold text-text">{detail.data.name ?? detail.data.email}</p>
               <p className="text-xs text-text-secondary">{detail.data.email}</p>
             </div>
+            <div className="flex shrink-0 items-center gap-2">
+            {canManage && !detail.data.emailVerified && (
+              <Button size="sm" variant="outline" loading={verifying} onClick={() => void verify(detail.data!.id)}>
+                <Icon icon={SealCheck} size="sm" />{t('pa.users.verify')}
+              </Button>
+            )}
             <button
               type="button"
               onClick={() => setSelectedId(null)}
@@ -110,6 +143,7 @@ export function UsersScreen() {
             >
               {t('pa.close')}
             </button>
+            </div>
           </header>
           <div className="grid gap-2 text-xs sm:grid-cols-3">
             <p className="text-text-secondary">
@@ -145,6 +179,8 @@ export function UsersScreen() {
         </section>
       )}
       {detail.status === 'failed' && detail.error && <ResourceFailure error={detail.error} onRetry={detail.reload} />}
+
+      <CreateAccountDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={() => users.reload()} />
 
       <PlatformTable
         label={t('pa.users.title')}

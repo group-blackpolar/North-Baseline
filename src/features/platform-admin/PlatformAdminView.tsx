@@ -61,10 +61,10 @@ function sectionOf(path: string): PlatformSection | null {
   return SECTIONS.some((entry) => entry.id === candidate) ? (candidate as PlatformSection) : null;
 }
 
-function screenFor(section: PlatformSection): ReactNode {
+function screenFor(section: PlatformSection, canManage: boolean): ReactNode {
   switch (section) {
     case 'users':
-      return <UsersScreen />;
+      return <UsersScreen canManage={canManage} />;
     case 'organizations':
       return <OrganizationsScreen />;
     case 'billing':
@@ -204,7 +204,7 @@ export function PlatformAdminView({ user, route }: { user: SessionUser; route: N
             <p className="text-sm text-text-secondary">{t('pa.description')}</p>
           </header>
           {allowed && section ? (
-            screenFor(section)
+            screenFor(section, isSuperAdmin)
           ) : (
             <div className="max-w-md">
               <EmptyState

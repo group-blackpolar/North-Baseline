@@ -74,11 +74,25 @@ const summary = { users: { total: 128, active: 120, suspended: 8, verified: 110,
 const billing = { currency: 'USD', basePriceMinor: 4900, memberPriceMinor: 900, groupsCostMinor: 0, organizationCount: 14, billableMemberCount: 84, estimatedMonthlyMinor: 134400, byStatusScope: 'ALL_PROFILES', byStatus: [{ status: 'ACTIVE', count: 12 }, { status: 'PAST_DUE', count: 1 }, { status: 'CLOSED', count: 1 }] };
 const contacts = [{ id: 'c-1', name: 'Roberto Alvarado', email: 'roberto@empresa-con-dominio-largo.example', organization: 'Importadora Pacífico', country: 'PA', project: 'Control de contenedores', message: 'Nos gustaría una demostración.', locale: 'es-lat', createdAt: ago(20), consentAt: ago(20) }];
 const adminPage = (items: unknown[]) => json({ items, nextCursor: null });
-const adminMock = (path: string): Response | null => {
+const adminMock = (path: string, method = 'GET', body = ''): Response | null => {
+  if (method === 'POST' && path === '/v1/platform/users') {
+    const input = JSON.parse(body || '{}') as { name: string; email: string; role: string; passwordChangeRequired: boolean };
+    if (platformUsers.some((u) => u.email === input.email.toLowerCase())) return json({ error: { code: 'IDENTITY_EXISTS', message: 'An identity with this email already exists' } }, 409);
+    const created = { id: `u-new-${platformUsers.length}`, email: input.email.toLowerCase(), name: input.name, role: input.role, status: 'ACTIVE', emailVerified: true, passwordChangeRequired: input.passwordChangeRequired, termsAcceptedAt: null, termsVersion: null, createdAt: ago(0) };
+    platformUsers.unshift(created as (typeof platformUsers)[number]);
+    return json(created, 201);
+  }
+  const verifyMatch = method === 'POST' && path.match(/^\/v1\/platform\/users\/([^/]+)\/verify-email$/);
+  if (verifyMatch) {
+    const target = platformUsers.find((u) => u.id === verifyMatch[1]);
+    if (!target) return json({ error: { code: 'NOT_FOUND', message: 'User not found' } }, 404);
+    target.emailVerified = true;
+    return json(target);
+  }
   if (path === '/v1/platform/summary') return json(summary);
   if (path === '/v1/platform/users') return adminPage(platformUsers);
   if (/^\/v1\/platform\/users\/[^/]+\/north-capabilities$/.test(path)) return json([]);
-  if (/^\/v1\/platform\/users\/[^/]+$/.test(path)) return json({ ...platformUsers[0], memberships: [] });
+  if (/^\/v1\/platform\/users\/[^/]+$/.test(path)) return json({ ...(platformUsers.find((u) => u.id === path.split('/').pop()) ?? platformUsers[0]), memberships: [] });
   if (path === '/v1/platform/organizations') return adminPage(platformOrgs);
   if (/^\/v1\/platform\/organizations\/[^/]+$/.test(path)) return json({ ...platformOrgs[0], invitationCount: 2, groups: [], billingProfile: null });
   if (path === '/v1/platform/audit') return adminPage(audit);
@@ -101,7 +115,7 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   // ?latency=ms simulates a slow API (default 120) to inspect delayed skeletons and keep-previous-data.
   await new Promise((resolve) => setTimeout(resolve, LATENCY));
   if (path === '/v1/organizations' && init?.method === 'POST') return json({ id: 'org-new', name: 'Nueva org', slug: 'nueva-org' }, 201);
-  const admin = adminMock(path);
+  const admin = adminMock(path, init?.method, typeof init?.body === 'string' ? init.body : '');
   if (admin) return admin;
   if (path === '/v1/auth/get-session') return json({ user });
   if (path === '/v1/identity/config') return json({ termsVersion: '2026-09-16', passwordMinLength: 12, passwordMaxLength: 128, googleAuthEnabled: false, captchaRequired: false });
