@@ -14,11 +14,17 @@ const ROLES = ['ADMIN', 'DEVELOPER', 'USER'] as const;
 const MIN = 12;
 const MAX = 128;
 
-/** Random password from a readable alphabet; always satisfies the 12+ character rule. */
+/** `BP-Admin-` + 40 random letters/digits (unbiased, from crypto.getRandomValues): 49 characters, well inside 12-128. */
+const PASSWORD_PREFIX = 'BP-Admin-';
 function generatePassword() {
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-  const bytes = crypto.getRandomValues(new Uint8Array(18));
-  return [...bytes].map((byte) => alphabet[byte % alphabet.length]).join('');
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let out = '';
+  while (out.length < 40) {
+    for (const byte of crypto.getRandomValues(new Uint8Array(64))) {
+      if (byte < 248 && out.length < 40) out += alphabet[byte % alphabet.length]; // 248 = 62 * 4: no modulo bias
+    }
+  }
+  return PASSWORD_PREFIX + out;
 }
 
 /**

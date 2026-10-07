@@ -3,6 +3,7 @@ import { MagnifyingGlass, X } from '@phosphor-icons/react';
 import { Badge } from '@/components/ui/badge';
 import { Plus, SealCheck } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { Icon } from '@/components/ui/icon';
 import { useNotifications } from '@/context/NotificationContext';
 import { getPlatformUser, listPlatformUsers, verifyPlatformUserEmail, type PlatformUser, type PlatformUserDetail } from '@/lib/platformAdmin';
@@ -103,9 +104,7 @@ export function UsersScreen({ canManage = false }: { canManage?: boolean }) {
           {t('pa.users.search')}
         </button>
         {canManage && (
-          <Button type="button" variant="accent" size="sm" className="md:ml-auto" onClick={() => setCreateOpen(true)}>
-            <Icon icon={Plus} size="sm" />{t('pa.create.open')}
-          </Button>
+          <IconButton label={t('pa.create.open')} variant="accent" icon={<Plus size={18} weight="bold" />} className="md:ml-auto" onClick={() => setCreateOpen(true)} />
         )}
         {query && (
           <button
