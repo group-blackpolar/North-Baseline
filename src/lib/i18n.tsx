@@ -4,14 +4,15 @@ import baseEs, { type Dictionary as BaseDictionary } from '@/locales/es';
 import baseEn from '@/locales/en';
 import { authEs, authEn, type AuthDictionary } from '@/locales/auth';
 import { adminEs, adminEn, type AdminDictionary } from '@/locales/admin';
+import { mediaEs, mediaEn, type MediaDictionary } from '@/locales/media';
 
-export type Dictionary = BaseDictionary & AuthDictionary & AdminDictionary;
+export type Dictionary = BaseDictionary & AuthDictionary & AdminDictionary & MediaDictionary;
 export type Locale = 'es' | 'en';
 
 /** Registrar un idioma nuevo = añadir su archivo base + auth */
 const REGISTRIES: Record<Locale, Dictionary> = {
-  es: { ...baseEs, ...authEs, ...adminEs },
-  en: { ...baseEn, ...authEn, ...adminEn },
+  es: { ...baseEs, ...authEs, ...adminEs, ...mediaEs },
+  en: { ...baseEn, ...authEn, ...adminEn, ...mediaEn },
 };
 
 const STORAGE_KEY = 'north-locale';

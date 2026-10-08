@@ -1,7 +1,11 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { CheckCircle, LockKey, WarningCircle } from '@phosphor-icons/react';
 import { DashboardCard } from '@/components/dashboard/primitives';
+import { NorthMediaPicker } from '@/components/media-picker';
 import { Button } from '@/components/ui/button';
+import { UserAvatar } from '@/components/ui/user-avatar';
+import { useNotifications } from '@/context/NotificationContext';
+import { isStorageUnavailable, removeOwnAvatar, uploadOwnAvatar, useOwnAvatarUrl } from '@/lib/assets';
 import { getOwnProfile, updateOwnProfile, type SessionUser } from '@/lib/auth';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -30,6 +34,10 @@ export function ProfilePage({ sub, user }: { sub: string; user: SessionUser }) {
   const [name, setName] = useState(user.name ?? '');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [picking, setPicking] = useState(false);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const { push } = useNotifications();
+  const hasAvatar = useOwnAvatarUrl(user.id) !== null;
 
   useEffect(() => {
     setProfile(user);
@@ -66,6 +74,17 @@ export function ProfilePage({ sub, user }: { sub: string; user: SessionUser }) {
     } finally {
       setSaving(false);
     }
+  };
+
+  const saveAvatar = async (files: File[]) => {
+    try { await uploadOwnAvatar(user.id, files[0]!); push({ type: 'success', title: t('media.avatar.saved') }); }
+    catch (error) { throw new Error(isStorageUnavailable(error) ? t('media.avatar.unavailable') : error instanceof Error ? error.message : t('media.err.upload')); }
+  };
+  const dropAvatar = async () => {
+    setAvatarBusy(true);
+    try { await removeOwnAvatar(user.id); push({ type: 'success', title: t('media.avatar.removed') }); }
+    catch (error) { push({ type: 'error', title: isStorageUnavailable(error) ? t('media.avatar.unavailable') : t('media.err.upload') }); }
+    finally { setAvatarBusy(false); }
   };
 
   if (sub === 'account') {
@@ -127,14 +146,18 @@ export function ProfilePage({ sub, user }: { sub: string; user: SessionUser }) {
   return (
     <Page title={t('profile.personalInformation')}>
       <DashboardCard title={t('profile.profile')} description={t('profile.profileHint')}>
-        <div className="flex items-center gap-3">
-          <div className="size-11 rounded-xl bg-accent-soft text-accent flex items-center justify-center font-display text-sm font-semibold shrink-0">
-            {(profile.name ?? profile.email).slice(0, 2).toUpperCase()}
-          </div>
-          <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-3">
+          <UserAvatar userId={user.id} name={profile.name ?? profile.email} className="size-14 rounded-xl text-base" />
+          <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-text">{profile.name ?? profile.email}</p>
             <p className="truncate text-xs text-text-secondary">{profile.email}</p>
+            <p className="text-[11px] text-text-muted">{t('media.avatar.hint')}</p>
           </div>
+          <div className="flex gap-1">
+            <Button size="sm" variant="secondary" disabled={avatarBusy} onClick={() => setPicking(true)}>{hasAvatar ? t('media.avatar.change') : t('media.avatar.add')}</Button>
+            {hasAvatar && <Button size="sm" variant="ghost" loading={avatarBusy} onClick={() => void dropAvatar()}>{t('media.avatar.remove')}</Button>}
+          </div>
+          <NorthMediaPicker open={picking} onOpenChange={setPicking} mode="avatar" title={t('media.avatar.title')} onSelect={saveAvatar} />
         </div>
 
         <form className="space-y-3" onSubmit={saveName}>

@@ -6,6 +6,8 @@ export interface Organization {
   slug?: string;
   avatarUrl?: string | null;
   iconData?: string | null;
+  /** Managed icon (CORECROW asset). Wins over `iconData`, which stays as the legacy fallback. */
+  iconAssetId?: string | null;
   description?: string | null;
   status?: 'ACTIVE' | 'SUSPENDED' | 'ARCHIVED';
 }
@@ -57,7 +59,7 @@ export async function getOrganizations(): Promise<Organization[]> {
   return organizations.map((organization) => ({ ...organization, avatarUrl: organization.iconData ?? organization.avatarUrl ?? null }));
 }
 
-export function updateOrganization(organizationId: string, input: { name?: string; slug?: string; iconData?: string | null; description?: string | null }) {
+export function updateOrganization(organizationId: string, input: { name?: string; slug?: string; iconData?: string | null; iconAssetId?: string | null; description?: string | null }) {
   return apiRequest<Organization>(`/v1/organizations/${encodeURIComponent(organizationId)}`, { method: 'PATCH', body: JSON.stringify(input) });
 }
 

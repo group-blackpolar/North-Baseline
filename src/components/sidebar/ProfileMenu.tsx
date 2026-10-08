@@ -4,6 +4,7 @@ import { useI18n } from '@/lib/i18n';
 import { useNotifications } from '@/context/NotificationContext';
 import { useLogout } from '@/hooks/useLogout';
 import type { SessionUser } from '@/lib/auth';
+import { UserAvatar } from '@/components/ui/user-avatar';
 
 export function ProfileMenu({ user }: { user: SessionUser }) {
   const { t } = useI18n();
@@ -38,7 +39,6 @@ export function ProfileMenu({ user }: { user: SessionUser }) {
   };
 
   const displayName = user.name ?? user.email;
-  const initials = displayName.slice(0, 2).toUpperCase();
 
   return (
     <div ref={ref} className="relative">
@@ -47,9 +47,7 @@ export function ProfileMenu({ user }: { user: SessionUser }) {
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left hover:bg-surface-hover transition-colors duration-(--duration-fast)"
       >
-        <div className="size-7 rounded-lg bg-accent-soft text-accent flex items-center justify-center font-display text-xs font-semibold shrink-0">
-          {initials}
-        </div>
+        <UserAvatar userId={user.id} name={displayName} className="size-7" />
         <div className="min-w-0 flex-1">
           <p className="text-xs font-medium text-text truncate">{displayName}</p>
           <p className="text-[10px] text-text-muted truncate">{user.email}</p>

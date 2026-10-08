@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { NorthIcon } from '@/components/brand/NorthLogo';
+import { OrganizationIcon } from '@/components/organization/OrganizationAvatar';
 import { useOrganizationNavigation } from '@/lib/shellNavigation';
 import { useI18n } from '@/lib/i18n';
 
@@ -74,7 +75,7 @@ export function OrganizationRail() {
                 )}
                 onClick={() => goToOrganization(org)}
               >
-                {avatar ? <img src={avatar} alt="" className="size-full object-cover" /> : initials}
+                <OrganizationIcon organizationId={org.id} iconAssetId={(org as { iconAssetId?: string | null }).iconAssetId} iconData={avatar} fallback={initials} />
               </button>
               </Tooltip>
             );
