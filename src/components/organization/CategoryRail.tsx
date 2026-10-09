@@ -34,7 +34,7 @@ export function CategoryRail({ children }: { children?: ReactNode }) {
   const { categories, isLoading } = useCatalog();
   const { activeTab } = useTabs();
   const goToCategory = useCategoryNavigation();
-  const { can } = usePermissions();
+  const { canNavigate } = usePermissions();
   const [pinned, setPinned] = useState(readPinnedPreference);
   const [hovered, setHovered] = useState(false);
   const [keyboardFocus, setKeyboardFocus] = useState(false);
@@ -107,7 +107,7 @@ export function CategoryRail({ children }: { children?: ReactNode }) {
         {!isLoading && categories.map((category) => {
           const Icon = resolveIcon(category.icon);
           const active = category.id === activeCategoryId;
-          const disabled = Boolean(category.requiredPermission && !can(category.requiredPermission));
+          const disabled = Boolean(category.requiredPermission && !canNavigate(category.requiredPermission));
           const label = category.id === 'platform-administration'
             ? t('personal.administration')
             : category.id === 'home'

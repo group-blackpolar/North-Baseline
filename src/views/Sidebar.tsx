@@ -25,7 +25,7 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
   const { workspaces, activeWorkspace, switchWorkspace } = useWorkspace();
   const { activeTab } = useTabs();
   const goToCategory = useCategoryNavigation();
-  const { can } = usePermissions();
+  const { canNavigate } = usePermissions();
   const [collapsed, setCollapsed] = useState(readCollapsedPreference);
   const [search, setSearch] = useState('');
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
@@ -139,7 +139,7 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
                 <div className="space-y-0.5">
                 {group.items.map((sub) => {
                   const SubIcon = resolveIcon(sub.icon);
-                  const disabled = Boolean(sub.requiredPermission && !can(sub.requiredPermission));
+                  const disabled = Boolean(sub.requiredPermission && !canNavigate(sub.requiredPermission));
                   const active = activeTab?.route.subcategoryId === sub.id;
 
                   return (

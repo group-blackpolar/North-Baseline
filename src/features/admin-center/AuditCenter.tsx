@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ArrowsClockwise, ClockCounterClockwise, ListBullets, MagnifyingGlass, Rows } from '@phosphor-icons/react';
+import { ArrowsClockwise, ClockCounterClockwise, EyeSlash, ListBullets, MagnifyingGlass, Rows } from '@phosphor-icons/react';
 import { DashboardCard } from '@/components/dashboard/primitives';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -10,7 +10,7 @@ import { listMembers, type Member } from '@/features/access-admin/api';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { listAuditEntries, type AuditEntry } from './api';
-import { auditCategory, emptyAuditFilters, filterAudit, groupByDay, type AuditFilters } from './auditModel';
+import { auditCategory, emptyAuditFilters, filterAudit, groupByDay, loadHiddenAudit, saveHiddenAudit, type AuditFilters } from './auditModel';
 import { useResource } from './hooks';
 import { KeyValue, Loading, Notice, SectionTabs, Shell, Unavailable, errorText, invalidateOrganization, selectClass, td, th } from './ui';
 
@@ -31,13 +31,26 @@ export function AuditCenter({ organizationId }: { organizationId: string }) {
   const [filters, setFilters] = useState<AuditFilters>(emptyAuditFilters);
   const [view, setView] = useState<'table' | 'timeline'>('table');
   const [selected, setSelected] = useState<AuditEntry | null>(null);
+  // Hide-from-view is a local preference (no deletion). Audit evidence is retained by CORECROW.
+  const [hidden, setHidden] = useState(() => loadHiddenAudit(organizationId));
+  const [showHidden, setShowHidden] = useState(false);
+  const [checked, setChecked] = useState<Set<string>>(new Set());
+  const [confirming, setConfirming] = useState(false);
 
   const events = useMemo(() => [...(first.data ?? []), ...more], [first.data, more]);
   const byUser = useMemo(() => new Map((members.data ?? []).map((member: Member) => [member.userId, member])), [members.data]);
   const actorName = (id: string) => byUser.get(id)?.name?.trim() || byUser.get(id)?.email || id;
   const categories = useMemo(() => [...new Set(events.map((event) => auditCategory(event.action)))].sort(), [events]);
   const actors = useMemo(() => [...new Set(events.flatMap((event) => (event.actorId ? [event.actorId] : [])))], [events]);
-  const visible = useMemo(() => filterAudit(events, filters, actorName), [events, filters, byUser]); // eslint-disable-line react-hooks/exhaustive-deps
+  const filtered = useMemo(() => filterAudit(events, filters, actorName), [events, filters, byUser]); // eslint-disable-line react-hooks/exhaustive-deps
+  const visible = useMemo(() => (showHidden ? filtered : filtered.filter((event) => !hidden.has(event.id))), [filtered, hidden, showHidden]);
+  const hiddenLoaded = useMemo(() => events.filter((event) => hidden.has(event.id)).length, [events, hidden]);
+  const commitHidden = (next: Set<string>) => { setHidden(next); saveHiddenAudit(organizationId, next); };
+  const hideSelected = () => { commitHidden(new Set([...hidden, ...checked])); setChecked(new Set()); setConfirming(false); };
+  const restore = (ids: string[]) => { const next = new Set(hidden); ids.forEach((id) => next.delete(id)); commitHidden(next); };
+  const toggleChecked = (id: string) => { setConfirming(false); setChecked((current) => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; }); };
+  const allChecked = visible.length > 0 && visible.every((event) => checked.has(event.id));
+  const toggleAll = () => { setConfirming(false); setChecked(allChecked ? new Set() : new Set(visible.map((event) => event.id))); };
   const last = events.at(-1);
   const dirty = JSON.stringify(filters) !== JSON.stringify(emptyAuditFilters());
   const when = (value: string) => new Date(value).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'medium' });
@@ -99,6 +112,23 @@ export function AuditCenter({ organizationId }: { organizationId: string }) {
             </div>
           ) : null}
 
+          {checked.size > 0 || hiddenLoaded > 0 ? (
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface-hover/40 px-3 py-2 text-xs" role="region" aria-label={t('adm2.audit.hide')}>
+              {checked.size > 0 ? (confirming ? (
+                <>
+                  <span className="text-text-secondary">{t('adm2.audit.hideNote')}</span>
+                  <Button size="sm" variant="accent" onClick={hideSelected}>{t('adm2.audit.hideConfirm')}</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>{t('adm2.audit.cancel')}</Button>
+                </>
+              ) : <Button size="sm" variant="secondary" onClick={() => setConfirming(true)}><EyeSlash className="size-3.5" />{t('adm2.audit.hideN', { n: checked.size })}</Button>) : null}
+              {hiddenLoaded > 0 ? (
+                <label className="ml-auto flex cursor-pointer items-center gap-2 text-text-secondary">
+                  <input type="checkbox" className="size-3.5 accent-(--color-accent)" checked={showHidden} onChange={(event) => setShowHidden(event.target.checked)} />
+                  {t('adm2.audit.showHidden')} · {t('adm2.audit.hiddenCount', { n: hiddenLoaded })}
+                </label>
+              ) : null}
+            </div>
+          ) : null}
           <Notice error={error ?? (first.data ? first.error : null)} />
           {first.status === 'loading' ? <Loading /> : first.status === 'error' && !first.data ? (
             <EmptyState icon={ClockCounterClockwise} title={t('state.loadError')} body={first.error ?? undefined} action={<Button size="sm" onClick={refresh}>{t('error.retry')}</Button>} />
@@ -109,10 +139,11 @@ export function AuditCenter({ organizationId }: { organizationId: string }) {
           ) : view === 'table' ? (
             <div className="overflow-x-auto rounded-lg border border-border">
               <table className="min-w-full border-separate border-spacing-0">
-                <thead><tr><th className={th}>{t('adm.col.when')}</th><th className={th}>{t('adm.col.action')}</th><th className={th}>{t('adm.col.actor')}</th><th className={th}>{t('adm.col.target')}</th><th className={th}>{t('adm2.audit.request')}</th></tr></thead>
+                <thead><tr><th className={cn(th, 'w-8')}><input type="checkbox" aria-label={t('adm2.audit.selectAll')} className="size-3.5 accent-(--color-accent)" checked={allChecked} onChange={toggleAll} /></th><th className={th}>{t('adm.col.when')}</th><th className={th}>{t('adm.col.action')}</th><th className={th}>{t('adm.col.actor')}</th><th className={th}>{t('adm.col.target')}</th><th className={th}>{t('adm2.audit.request')}</th></tr></thead>
                 <tbody>
                   {visible.map((event) => (
-                    <tr key={event.id} tabIndex={0} onClick={() => setSelected(event)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelected(event); } }} className="cursor-pointer outline-none transition-colors duration-(--duration-fast) hover:bg-surface-hover/60 focus-visible:bg-surface-hover">
+                    <tr key={event.id} tabIndex={0} onClick={() => setSelected(event)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelected(event); } }} className={cn('cursor-pointer outline-none transition-colors duration-(--duration-fast) hover:bg-surface-hover/60 focus-visible:bg-surface-hover', hidden.has(event.id) && 'opacity-50')}>
+                      <td className={td} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}><input type="checkbox" aria-label={t('adm2.audit.selectRow')} className="size-3.5 accent-(--color-accent)" checked={checked.has(event.id)} onChange={() => toggleChecked(event.id)} /></td>
                       <td className={cn(td, 'whitespace-nowrap')}>{when(event.createdAt)}</td>
                       <td className={cn(td, 'font-medium')}><span className="mr-1.5 rounded bg-surface-active px-1.5 py-0.5 text-[10px] uppercase text-text-secondary">{auditCategory(event.action)}</span>{event.action}</td>
                       <td className={cn(td, 'max-w-48 truncate')}>{actorCell(event)}</td>
@@ -159,6 +190,12 @@ export function AuditCenter({ organizationId }: { organizationId: string }) {
               <KeyValue label={t('adm2.audit.request')} mono>{selected.requestId ?? '—'}</KeyValue>
               <KeyValue label={t('adm2.audit.event')} mono>{selected.id}</KeyValue>
             </dl>
+            <div className="space-y-1.5">
+              {hidden.has(selected.id)
+                ? <Button size="sm" variant="secondary" onClick={() => restore([selected.id])}>{t('adm2.audit.restore')}</Button>
+                : <Button size="sm" variant="secondary" onClick={() => { commitHidden(new Set([...hidden, selected.id])); setSelected(null); }}><EyeSlash className="size-3.5" />{t('adm2.audit.hide')}</Button>}
+              <p className="text-[11px] text-text-muted">{t('adm2.audit.hideNote')}</p>
+            </div>
             <div>
               <h3 className="ui-label mb-1">{t('adm2.audit.context')}</h3>
               {selected.metadata && typeof selected.metadata === 'object' && Object.keys(selected.metadata as object).length > 0 ? (

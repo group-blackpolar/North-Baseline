@@ -7,9 +7,8 @@ import { CategoryRail } from '@/components/organization/CategoryRail';
 import { ContextSidebar } from '@/views/Sidebar';
 import { TabBar } from '@/components/tabs/TabBar';
 import { CurrentPath } from '@/components/tabs/CurrenPath';
-import { SplitContent } from '@/components/layout/SplitContent';
-import { LayoutSwitcher } from '@/components/layout/LayoutSwitcher';
-import { LayoutProvider } from '@/context/LayoutContext';
+import { WorkspaceContent } from '@/components/layout/WorkspaceContent';
+import { AssistantBar } from '@/components/layout/AssistantBar';
 import { OrganizationProvider, useOrganization } from '@/context/OrganizationContext';
 import { WorkspaceProvider, useWorkspace } from '@/context/WorkspaceContext';
 import { TabsProvider, useTabs } from '@/context/TabsContext';
@@ -229,7 +228,6 @@ function WorkspaceGate({
         organizationId={organizationId}
       >
         <TabsProvider persistKey={navKey(user.id, organizationId)}>
-          <LayoutProvider>
             <CatalogSync>
               <RestoredPanels />
               <PublishedRouteIntent route={route} />
@@ -246,13 +244,12 @@ function WorkspaceGate({
                   {compact ? <MobileHeader user={user} /> : <CurrentPath />}
                   {!compact && <TabBar />}
                   <div className="flex-1 flex flex-col min-h-0">
-                    <SplitContent user={user} />
+                    <WorkspaceContent user={user} />
                   </div>
                 </div>
-                {!compact && <LayoutSwitcher />}
+                {!compact && <AssistantBar />}
               </div>
             </CatalogSync>
-          </LayoutProvider>
         </TabsProvider>
       </PermissionProvider>
     </CatalogProvider>
@@ -584,12 +581,14 @@ function PublishedRouteIntent({ route }: { route: NorthRoute }) {
   );
 
   useEffect(() => {
-    if (route.kind !== 'panel') { setMissing(false); return; }
+    if (route.kind !== 'panel') { setMissing(false); resolvedPathRef.current = null; return; }
     // Catalog navigation resolves and opens the published panel before it
     // updates the canonical URL. Do not immediately resolve the same route a
     // second time: a late duplicate failure would otherwise cover valid,
     // already-authorized content with the generic not-found overlay.
-    if (alreadyResolved) { setMissing(false); return; }
+    // Remember that this URL was handled: when the tab later moves to a screen without a URL (e.g. Administration),
+    // `alreadyResolved` flips to false while the URL is unchanged, and re-resolving it would bounce the user back.
+    if (alreadyResolved) { resolvedPathRef.current = route.path; setMissing(false); return; }
     if (isLoading) return;
     // A URL is resolved once. Catalog refreshes (e.g. after saving organization settings) re-run this effect while the
     // user is on a screen whose route is not in the URL; resolving again would hijack that tab or flash not-found.

@@ -26,7 +26,7 @@ export function NavigationDrawer({ open, onOpenChange, user }: { open: boolean; 
   const { organizations, activeOrganization, isLoading } = useOrganization();
   const { categories } = useCatalog();
   const { activeTab } = useTabs();
-  const { can } = usePermissions();
+  const { canNavigate } = usePermissions();
   const goToOrganization = useOrganizationNavigation();
   const goToCategory = useCategoryNavigation();
   const go = useOverlayHistory(open, () => onOpenChange(false));
@@ -64,7 +64,7 @@ export function NavigationDrawer({ open, onOpenChange, user }: { open: boolean; 
         <nav aria-label={t('shell.categories')} className="space-y-0.5">
           {categories.map((category) => {
             const CategoryIcon = resolveIcon(category.icon);
-            const disabled = Boolean(category.requiredPermission && !can(category.requiredPermission));
+            const disabled = Boolean(category.requiredPermission && !canNavigate(category.requiredPermission));
             const active = category.id === activeCategoryId;
             const nested = category.subcategories.length > 1 && category.id !== 'platform-administration';
             const open = nested && shownCategory === category.id;
@@ -88,7 +88,7 @@ export function NavigationDrawer({ open, onOpenChange, user }: { open: boolean; 
                     {category.subcategories.map((sub) => {
                       const SubIcon = resolveIcon(sub.icon);
                       const subActive = active && activeTab?.route.subcategoryId === sub.id;
-                      const subDisabled = Boolean(sub.requiredPermission && !can(sub.requiredPermission));
+                      const subDisabled = Boolean(sub.requiredPermission && !canNavigate(sub.requiredPermission));
                       return (
                         <button key={sub.id} type="button" disabled={subDisabled} aria-current={subActive ? 'page' : undefined} className={cn(row, 'text-[13px]', rowState(subActive), subDisabled && 'cursor-not-allowed opacity-40')} onClick={() => go(() => goToCategory(category, sub))}>
                           <Icon icon={SubIcon} size="sm" /><span className="truncate">{sub.labelKey ? t(sub.labelKey as never) : sub.name}</span>

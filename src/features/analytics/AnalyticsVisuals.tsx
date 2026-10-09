@@ -10,9 +10,12 @@ import {
   Pie,
   PieChart,
   ResponsiveContainer,
+  Scatter,
+  ScatterChart,
   Tooltip,
   XAxis,
   YAxis,
+  ZAxis,
 } from 'recharts';
 import { ArrowDown, ArrowUp, CaretUpDown, Funnel, WarningCircle } from '@phosphor-icons/react';
 import { useMemo, useState, type ReactNode } from 'react';
@@ -151,6 +154,16 @@ export function AnalyticsBarChart({ result, categoryKey, series, horizontal = fa
 
 export function AnalyticsLineAreaChart({ result, categoryKey, series, variant = 'line', height = 240 }: { result: AnalyticsResult; categoryKey: string; series: AnalyticsSeries[]; variant?: 'line' | 'area'; height?: number }) {
   return <ChartState result={result} series={series}>{(rows) => <div style={{ height }}><ResponsiveContainer width="100%" height="100%">{variant === 'area' ? <AreaChart data={rows} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}><CartesianGrid {...GRID} vertical={false} /><XAxis dataKey={categoryKey} tick={AXIS_TICK} tickLine={false} axisLine={false} /><YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} /><Tooltip content={<NorthChartTooltip />} />{series.map((item, index) => <Area key={item.key} type="monotone" dataKey={item.key} name={item.label} stroke={item.color ?? PALETTE[index % PALETTE.length]} fill={item.color ?? PALETTE[index % PALETTE.length]} fillOpacity={0.18} strokeWidth={2} />)}</AreaChart> : <LineChart data={rows} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}><CartesianGrid {...GRID} vertical={false} /><XAxis dataKey={categoryKey} tick={AXIS_TICK} tickLine={false} axisLine={false} /><YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} /><Tooltip content={<NorthChartTooltip />} />{series.map((item, index) => <Line key={item.key} type="monotone" dataKey={item.key} name={item.label} stroke={item.color ?? PALETTE[index % PALETTE.length]} strokeWidth={2} dot={false} />)}</LineChart>}</ResponsiveContainer></div>}</ChartState>;
+}
+
+/** Two numeric measures against each other (one point per row). Non-numeric rows are skipped, never plotted as zero. */
+export function AnalyticsScatterChart({ result, xKey, yKey, xLabel, yLabel, sizeKey, height = 240 }: { result: AnalyticsResult; xKey: string; yKey: string; xLabel?: string; yLabel?: string; sizeKey?: string; height?: number }) {
+  const { t } = useI18n();
+  return <ResultState result={result}>{(data) => {
+    const points = data.rows.flatMap((row) => { const x = number(row[xKey]); const y = number(row[yKey]); return x === null || y === null ? [] : [{ ...row, [xKey]: x, [yKey]: y }]; });
+    if (!points.length) return <div role="status" className="flex min-h-32 items-center justify-center px-4 text-center text-xs text-text-muted">{t('analytics.noNumericValues')}</div>;
+    return <div style={{ height }}><ResponsiveContainer width="100%" height="100%"><ScatterChart margin={{ top: 8, right: 8, left: -4, bottom: 0 }}><CartesianGrid {...GRID} /><XAxis type="number" dataKey={xKey} name={xLabel ?? xKey} tick={AXIS_TICK} tickLine={false} axisLine={false} /><YAxis type="number" dataKey={yKey} name={yLabel ?? yKey} tick={AXIS_TICK} tickLine={false} axisLine={false} />{sizeKey ? <ZAxis type="number" dataKey={sizeKey} range={[30, 220]} /> : <ZAxis range={[60, 60]} />}<Tooltip cursor={{ strokeDasharray: '3 3' }} content={<NorthChartTooltip />} /><Scatter data={points} fill={PALETTE[0]} fillOpacity={0.75} /></ScatterChart></ResponsiveContainer></div>;
+  }}</ResultState>;
 }
 
 export function AnalyticsDonutChart({ result, categoryKey, valueKey, variant = 'donut', color, height = 240 }: { result: AnalyticsResult; categoryKey: string; valueKey: string; variant?: 'donut' | 'pie'; color?: string; height?: number }) {

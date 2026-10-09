@@ -22,7 +22,7 @@ export function LanguageSelector({ value, onChange }: { value: string; onChange:
         </svg>
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-32 rounded-md border border-border bg-surface shadow-lg overflow-hidden z-10">
+        <div className="absolute right-0 mt-2 w-32 rounded-md border border-border bg-surface shadow-lg overflow-hidden z-(--z-popover)">
           {LANGS.map((l) => (
             <button
               key={l.code}

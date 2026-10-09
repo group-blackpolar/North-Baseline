@@ -21,8 +21,9 @@ export type DatasetQueryColumn = {
 
 export type DatasetQueryFilter = {
   fieldId: string;
-  operator: 'EQ' | 'NE' | 'GT' | 'GTE' | 'LT' | 'LTE' | 'CONTAINS';
-  value: DatasetQueryValue;
+  operator: 'EQ' | 'NE' | 'GT' | 'GTE' | 'LT' | 'LTE' | 'CONTAINS' | 'IN';
+  /** IN carries a non-empty list of non-null scalars; every other operator a single value. */
+  value: DatasetQueryValue | Array<string | number | boolean>;
 };
 
 export type DatasetQueryOrder = {

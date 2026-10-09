@@ -7,14 +7,15 @@ import { adminEs, adminEn, type AdminDictionary } from '@/locales/admin';
 import { mediaEs, mediaEn, type MediaDictionary } from '@/locales/media';
 import { assistantEs, assistantEn, type AssistantDictionary } from '@/locales/assistant';
 import { pack12Es, pack12En, type Pack12Dictionary } from '@/locales/pack12';
+import { pack13Es, pack13En, type Pack13Dictionary } from '@/locales/pack13';
 
-export type Dictionary = BaseDictionary & AuthDictionary & AdminDictionary & MediaDictionary & AssistantDictionary & Pack12Dictionary;
+export type Dictionary = BaseDictionary & AuthDictionary & AdminDictionary & MediaDictionary & AssistantDictionary & Pack12Dictionary & Pack13Dictionary;
 export type Locale = 'es' | 'en';
 
 /** Registrar un idioma nuevo = añadir su archivo base + auth */
 const REGISTRIES: Record<Locale, Dictionary> = {
-  es: { ...baseEs, ...authEs, ...adminEs, ...mediaEs, ...assistantEs, ...pack12Es },
-  en: { ...baseEn, ...authEn, ...adminEn, ...mediaEn, ...assistantEn, ...pack12En },
+  es: { ...baseEs, ...authEs, ...adminEs, ...mediaEs, ...assistantEs, ...pack12Es, ...pack13Es },
+  en: { ...baseEn, ...authEn, ...adminEn, ...mediaEn, ...assistantEn, ...pack12En, ...pack13En },
 };
 
 const STORAGE_KEY = 'north-locale';

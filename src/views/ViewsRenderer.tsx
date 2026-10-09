@@ -1,12 +1,12 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Barricade } from '@phosphor-icons/react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { ArrowsIn, ArrowsOut, Barricade, Presentation } from '@phosphor-icons/react';
 import type { SessionUser } from '@/lib/auth';
 import type { Tab } from '@/context/TabsContext';
 import { EmptyState } from '@/components/ui/empty-state';
 import { adminSectionOf } from '@/features/admin-center/sections';
 import { PersonalView } from '@/features/personal/PersonalView';
-import { AnalyticsBarChart, AnalyticsDataGrid, AnalyticsDonutChart, AnalyticsFilterControls, AnalyticsKpi, AnalyticsLineAreaChart } from '@/features/analytics/AnalyticsVisuals';
-import type { AnalyticsColumn, AnalyticsFilter, AnalyticsResult, AnalyticsValue } from '@/features/analytics/types';
+import { AnalyticsBarChart, AnalyticsDataGrid, AnalyticsDonutChart, AnalyticsKpi, AnalyticsLineAreaChart } from '@/features/analytics/AnalyticsVisuals';
+import type { AnalyticsColumn, AnalyticsResult, AnalyticsValue } from '@/features/analytics/types';
 import type { DatasetQueryFilter } from '@/features/analytics/datasetQuery';
 import type { PanelBindingFilterDefinition } from '@/features/analytics/panelBindingQuery';
 import { usePanelBindingQuery } from '@/features/analytics/usePanelBindingQuery';
@@ -17,6 +17,12 @@ import { useOrganization } from '@/context/OrganizationContext';
 import { useI18n } from '@/lib/i18n';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DocumentWorkspaceHost } from '@/features/documents/DocumentsWorkspace';
+import { useShowcaseSlug } from '@/features/showcase/ShowcaseContext';
+import { FilterBar, type FacetLoader, type FilterControl } from '@/features/filters/FilterBar';
+import { queryPanelFacet } from '@/features/filters/facetsApi';
+import { chipsOf, filterModeOf, filtersForDefinitions, loadSelections, saveSelections, type FilterSelections } from '@/features/filters/filterModel';
+import { PresentationMode } from '@/features/presentation/PresentationMode';
+import { cn } from '@/lib/utils';
 
 // Administration is the largest authenticated surface and most sessions never open it: load it on demand.
 const AdminCenter = lazy(() => import('@/features/admin-center/AdminCenter').then((module) => ({ default: module.AdminCenter })));
@@ -140,6 +146,7 @@ function PublishedAnalyticsContent({
   locales,
   filters,
   onFilterDefinitions,
+  onExecuted,
 }: {
   component: PublishedPanelDocument['sections'][number]['components'][number];
   organizationId: string | null | undefined;
@@ -147,12 +154,16 @@ function PublishedAnalyticsContent({
   locales: string[];
   filters: DatasetQueryFilter[];
   onFilterDefinitions: (bindingId: string, definitions: PanelBindingFilterDefinition[]) => void;
+  onExecuted: (bindingId: string, executedAt: string) => void;
 }) {
   const binding = datasetBinding(component.bindings);
   const { result, response } = usePanelBindingQuery(organizationId, panelId, binding?.sourceId, filters);
   useEffect(() => {
-    if (binding && response) onFilterDefinitions(binding.sourceId, response.filterDefinitions);
-  }, [binding, onFilterDefinitions, response]);
+    if (binding && response) {
+      onFilterDefinitions(binding.sourceId, response.filterDefinitions);
+      onExecuted(binding.sourceId, response.executedAt);
+    }
+  }, [binding, onExecuted, onFilterDefinitions, response]);
 
   // A malformed or future binding type does not fall back to a client query.
   if (!binding) return null;
@@ -204,56 +215,97 @@ function SafeComponent({ type, props, locales }: { type: string; props: Record<s
   return null;
 }
 
-const FILTER_OPERATOR_LABEL: Record<DatasetQueryFilter['operator'], string> = { EQ: '=', NE: '≠', GT: '>', GTE: '≥', LT: '<', LTE: '≤', CONTAINS: '∋' };
+function sceneTitle(section: PublishedPanelDocument['sections'][number], locales: string[]): string {
+  const heading = section.components.slice().sort((a, b) => a.order - b.order).find((component) => component.type === 'heading');
+  return heading ? localized(heading.props.text, locales) : '';
+}
 
 export function PublishedPanel({ title, document, locales, organizationId, panelId }: { title: string; document: PublishedPanelDocument | null; locales: string[]; organizationId: string | null | undefined; panelId: string }) {
   const breakpoint = usePublishedBreakpoint();
   const { t } = useI18n();
+  const showcaseSlug = useShowcaseSlug();
+  const articleRef = useRef<HTMLElement>(null);
   const [definitionsByBinding, setDefinitionsByBinding] = useState<Record<string, PanelBindingFilterDefinition[]>>({});
-  const [draftValues, setDraftValues] = useState<Record<string, string>>({});
-  const [filtersByBinding, setFiltersByBinding] = useState<Record<string, DatasetQueryFilter[]>>({});
+  const [selections, setSelections] = useState<FilterSelections>(() => loadSelections(panelId));
+  const [executedByBinding, setExecutedByBinding] = useState<Record<string, string>>({});
+  // A presentation works on a frozen snapshot of the filters; the dashboard's own selections are never touched by it.
+  const [presenting, setPresenting] = useState<FilterSelections | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
   useEffect(() => {
     setDefinitionsByBinding({});
-    setDraftValues({});
-    setFiltersByBinding({});
+    setExecutedByBinding({});
+    setSelections(loadSelections(panelId));
+    setPresenting(null);
   }, [panelId]);
+  useEffect(() => {
+    const sync = () => setFullscreen(window.document.fullscreenElement === articleRef.current);
+    window.document.addEventListener('fullscreenchange', sync);
+    return () => window.document.removeEventListener('fullscreenchange', sync);
+  }, []);
+  const updateSelections = useCallback((next: FilterSelections) => { setSelections(next); saveSelections(panelId, next); }, [panelId]);
   const registerFilterDefinitions = useCallback((bindingId: string, definitions: PanelBindingFilterDefinition[]) => {
     setDefinitionsByBinding((current) => JSON.stringify(current[bindingId] ?? []) === JSON.stringify(definitions) ? current : { ...current, [bindingId]: definitions });
   }, []);
-  const filterDefinitions = useMemo(() => {
-    const unique = new Map<string, { definition: PanelBindingFilterDefinition; operator: DatasetQueryFilter['operator'] }>();
-    for (const definitions of Object.values(definitionsByBinding)) for (const definition of definitions) {
-      for (const operator of definition.operators) unique.set(`${definition.fieldId}:${operator}`, { definition, operator });
+  const registerExecuted = useCallback((bindingId: string, at: string) => {
+    setExecutedByBinding((current) => current[bindingId] === at ? current : { ...current, [bindingId]: at });
+  }, []);
+
+  // Distinct fields across bindings, in binding order. The control type comes from the definition CORECROW returned.
+  const canFacet = !showcaseSlug && Boolean(organizationId);
+  const controls = useMemo<FilterControl[]>(() => {
+    const byField = new Map<string, FilterControl>();
+    for (const bindingId of Object.keys(definitionsByBinding).sort()) for (const definition of definitionsByBinding[bindingId]!) {
+      if (byField.has(definition.fieldId)) continue;
+      const mode = filterModeOf(definition);
+      byField.set(definition.fieldId, { fieldId: definition.fieldId, label: localized(definition.displayName, locales) || definition.key, type: definition.type, operators: definition.operators, mode: !canFacet && (mode === 'multi' || mode === 'single') ? 'text' : mode });
     }
-    return [...unique.entries()];
-  }, [definitionsByBinding]);
-  const filterControls = useMemo<AnalyticsFilter[]>(() => filterDefinitions.map(([id, { definition, operator }]) => {
-    const type = definition.type === 'DATE' ? 'date' : definition.type === 'BOOLEAN' ? 'select' : 'text';
-    return {
-      id,
-      label: `${localized(definition.displayName, locales) || definition.key} ${FILTER_OPERATOR_LABEL[operator]}`,
-      type,
-      value: draftValues[id] ?? '',
-      ...(definition.type === 'BOOLEAN' ? { options: [{ value: 'true', label: t('analytics.true') }, { value: 'false', label: t('analytics.false') }] } : {}),
-    };
-  }), [draftValues, filterDefinitions, locales, t]);
-  const applyFilters = () => {
-    setFiltersByBinding(Object.fromEntries(Object.entries(definitionsByBinding).map(([bindingId, definitions]) => [bindingId, definitions.flatMap((definition) => definition.operators.flatMap((operator): DatasetQueryFilter[] => {
-        const value = draftValues[`${definition.fieldId}:${operator}`];
-        if (value === undefined || value === '') return [];
-        return [{ fieldId: definition.fieldId, operator, value: definition.type === 'BOOLEAN' ? value === 'true' : value }];
-      }))])));
-  };
-  const clearFilters = () => { setDraftValues({}); setFiltersByBinding({}); };
+    return [...byField.values()];
+  }, [canFacet, definitionsByBinding, locales]);
+  const filtersFor = useCallback((source: FilterSelections) => Object.fromEntries(Object.entries(definitionsByBinding).map(([bindingId, definitions]) => [bindingId, filtersForDefinitions(definitions, source)])) as Record<string, DatasetQueryFilter[]>, [definitionsByBinding]);
+  const filtersByBinding = useMemo(() => filtersFor(presenting ?? selections), [filtersFor, presenting, selections]);
+  const loadFacet = useCallback<FacetLoader>(async (fieldId, search, signal) => {
+    const entry = Object.entries(definitionsByBinding).find(([, definitions]) => definitions.some((definition) => definition.fieldId === fieldId));
+    if (!entry || !organizationId) return { values: [], truncated: false };
+    const result = await queryPanelFacet(organizationId, panelId, entry[0], { fieldId, ...(search ? { search } : {}), filters: filtersForDefinitions(entry[1], selections, fieldId) }, signal);
+    return { values: result.values, truncated: result.truncated };
+  }, [definitionsByBinding, organizationId, panelId, selections]);
+
   if (!document) return <div className="p-6 text-sm text-text-muted">Este panel publicado no tiene contenido disponible.</div>;
-  return <article className="north-enter mx-auto w-full max-w-[1680px] space-y-5 p-4 lg:p-5"><h1 className="font-display text-2xl font-semibold">{title}</h1>{filterControls.length ? <div className="space-y-2"><AnalyticsFilterControls filters={filterControls} onChange={(id, value) => setDraftValues((current) => ({ ...current, [id]: Array.isArray(value) ? value[0] ?? '' : value }))} /><div className="flex justify-end gap-2"><button type="button" onClick={clearFilters} className="h-8 rounded-md border border-border px-3 text-xs text-text-secondary hover:bg-surface-hover">{t('analytics.clearFilters')}</button><button type="button" onClick={applyFilters} className="h-8 rounded-md bg-accent px-3 text-xs font-medium text-white hover:opacity-90">{t('analytics.applyFilters')}</button></div></div> : null}{document.sections.slice().sort((a, b) => a.order - b.order).map((section) => <section key={section.id} className={`grid grid-cols-12 auto-rows-[minmax(2rem,auto)] ${GAP[section.layout.gap]}`}>{section.components.slice().sort((a, b) => a.order - b.order).map((component) => {
-    const content = datasetBinding(component.bindings)
-      ? <PublishedAnalyticsContent component={component} organizationId={organizationId} panelId={panelId} locales={locales} filters={filtersByBinding[datasetBinding(component.bindings)!.sourceId] ?? []} onFilterDefinitions={registerFilterDefinitions} />
+  const sections = document.sections.slice().sort((a, b) => a.order - b.order);
+  const renderSection = (section: (typeof sections)[number]) => <section key={section.id} className={`grid grid-cols-12 auto-rows-[minmax(2rem,auto)] ${GAP[section.layout.gap]}`}>{section.components.slice().sort((a, b) => a.order - b.order).map((component) => {
+    const binding = datasetBinding(component.bindings);
+    const content = binding
+      ? <PublishedAnalyticsContent component={component} organizationId={organizationId} panelId={panelId} locales={locales} filters={filtersByBinding[binding.sourceId] ?? []} onFilterDefinitions={registerFilterDefinitions} onExecuted={registerExecuted} />
       : component.type === 'document_workspace'
         ? <DocumentWorkspaceHost organizationId={organizationId} props={component.props} />
         : SafeComponent({ type: component.type, props: component.props, locales });
     return content === null ? null : <PublishedGridItem key={component.id} component={component} breakpoint={breakpoint}>{content}</PublishedGridItem>;
-  })}</section>)}</article>;
+  })}</section>;
+  const updatedAt = Object.values(executedByBinding).sort().at(-1) ?? null;
+  const toggleFullscreen = () => {
+    if (window.document.fullscreenElement) void window.document.exitFullscreen().catch(() => {});
+    else void articleRef.current?.requestFullscreen().catch(() => {});
+  };
+  const toolbarButton = 'inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs font-medium text-text-secondary transition-colors duration-(--duration-fast) hover:bg-surface-hover hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 pointer-coarse:h-(--touch-min)';
+
+  return <article ref={articleRef} className={cn('north-enter mx-auto w-full max-w-[1680px] space-y-5 p-4 lg:p-5', fullscreen && 'max-w-none overflow-auto bg-background')}>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <h1 className="font-display text-2xl font-semibold">{title}</h1>
+      <div className="flex items-center gap-2">
+        {sections.length > 0 ? <button type="button" className={toolbarButton} onClick={() => setPresenting(selections)}><Presentation className="size-3.5" aria-hidden="true" />{t('pres.start')}</button> : null}
+        {window.document.fullscreenEnabled ? <button type="button" className={toolbarButton} onClick={toggleFullscreen} aria-pressed={fullscreen}>{fullscreen ? <ArrowsIn className="size-3.5" aria-hidden="true" /> : <ArrowsOut className="size-3.5" aria-hidden="true" />}{fullscreen ? t('pres.exitFullscreen') : t('pres.fullscreen')}</button> : null}
+      </div>
+    </div>
+    <FilterBar controls={controls} selections={selections} onChange={updateSelections} loadFacet={canFacet ? loadFacet : undefined} />
+    {presenting ? null : sections.map(renderSection)}
+    {presenting ? <PresentationMode
+      title={title}
+      scenes={sections.map((section, index) => ({ id: section.id, title: sceneTitle(section, locales) || t('pres.scene', { n: index + 1 }), content: renderSection(section) }))}
+      filterSummary={chipsOf(controls, presenting).map((chip) => chip.text)}
+      updatedAt={updatedAt}
+      onExit={() => setPresenting(null)}
+    /> : null}
+  </article>;
 }
 
 export function ViewRenderer({ user, tab }: { user: SessionUser; tab: Tab | null }) {

@@ -32,14 +32,24 @@ export async function navigateToPublishedTarget(input: {
   history?: 'push' | 'replace' | 'none';
 }) {
   const subcategory = input.subcategory ?? input.category.subcategories[0];
+  // A screen without a published panel has no panel URL: leave the organization root, never a stale panel path
+  // (a reload or the route intent would otherwise reopen the previous panel).
+  const leavePanelUrl = () => {
+    if (!input.organizationSlug) return;
+    const root = `/${encodeURIComponent(input.organizationSlug)}`;
+    // Only on an explicit click: the boot-time `replace` must never overwrite a deep link still being resolved.
+    if (input.history === 'push') pushPath(root);
+  };
   if (!subcategory) {
     input.navigate(input.category.id, null);
+    leavePanelUrl();
     return false;
   }
 
   const panel = subcategory.publishedPanels?.[0];
   if (!input.organizationSlug || !input.category.slug || !subcategory.slug || !panel) {
     input.navigate(input.category.id, subcategory.id);
+    leavePanelUrl();
     return false;
   }
 

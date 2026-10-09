@@ -43,3 +43,16 @@ export function groupByDay<T extends AuditLike>(events: T[]): Array<{ day: strin
   }
   return [...groups.entries()].map(([day, items]) => ({ day, items }));
 }
+
+// 'Hide from my view' is a presentation preference, never a deletion: CORECROW keeps every event. It lives in this
+// browser only (per organization), is validated on read and can always be undone.
+const hiddenKey = (organizationId: string) => `north-audit-hidden-v1:${organizationId}`;
+export function loadHiddenAudit(organizationId: string): Set<string> {
+  try {
+    const raw = JSON.parse(localStorage.getItem(hiddenKey(organizationId)) ?? '[]');
+    return new Set(Array.isArray(raw) ? raw.filter((id): id is string => typeof id === 'string').slice(-5000) : []);
+  } catch { return new Set(); }
+}
+export function saveHiddenAudit(organizationId: string, ids: Set<string>) {
+  try { localStorage.setItem(hiddenKey(organizationId), JSON.stringify([...ids].slice(-5000))); } catch { /* storage unavailable */ }
+}
