@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react';
 import { ArrowsClockwise, Copy, EnvelopeSimple, Key, MagnifyingGlass, Plus, ShieldCheck, Trash, Users } from '@phosphor-icons/react';
 import { DashboardCard } from '@/components/dashboard/primitives';
 import { Button } from '@/components/ui/button';
+import { Sheet } from '@/components/ui/sheet';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ResponsiveList } from '@/components/ui/responsive-list';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -28,6 +29,37 @@ export const ACCESS_SECTIONS: AccessSection[] = ['settings', 'users', 'invitatio
 const initials = (member: Member) => memberLabel(member).slice(0, 2).toUpperCase();
 
 // ---------------------------------------------------------------------------
+// Contextual member panel (read-only view; every change stays in the screens below and is authorized by CORECROW)
+// ---------------------------------------------------------------------------
+
+function MemberSheet({ organizationId, member, groups, currentUserId, onClose }: { organizationId: string; member: Member | null; groups: Group[]; currentUserId: string; onClose: () => void }) {
+  const { t, locale } = useI18n();
+  const grants = useList(() => (member ? listMemberGrants(organizationId, member.userId) : Promise.resolve([] as RegisteredPermission[])), [organizationId, member?.userId]);
+  const memberGroups = member ? groups.filter((group) => group.memberUserIds.includes(member.userId)) : [];
+  const inherited = [...new Set(memberGroups.flatMap((group) => group.permissions))];
+  const chips = (items: string[]) => <ul className="flex flex-wrap gap-1">{items.map((item) => <li key={item} className="mono-data rounded-md border border-border bg-surface-hover px-1.5 py-0.5">{item}</li>)}</ul>;
+  return (
+    <Sheet open={Boolean(member)} onOpenChange={(open) => { if (!open) onClose(); }} side="right" title={member ? memberLabel(member) : ''} description={member?.email}>
+      {member ? (
+        <div className="space-y-4 text-xs">
+          <dl className="space-y-1.5">
+            <div className="flex justify-between gap-3"><dt className="text-text-secondary">{t('access.col.role')}</dt><dd className="font-medium text-text">{member.role}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-text-secondary">{t('access.col.status')}</dt><dd className="text-text">{member.status ?? '—'}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-text-secondary">{t('adm.col.joined')}</dt><dd className="text-text">{new Date(member.createdAt).toLocaleDateString(locale)}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-text-secondary">ID</dt><dd className="mono-data max-w-48 truncate text-text">{member.userId}</dd></div>
+            {member.userId === currentUserId ? <p className="text-text-muted">{t('access.you')}</p> : null}
+          </dl>
+          <section className="space-y-1.5"><h3 className="ui-label">{t('adm.col.groups')}</h3>{memberGroups.length === 0 ? <p className="text-text-muted">—</p> : chips(memberGroups.map((group) => group.name))}</section>
+          <section className="space-y-1.5"><h3 className="ui-label">{t('adm2.members.direct')}</h3>{grants.loading && !grants.data ? <Loading /> : (grants.data ?? []).length === 0 ? <p className="text-text-muted">{grants.error ?? t('access.perm.none')}</p> : chips(grants.data ?? [])}</section>
+          <section className="space-y-1.5"><h3 className="ui-label">{t('adm2.members.viaGroups')}</h3>{inherited.length === 0 ? <p className="text-text-muted">—</p> : chips(inherited)}</section>
+          <p className="text-text-muted">{t('adm2.members.sheetNote')}</p>
+        </div>
+      ) : null}
+    </Sheet>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Users and roles
 // ---------------------------------------------------------------------------
 
@@ -42,13 +74,16 @@ function UsersScreen({ organizationId, currentUserId }: { organizationId: string
   const [adding, setAdding] = useState(false);
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'' | TenantRole>('');
+  const [statusFilter, setStatusFilter] = useState<'' | 'ACTIVE' | 'SUSPENDED'>('');
+  const [selected, setSelected] = useState<Member | null>(null);
 
   const groupNames = (member: Member) => (groups.data ?? []).filter((group) => group.memberUserIds.includes(member.userId)).map((group) => group.name);
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return (members.data ?? []).filter((member) => (!roleFilter || member.role === roleFilter)
+      && (!statusFilter || (member.status ?? 'ACTIVE') === statusFilter)
       && (!needle || `${member.name ?? ''} ${member.email ?? ''}`.toLowerCase().includes(needle)));
-  }, [members.data, query, roleFilter]);
+  }, [members.data, query, roleFilter, statusFilter]);
 
   const roleSelect = (member: Member) => (
     <select aria-label={t('access.col.role')} className={selectClass} value={member.role} disabled={!manage || busy === member.userId}
@@ -70,6 +105,8 @@ function UsersScreen({ organizationId, currentUserId }: { organizationId: string
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-48 flex-1 sm:max-w-xs"><MagnifyingGlass className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-text-muted" /><Input className="pl-7" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('adm.users.search')} aria-label={t('adm.users.search')} /></div>
           <select aria-label={t('access.col.role')} className={selectClass} value={roleFilter} onChange={(event) => setRoleFilter(event.target.value as typeof roleFilter)}><option value="">{t('adm.users.allRoles')}</option>{TENANT_ROLES.map((role) => <option key={role}>{role}</option>)}</select>
+          <select aria-label={t('access.col.status')} className={selectClass} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}><option value="">{t('adm2.members.allStatus')}</option><option value="ACTIVE">ACTIVE</option><option value="SUSPENDED">SUSPENDED</option></select>
+          <span className="text-xs text-text-muted" role="status">{t('adm2.members.count', { shown: visible.length, total: members.data?.length ?? 0 })}</span>
         </div>
         <Notice error={error ?? (members.data ? members.error : null)} ok={ok} />
         <LoadError list={members} />
@@ -92,7 +129,7 @@ function UsersScreen({ organizationId, currentUserId }: { organizationId: string
                   <thead><tr><th className={th}>{t('access.col.user')}</th><th className={th}>{t('access.col.role')}</th><th className={th}>{t('adm.col.groups')}</th><th className={th}>{t('access.col.status')}</th><th className={th}>{t('adm.col.joined')}</th><th className={th} /></tr></thead>
                   <tbody>
                     {visible.map((member) => (
-                      <tr key={member.id} className="hover:bg-surface-hover/50">
+                      <tr key={member.id} tabIndex={0} onClick={(event) => { if (!(event.target as HTMLElement).closest('select,button')) setSelected(member); }} onKeyDown={(event) => { if (event.key === 'Enter' && event.target === event.currentTarget) setSelected(member); }} className="cursor-pointer outline-none hover:bg-surface-hover/50 focus-visible:bg-surface-hover">
                         <td className={cn(td, 'max-w-72')}><div className="flex items-center gap-2">{avatar(member)}<div className="min-w-0"><p className="truncate font-medium">{memberLabel(member)}{you(member)}</p><p className="truncate text-text-secondary">{member.email ?? '—'}</p></div></div></td>
                         <td className={td}>{roleSelect(member)}</td>
                         <td className={cn(td, 'max-w-56')}><div className="flex flex-wrap gap-1">{chips(member)}</div></td>
@@ -108,6 +145,7 @@ function UsersScreen({ organizationId, currentUserId }: { organizationId: string
         )}
         <p className="text-[11px] text-text-muted">{t('access.users.rolesNote')}</p>
       </DashboardCard>
+      <MemberSheet organizationId={organizationId} member={selected} groups={groups.data ?? []} currentUserId={currentUserId} onClose={() => setSelected(null)} />
       <AddUserDialog open={adding} organizationId={organizationId} groups={groups.data ?? []} canAssignGroups={can(PERM.permissionsManage)} onClose={() => setAdding(false)} onDone={() => { void members.reload(); void groups.reload(); }} />
       <ConfirmDialog open={Boolean(confirmRemove)} destructive busy={busy === confirmRemove?.userId} title={t('adm.users.removeTitle')} description={confirmRemove ? `${memberLabel(confirmRemove)} — ${t('adm.users.removeBody')}` : undefined} confirmLabel={t('access.users.remove')}
         onCancel={() => setConfirmRemove(null)}

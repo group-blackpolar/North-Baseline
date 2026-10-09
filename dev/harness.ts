@@ -7,7 +7,7 @@ const user = {
 };
 const organizations = [
   { id: 'org-seminsa', name: 'Seminsa', slug: 'seminsa' },
-  { id: 'org-shark', name: 'SHARK', slug: 'shark' },
+  { id: 'org-northwind', name: 'Northwind', slug: 'northwind' },
   { id: 'org-acme', name: 'Acme Logistics', slug: 'acme' },
 ];
 const label = (es: string, en: string) => ({ es, en });
@@ -60,7 +60,7 @@ const people = [
   ['Luis Ortega', 'luis@xyz.example', 'USER'], ['Ana Paula Robles', 'ana.robles@hotelcostaazul.example', 'USER'], ['Carlos Medina', 'cmedina@constructoradelta.example', 'DEVELOPER'], ['Elena Ruiz', 'elena@farmaciasunidas.example', 'USER'],
 ] as const;
 const platformUsers = people.map(([name, email, role], index) => ({ id: `u-${index}`, email, name, role, status: index === 4 ? 'SUSPENDED' : 'ACTIVE', emailVerified: index !== 3, passwordChangeRequired: false, termsAcceptedAt: ago(500), termsVersion: '2026-09-16', createdAt: ago(900 + index * 40) }));
-const platformOrgs = [['Seminsa', 'seminsa', 'ACTIVE'], ['SHARK', 'shark', 'ACTIVE'], ['Acme Logistics & Distribución Internacional de Carga Pesada S.A.', 'acme', 'SUSPENDED'], ['Hotel Costa Azul', 'costa-azul', 'ARCHIVED']].map(([name, slug, status], index) => ({
+const platformOrgs = [['Seminsa', 'seminsa', 'ACTIVE'], ['Northwind', 'northwind', 'ACTIVE'], ['Acme Logistics & Distribución Internacional de Carga Pesada S.A.', 'acme', 'SUSPENDED'], ['Hotel Costa Azul', 'costa-azul', 'ARCHIVED']].map(([name, slug, status], index) => ({
   id: `o-${index}`, name, slug, status, createdAt: ago(2000 + index * 100), updatedAt: ago(30 + index), homePanelId: null, owner: { id: `u-${index}`, name: people[index]![0], email: people[index]![1] }, memberCount: 3 + index * 4, groupCount: index, billingStatus: ['ACTIVE', 'ACTIVE', 'PAST_DUE', 'CLOSED'][index], billingCurrency: 'USD',
 }));
 const tenantMembers = people.map(([name, email], index) => ({ id: `m-${index}`, organizationId: 'org-seminsa', userId: `u-${index}`, role: ['OWNER', 'ADMIN', 'MEMBER', 'VIEWER', 'BILLING_ADMIN', 'MEMBER'][index], createdAt: ago(800), email, name, status: index === 4 ? 'SUSPENDED' : 'ACTIVE' }));

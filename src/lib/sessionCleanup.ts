@@ -2,6 +2,9 @@
  *  Se ejecuta SIEMPRE, incluso si el servidor no responde (fallback garantizado).
  *  NOTE: no toca preferencias de UI (tema, idioma) — no son estado de autenticación. */
 
+import { apiCache } from './apiCache';
+import { clearNavState } from './navState';
+
 const AUTH_STORAGE_KEYS = [
   'north-open-tabs-v2',
   'north-demo-orgs-v1',
@@ -12,6 +15,10 @@ const AUTH_STORAGE_KEYS = [
 const SESSION_KILLED_KEY = 'north-session-killed-v1';
 
 export function clearLocalSession(): void {
+  // 0) Cached API reads belong to the signed-out person.
+  apiCache.clear();
+  clearNavState();
+
   // 1) Cookies visibles desde JS (las HttpOnly las invalida el endpoint de logout)
   try {
     document.cookie.split(';').forEach((cookie) => {

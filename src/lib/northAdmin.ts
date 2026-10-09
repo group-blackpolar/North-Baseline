@@ -1,4 +1,4 @@
-import { apiRequest } from '@/lib/api';
+import { apiRequest, cachedGet } from '@/lib/api';
 
 export type LocalizedText = Record<string, string>;
 
@@ -49,8 +49,10 @@ export const componentTypes: ComponentType[] = ['heading', 'rich_text', 'image',
 
 /** Complete metadata-only management tree. CORECROW authorizes this endpoint
  * with north.category.create, so the UI never infers admin rights client-side. */
-export function listAuthorizedTaxonomy(organizationId: string): Promise<ManagementCategory[]> {
-  return apiRequest<ManagementCategory[]>(`/v1/organizations/${encodeURIComponent(organizationId)}/north/management-tree`);
+export function listAuthorizedTaxonomy(organizationId: string, options?: { force?: boolean }): Promise<ManagementCategory[]> {
+  // Short TTL: the Views workspace, the editor and the Overview share one read. Every write to the organization
+  // (create, rename, archive, reorder, publish…) invalidates it, so a mutation is always followed by a fresh tree.
+  return cachedGet<ManagementCategory[]>(`/v1/organizations/${encodeURIComponent(organizationId)}/north/management-tree`, { ttlMs: 10_000 }, options);
 }
 
 export function createCategory(organizationId: string, input: MetadataInput) {
@@ -85,7 +87,7 @@ export function cloneTaxonomyResource(organizationId: string, input: { kind: 'CA
 export function getDraft(organizationId: string, panelId: string) { return apiRequest<PanelRevision>(`${orgPath(organizationId)}/panels/${encodeURIComponent(panelId)}/draft`); }
 export function saveDraft(organizationId: string, panelId: string, document: PanelDocument, etag?: string, message?: string) { return apiRequest<PanelRevision>(`${orgPath(organizationId)}/panels/${encodeURIComponent(panelId)}/draft`, { method: 'PATCH', headers: etag ? { 'If-Match': etag } : undefined, body: JSON.stringify({ document, ...(message ? { message } : {}) }) }); }
 export function publishDraft(organizationId: string, panelId: string, etag: string) { return apiRequest<PanelRevision>(`${orgPath(organizationId)}/panels/${encodeURIComponent(panelId)}/publish`, { method: 'POST', headers: { 'If-Match': etag } }); }
-export function listRevisions(organizationId: string, panelId: string) { return apiRequest<PanelRevisionSummary[]>(`${orgPath(organizationId)}/panels/${encodeURIComponent(panelId)}/revisions`); }
+export function listRevisions(organizationId: string, panelId: string) { return cachedGet<PanelRevisionSummary[]>(`${orgPath(organizationId)}/panels/${encodeURIComponent(panelId)}/revisions`, { ttlMs: 20_000 }); }
 export function readRevision(organizationId: string, panelId: string, revisionId: string) { return apiRequest<PanelRevision>(`${orgPath(organizationId)}/panels/${encodeURIComponent(panelId)}/revisions/${encodeURIComponent(revisionId)}`); }
 export function restoreRevision(organizationId: string, panelId: string, revisionId: string, etag: string) { return apiRequest<PanelRevision>(`${orgPath(organizationId)}/panels/${encodeURIComponent(panelId)}/revisions/${encodeURIComponent(revisionId)}/restore`, { method: 'POST', headers: { 'If-Match': etag }, body: JSON.stringify({}) }); }
 export function setPanelAudience(organizationId: string, panelId: string, input: { type: TaxonomyPanel['audienceType']; roles?: string[]; groupIds?: string[]; capabilities?: string[]; membershipIds?: string[] }) { return apiRequest<TaxonomyPanel>(`${orgPath(organizationId)}/panels/${encodeURIComponent(panelId)}/audience`, { method: 'PUT', body: JSON.stringify(input) }); }

@@ -34,8 +34,8 @@ import {
   acceptTerms,
   completePendingOnboarding,
   FALLBACK_TERMS_VERSION,
+  checkSession,
   getIdentityConfig,
-  getSession,
   logout as authLogout,
   type IdentityConfig,
   type SessionUser,
@@ -46,10 +46,14 @@ import { acceptInvitation, resolvePublicOrganization, resolvePublishedPanel, typ
 import { currentNorthRoute, replacePath, type NorthRoute } from '@/lib/routes';
 import { GenericNotFound, OrganizationAccessGate } from '@/components/organization/OrganizationAccessGate';
 import { InspectionBanner } from '@/components/organization/InspectionBanner';
+import { ConnectionProblem } from '@/components/errors/ConnectionProblem';
 import { useInspection } from '@/lib/inspection';
 import { PlatformAdminView } from '@/features/platform-admin/PlatformAdminView';
 import { ShowcaseView } from '@/features/showcase/ShowcaseView';
-import { navigateToPublishedTarget } from '@/lib/publishedNavigation';
+import { navigateToPublishedTarget, publishedTabFromResolved } from '@/lib/publishedNavigation';
+import { navKey } from '@/lib/navState';
+import { apiCache } from '@/lib/apiCache';
+import { isAdminScreen } from '@/features/admin-center/sections';
 
 const PENDING_ROUTE_INVITATION_KEY = 'north-pending-route-invitation-v1';
 type PendingRouteInvitation = { token: string; path: string; userId?: string };
@@ -157,16 +161,49 @@ function CatalogSync({ children }: { children: ReactNode }) {
     }
 
     // Verificar si la tab actual apunta a una categoría que existe en el catálogo
-    const hasCategory = categories.some((category) => category.id === activeTab.route.categoryId);
-    if (!hasCategory) {
+    const currentCategory = categories.find((category) => category.id === activeTab.route.categoryId);
+    if (!currentCategory) {
       // La tab apunta a una categoría inexistente → re-rutear a la primera categoría
       const firstCategory = categories[0];
       if (firstCategory) openCategory(firstCategory);
+    } else if (activeTab.route.subcategoryId && !currentCategory.subcategories.some((sub) => sub.id === activeTab.route.subcategoryId)) {
+      // A restored tab whose subcategory no longer exists (archived, or access changed) → the category's first entry.
+      openCategory(currentCategory);
     }
     return () => { live = false; };
   }, [activeOrganization?.slug, categories, isLoading, activeTab, navigate]);
 
   return <>{children}</>;
+}
+
+/** Resolves the published panels of tabs restored after a reload/discarded page. Documents are never persisted: only
+ *  the panel id is, and CORECROW is asked again (so a revoked or archived panel simply does not come back). */
+function RestoredPanels() {
+  const { tabs, hydratePanel } = useTabs();
+  const { categories, isLoading } = useCatalog();
+  const { activeOrganization } = useOrganization();
+  const requested = useRef(new Set<string>());
+
+  useEffect(() => {
+    if (isLoading || !activeOrganization?.slug) return;
+    for (const tab of tabs) {
+      if (tab.publishedPanel || requested.current.has(tab.id)) continue;
+      const category = categories.find((item) => item.id === tab.route.categoryId);
+      const subcategory = category?.subcategories.find((item) => item.id === tab.route.subcategoryId);
+      // A restored tab names its panel; a route-only tab on a subcategory that has published panels opens the first one,
+      // exactly like choosing that subcategory in the sidebar would.
+      const panel = tab.restorePanelId
+        ? subcategory?.publishedPanels?.find((item) => item.id === tab.restorePanelId)
+        : category?.slug !== 'admin' ? subcategory?.publishedPanels?.[0] : undefined;
+      if (!category?.slug || !subcategory?.slug || !panel) continue;
+      requested.current.add(tab.id);
+      void resolvePublishedPanel({ organizationSlug: activeOrganization.slug, categorySlug: category.slug, subcategorySlug: subcategory.slug, panelSlug: panel.slug })
+        .then((result) => hydratePanel(tab.id, publishedTabFromResolved(result)))
+        .catch(() => { requested.current.delete(tab.id); });
+    }
+  }, [activeOrganization?.slug, categories, hydratePanel, isLoading, tabs]);
+
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -191,9 +228,10 @@ function WorkspaceGate({
       <PermissionProvider
         organizationId={organizationId}
       >
-        <TabsProvider>
+        <TabsProvider persistKey={navKey(user.id, organizationId)}>
           <LayoutProvider>
             <CatalogSync>
+              <RestoredPanels />
               <PublishedRouteIntent route={route} />
               {/* The organization rail and the shell frame live outside this keyed subtree (see AppShell), so
                   switching organization keeps them on screen while the tenant-scoped state below remounts. */}
@@ -282,6 +320,7 @@ function AppInner() {
   // localStorage or the URL. It is discarded after acceptance/final failure.
   const [pendingRouteInvitation, setPendingRouteInvitation] = useState<PendingRouteInvitation | null>(loadPendingRouteInvitation);
   const [checkingSession, setCheckingSession] = useState(!isTauri());
+  const [bootUnreachable, setBootUnreachable] = useState(false);
   const [onboardingIssue, setOnboardingIssue] = useState('');
   const [identityConfig, setIdentityConfig] = useState<IdentityConfig>({
     termsVersion: FALLBACK_TERMS_VERSION,
@@ -291,34 +330,49 @@ function AppInner() {
     captchaRequired: false,
   });
 
+  const bootSession = useCallback(async () => {
+    setBootUnreachable(false);
+    setCheckingSession(true);
+    try {
+      // Kill-switch: sesión invalidada localmente → ignorar cookie zombi
+      if (isSessionKilled()) return;
+      // "Unreachable" is not "signed out": retry briefly, then offer a retry screen instead of the login form.
+      let check = await checkSession();
+      for (let attempt = 1; check.status === 'unreachable' && attempt <= 2; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 700 * attempt));
+        check = await checkSession();
+      }
+      if (check.status === 'unreachable') { setBootUnreachable(true); return; }
+      if (check.status !== 'authenticated') return;
+      const sessionUser = check.user;
+      try {
+        if (sessionUser.passwordChangeRequired) {
+          setUser(sessionUser);
+          return;
+        }
+        const onboarding = await completePendingOnboarding(sessionUser);
+        const pending = loadPendingRouteInvitation();
+        if (pending?.path && (!pending.userId || pending.userId === sessionUser.id)) replacePath(pending.path);
+        setUser(onboarding?.user ?? sessionUser);
+      } catch (error) {
+        setUser(sessionUser);
+        setOnboardingIssue(
+          error instanceof Error ? error.message : 'No fue posible completar el registro'
+        );
+      }
+    } finally {
+      setCheckingSession(false);
+    }
+  }, []);
+
   useEffect(() => {
     getIdentityConfig().then(setIdentityConfig).catch(() => {});
     if (isTauri()) {
       setCheckingSession(false);
       return;
     }
-    getSession()
-      .then(async (sessionUser) => {
-        // Kill-switch: sesión invalidada localmente → ignorar cookie zombi
-        if (!sessionUser || isSessionKilled()) return;
-        try {
-          if (sessionUser.passwordChangeRequired) {
-            setUser(sessionUser);
-            return;
-          }
-          const onboarding = await completePendingOnboarding(sessionUser);
-          const pending = loadPendingRouteInvitation();
-          if (pending?.path && (!pending.userId || pending.userId === sessionUser.id)) replacePath(pending.path);
-          setUser(onboarding?.user ?? sessionUser);
-        } catch (error) {
-          setUser(sessionUser);
-          setOnboardingIssue(
-            error instanceof Error ? error.message : 'No fue posible completar el registro'
-          );
-        }
-      })
-      .finally(() => setCheckingSession(false));
-  }, []);
+    void bootSession();
+  }, [bootSession]);
 
   useEffect(() => {
     // Profile reads re-publish an identical user. Keep the previous reference so
@@ -339,6 +393,9 @@ function AppInner() {
       return null;
     });
   }, [user]);
+
+  // Cached API reads are bound to the signed-in person: a different (or no) user starts from an empty cache.
+  useEffect(() => { apiCache.setScope(user?.id ?? ''); }, [user?.id]);
 
   const handleLogout = useCallback(() => {
     void authLogout().catch(() => {}).finally(() => {
@@ -372,6 +429,8 @@ function AppInner() {
       </div>
     );
   }
+
+  if (!user && bootUnreachable) return <ConnectionProblem onRetry={bootSession} className="fixed inset-0" />;
 
   if (!user) {
     if ((route.kind === 'organization' || route.kind === 'panel') && !accessAuthMode) {
@@ -518,8 +577,7 @@ function PublishedRouteIntent({ route }: { route: NorthRoute }) {
   // The access screens (settings, users, invitations, groups, permissions, audit) are catalog routes too and do not
   // change the URL, so any admin tab in this category counts as already resolved.
   const isViewsAdminTarget = knownCategory?.slug === 'admin' && activeTab?.route.categoryId === knownCategory.id
-    && ((knownSubcategory?.slug === 'settings' && activeTab.route.subcategoryId === knownSubcategory.id)
-      || Boolean(activeTab.route.subcategoryId?.startsWith('access-')));
+    && isAdminScreen(knownCategory.subcategories.find((subcategory) => subcategory.id === activeTab.route.subcategoryId));
   const alreadyResolved = Boolean(
     isViewsAdminTarget
     || (knownPanelId && activeTab?.publishedPanel?.id === knownPanelId),
@@ -543,14 +601,8 @@ function PublishedRouteIntent({ route }: { route: NorthRoute }) {
         if (!live) return;
         resolvedPathRef.current = route.path;
         if (result.canonicalPath) replacePath(result.canonicalPath);
-        const localeOrder = result.revision ? [result.revision.locale.resolved, ...result.revision.locale.fallbackChain, result.revision.defaultLocale] : [];
         // A direct, user-requested deep link is an intentional tab navigation.
-        navigate(result.category.id, result.subcategory.id, {
-          id: result.panel.id,
-          title: String(localeOrder.map((locale) => result.panel.name[locale]).find((value) => typeof value === 'string') ?? Object.values(result.panel.name).find((value) => typeof value === 'string') ?? result.panel.slug),
-          document: result.revision?.document ?? null,
-          localeOrder,
-        });
+        navigate(result.category.id, result.subcategory.id, publishedTabFromResolved(result));
       })
       .catch(() => { if (live) { resolvedPathRef.current = route.path; setMissing(true); } });
     return () => { live = false; };
@@ -561,7 +613,7 @@ function PublishedRouteIntent({ route }: { route: NorthRoute }) {
 }
 
 function AuthenticatedRouter({ user, onAuthError, route, pendingInvitation, onInvitationHandled, onInvitationBound }: { user: SessionUser; onAuthError: () => void; route: NorthRoute; pendingInvitation: PendingRouteInvitation | null; onInvitationHandled: () => void; onInvitationBound: (userId: string) => void }) {
-  const { organizations, activeOrganization, isLoading, switchOrganization, refresh } = useOrganization();
+  const { organizations, activeOrganization, isLoading, status, switchOrganization, refresh } = useOrganization();
   const isOrganizationRoute = route.kind === 'organization' || route.kind === 'panel';
   const [publicOrganization, setPublicOrganization] = useState<PublicOrganization | null>(null);
   const [missing, setMissing] = useState(false);
@@ -601,6 +653,8 @@ function AuthenticatedRouter({ user, onAuthError, route, pendingInvitation, onIn
   }
   if (!isOrganizationRoute) return <AppShell user={user} onAuthError={onAuthError} route={route} />;
   if (isLoading) return <ShellSkeleton />;
+  // The organization list could not be loaded: that is an API problem, never "you are not a member".
+  if (!member && status === 'error') return <ConnectionProblem onRetry={refresh} />;
   if (!member) {
     if (missing) return <GenericNotFound />;
     if (!publicOrganization) return <ShellSkeleton />;

@@ -1,4 +1,4 @@
-import { apiRequest } from '@/lib/api';
+import { cachedGet } from '@/lib/api';
 
 export const PERM = {
   organizationRead: 'organization.read',
@@ -35,11 +35,13 @@ export interface PermissionSet {
  * UX capability discovery only. CoreCrow remains the authorization authority.
  * Failures are intentionally handled as an empty permission set by the caller.
  */
-export async function fetchPermissions(organizationId: string): Promise<PermissionSet> {
-  const data = await apiRequest<{
+export async function fetchPermissions(organizationId: string, options?: { force?: boolean }): Promise<PermissionSet> {
+  // Short TTL + SWR: permission *discovery* only drives what the UI offers. Role/grant/group writes invalidate it and
+  // CORECROW re-authorizes every protected request regardless.
+  const data = await cachedGet<{
     permissions: Permission[];
     role: PermissionSet['role'];
-  }>(`/v1/organizations/${organizationId}/permissions`);
+  }>(`/v1/organizations/${organizationId}/permissions`, { ttlMs: 10_000, staleMs: 50_000 }, options);
   return {
     permissions: Array.isArray(data.permissions) ? data.permissions : [],
     role: data.role,

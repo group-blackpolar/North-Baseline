@@ -4,7 +4,7 @@ import { apiRequest } from '@/lib/api';
 const HEX = /^[a-f0-9]{64}$/i;
 const SHAPES = [HEX, /^[A-Z0-9]{1,12}-KEY-[A-Z0-9]{8,24}$/i, /^BP-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/i];
 
-/** Emailed invitation tokens are lowercase hex; organization keys (`SHARK-KEY-…`) are uppercase. */
+/** Emailed invitation tokens are lowercase hex; organization keys (`ACME-KEY-…`) are uppercase. */
 export const normalizeInvitationCredential = (value: string) => {
   const compact = value.replace(/\s/g, '');
   return HEX.test(compact) ? compact.toLowerCase() : compact.toUpperCase();

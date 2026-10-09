@@ -1,14 +1,17 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { fetchCatalog } from '@/lib/catalog';
 import type { CategoryModel, SubcategoryModel } from '@/lib/models';
 import { getOrganizationNavigation, type NavigationCategory } from '@/lib/organizations';
 import { PERSONAL_ORG_ID } from '@/lib/demo/store';
 import type { SessionUser } from '@/lib/auth';
-import { ACCESS_SECTIONS, type AccessSection } from '@/features/access-admin/AccessAdminView';
+import { ADMIN_ICON, ADMIN_PERMISSION, ADMIN_SECTIONS, SERVER_VIEWS_SLUG, adminSubcategoryId } from '@/features/admin-center/sections';
 
 interface CatalogContextValue {
   categories: CategoryModel[];
+  /** True only while there is nothing to show yet. A background refresh keeps the current catalog on screen. */
   isLoading: boolean;
+  /** The last load failed (network / API). The previous catalog, if any, is kept; this is never an access decision. */
+  error: string | null;
   getCategory: (categoryId: string) => CategoryModel | undefined;
   getSubcategory: (categoryId: string, subcategoryId: string | null) => SubcategoryModel | undefined;
   refresh: () => Promise<void>;
@@ -29,28 +32,41 @@ export function CatalogProvider({
 }) {
   const [categories, setCategories] = useState<CategoryModel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const loadedRef = useRef(false);
 
-  const refresh = useCallback(async () => {
-    setIsLoading(true);
+  const load = useCallback(async (force: boolean) => {
     const catalog = organizationId === PERSONAL_ORG_ID
       ? fetchCatalog(workspaceId, { includePlatformAdministration: platformRole === 'ADMIN' || platformRole === 'SUPERADMIN' })
-      : getOrganizationNavigation(organizationId).then(navigationToCatalog);
-    try {
-      setCategories(await catalog);
-    } finally {
-      setIsLoading(false);
-    }
+      : getOrganizationNavigation(organizationId, { force }).then(navigationToCatalog);
+    return catalog;
   }, [organizationId, platformRole, workspaceId]);
+
+  /** Explicit refresh (after a structural edit): always asks CORECROW, never blanks the navigation. */
+  const refresh = useCallback(async () => {
+    try {
+      setCategories(await load(true));
+      setError(null);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Request failed');
+      throw reason;
+    }
+  }, [load]);
 
   useEffect(() => {
     let alive = true;
-    setIsLoading(true);
-    const catalog = organizationId === PERSONAL_ORG_ID
-      ? fetchCatalog(workspaceId, { includePlatformAdministration: platformRole === 'ADMIN' || platformRole === 'SUPERADMIN' })
-      : getOrganizationNavigation(organizationId).then(navigationToCatalog);
-    catalog
-      .then((catalog) => {
-        if (alive) setCategories(catalog);
+    // Only the very first load shows a skeleton; later reloads (role change, workspace) are silent.
+    if (!loadedRef.current) setIsLoading(true);
+    load(false)
+      .then((next) => {
+        if (!alive) return;
+        loadedRef.current = true;
+        setCategories(next);
+        setError(null);
+      })
+      .catch((reason) => {
+        // Keep whatever is already on screen: an API failure must not empty (and so redirect) the shell.
+        if (alive) setError(reason instanceof Error ? reason.message : 'Request failed');
       })
       .finally(() => {
         if (alive) setIsLoading(false);
@@ -58,7 +74,7 @@ export function CatalogProvider({
     return () => {
       alive = false;
     };
-  }, [organizationId, platformRole, workspaceId]);
+  }, [load]);
 
   const getCategory = useCallback(
     (categoryId: string) => categories.find((c) => c.id === categoryId),
@@ -72,7 +88,7 @@ export function CatalogProvider({
   );
 
   return (
-    <CatalogContext.Provider value={{ categories, isLoading, getCategory, getSubcategory, refresh }}>
+    <CatalogContext.Provider value={{ categories, isLoading, error, getCategory, getSubcategory, refresh }}>
       {children}
     </CatalogContext.Provider>
   );
@@ -88,32 +104,29 @@ function localizedName(value: Record<string, string>) {
   return value.es ?? value.en ?? Object.values(value)[0] ?? '';
 }
 
-/** Organization access screens. UI entries only: every read and write behind them is authorized by CORECROW. */
-const ACCESS_ICONS: Record<AccessSection, string> = { settings: 'settings', users: 'users', invitations: 'bell', groups: 'users', permissions: 'key', audit: 'scroll' };
-const ACCESS_PERMISSIONS: Record<AccessSection, string> = {
-  settings: 'organization.read', users: 'members.read', invitations: 'invitations.read', groups: 'groups.read', permissions: 'members.read', audit: 'audit.read',
-};
-
-function accessSubcategories(categoryId: string, offset: number): SubcategoryModel[] {
-  return ACCESS_SECTIONS.map((section, index) => ({
-    id: `access-${section}`,
-    categoryId,
-    name: section,
-    labelKey: section === 'settings' || section === 'audit' ? `adm.nav.${section}` : `access.nav.${section}`,
-    icon: ACCESS_ICONS[section],
-    requiredPermission: ACCESS_PERMISSIONS[section],
-    route: `access/${section}`,
-    slug: `access-${section}`,
-    // Settings leads the Administration list; the rest follow the server-defined Architecture entry.
-    order: section === 'settings' ? -1 : offset + index,
-  }));
-}
-
-/** Administration lists Settings first, then the server-defined Architecture entry, then the access screens. */
-function withAccessSections(category: NavigationCategory, serverSubs: SubcategoryModel[]): SubcategoryModel[] {
+/**
+ * Administration is the eight-capability control center (see admin-center/sections.ts). They are subcategories of the
+ * server-defined `admin` category, so tabs, deep links and the sidebar keep working unchanged. `views` IS the server's
+ * system subcategory (the structure editor); the others are client entries — UI only: CORECROW authorizes every read/write.
+ */
+function withAdminSections(category: NavigationCategory, serverSubs: SubcategoryModel[]): SubcategoryModel[] {
   if (category.slug !== 'admin') return serverSubs;
-  const access = accessSubcategories(category.id, serverSubs.length);
-  return [...access.filter((sub) => sub.slug === 'access-settings'), ...serverSubs, ...access.filter((sub) => sub.slug !== 'access-settings')];
+  const serverViews = serverSubs.find((sub) => sub.slug === SERVER_VIEWS_SLUG);
+  // Anything else the server defines for `admin` (future system entries) stays after the eight capabilities.
+  const extras = serverSubs.filter((sub) => sub !== serverViews);
+  const entries = ADMIN_SECTIONS.map((section, index): SubcategoryModel => {
+    const base = {
+      categoryId: category.id,
+      labelKey: `adm.nav.${section}`,
+      icon: ADMIN_ICON[section],
+      requiredPermission: ADMIN_PERMISSION[section] ?? undefined,
+      route: section,
+      order: index,
+    };
+    if (section === 'views' && serverViews) return { ...serverViews, ...base, name: serverViews.name, slug: SERVER_VIEWS_SLUG, route: SERVER_VIEWS_SLUG };
+    return { ...base, id: adminSubcategoryId(section), name: section, slug: section === 'views' ? SERVER_VIEWS_SLUG : `adm-${section}` };
+  });
+  return [...entries, ...extras.map((sub, index) => ({ ...sub, order: entries.length + index }))];
 }
 
 function navigationToCatalog(navigation: NavigationCategory[]): CategoryModel[] {
@@ -124,15 +137,13 @@ function navigationToCatalog(navigation: NavigationCategory[]): CategoryModel[] 
     icon: category.icon ?? 'Folder',
     slug: category.slug,
     order: 0,
-    subcategories: withAccessSections(category, category.subcategories.map((subcategory, index): SubcategoryModel => ({
+    subcategories: withAdminSections(category, category.subcategories.map((subcategory, index): SubcategoryModel => ({
       id: subcategory.id,
       categoryId: category.id,
       name: localizedName(subcategory.name),
       icon: subcategory.icon ?? 'FileText',
       route: subcategory.slug,
       slug: subcategory.slug,
-      // The server's system entry holds the structure editor (categories, subcategories, views): shown as Architecture.
-      ...(category.slug === 'admin' && subcategory.slug === 'settings' ? { labelKey: 'adm.nav.architecture' } : {}),
       publishedPanels: subcategory.panels.map((panel) => ({
         id: panel.id,
         name: localizedName(panel.name),
