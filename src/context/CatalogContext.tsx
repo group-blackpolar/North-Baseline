@@ -4,7 +4,7 @@ import type { CategoryModel, SubcategoryModel } from '@/lib/models';
 import { getOrganizationNavigation, type NavigationCategory } from '@/lib/organizations';
 import { PERSONAL_ORG_ID } from '@/lib/demo/store';
 import type { SessionUser } from '@/lib/auth';
-import { ACCESS_SECTIONS, type AccessSection } from '@/features/access-admin/AccessAdminView';
+import { ADMIN_ICON, ADMIN_PERMISSION, ADMIN_SECTIONS, SERVER_VIEWS_SLUG, adminSubcategoryId } from '@/features/admin-center/sections';
 
 interface CatalogContextValue {
   categories: CategoryModel[];
@@ -104,32 +104,29 @@ function localizedName(value: Record<string, string>) {
   return value.es ?? value.en ?? Object.values(value)[0] ?? '';
 }
 
-/** Organization access screens. UI entries only: every read and write behind them is authorized by CORECROW. */
-const ACCESS_ICONS: Record<AccessSection, string> = { settings: 'settings', users: 'users', invitations: 'bell', groups: 'users', permissions: 'key', audit: 'scroll' };
-const ACCESS_PERMISSIONS: Record<AccessSection, string> = {
-  settings: 'organization.read', users: 'members.read', invitations: 'invitations.read', groups: 'groups.read', permissions: 'members.read', audit: 'audit.read',
-};
-
-function accessSubcategories(categoryId: string, offset: number): SubcategoryModel[] {
-  return ACCESS_SECTIONS.map((section, index) => ({
-    id: `access-${section}`,
-    categoryId,
-    name: section,
-    labelKey: section === 'settings' || section === 'audit' ? `adm.nav.${section}` : `access.nav.${section}`,
-    icon: ACCESS_ICONS[section],
-    requiredPermission: ACCESS_PERMISSIONS[section],
-    route: `access/${section}`,
-    slug: `access-${section}`,
-    // Settings leads the Administration list; the rest follow the server-defined Architecture entry.
-    order: section === 'settings' ? -1 : offset + index,
-  }));
-}
-
-/** Administration lists Settings first, then the server-defined Architecture entry, then the access screens. */
-function withAccessSections(category: NavigationCategory, serverSubs: SubcategoryModel[]): SubcategoryModel[] {
+/**
+ * Administration is the eight-capability control center (see admin-center/sections.ts). They are subcategories of the
+ * server-defined `admin` category, so tabs, deep links and the sidebar keep working unchanged. `views` IS the server's
+ * system subcategory (the structure editor); the others are client entries — UI only: CORECROW authorizes every read/write.
+ */
+function withAdminSections(category: NavigationCategory, serverSubs: SubcategoryModel[]): SubcategoryModel[] {
   if (category.slug !== 'admin') return serverSubs;
-  const access = accessSubcategories(category.id, serverSubs.length);
-  return [...access.filter((sub) => sub.slug === 'access-settings'), ...serverSubs, ...access.filter((sub) => sub.slug !== 'access-settings')];
+  const serverViews = serverSubs.find((sub) => sub.slug === SERVER_VIEWS_SLUG);
+  // Anything else the server defines for `admin` (future system entries) stays after the eight capabilities.
+  const extras = serverSubs.filter((sub) => sub !== serverViews);
+  const entries = ADMIN_SECTIONS.map((section, index): SubcategoryModel => {
+    const base = {
+      categoryId: category.id,
+      labelKey: `adm.nav.${section}`,
+      icon: ADMIN_ICON[section],
+      requiredPermission: ADMIN_PERMISSION[section] ?? undefined,
+      route: section,
+      order: index,
+    };
+    if (section === 'views' && serverViews) return { ...serverViews, ...base, name: serverViews.name, slug: SERVER_VIEWS_SLUG, route: SERVER_VIEWS_SLUG };
+    return { ...base, id: adminSubcategoryId(section), name: section, slug: section === 'views' ? SERVER_VIEWS_SLUG : `adm-${section}` };
+  });
+  return [...entries, ...extras.map((sub, index) => ({ ...sub, order: entries.length + index }))];
 }
 
 function navigationToCatalog(navigation: NavigationCategory[]): CategoryModel[] {
@@ -140,15 +137,13 @@ function navigationToCatalog(navigation: NavigationCategory[]): CategoryModel[] 
     icon: category.icon ?? 'Folder',
     slug: category.slug,
     order: 0,
-    subcategories: withAccessSections(category, category.subcategories.map((subcategory, index): SubcategoryModel => ({
+    subcategories: withAdminSections(category, category.subcategories.map((subcategory, index): SubcategoryModel => ({
       id: subcategory.id,
       categoryId: category.id,
       name: localizedName(subcategory.name),
       icon: subcategory.icon ?? 'FileText',
       route: subcategory.slug,
       slug: subcategory.slug,
-      // The server's system entry holds the structure editor (categories, subcategories, views): shown as Architecture.
-      ...(category.slug === 'admin' && subcategory.slug === 'settings' ? { labelKey: 'adm.nav.architecture' } : {}),
       publishedPanels: subcategory.panels.map((panel) => ({
         id: panel.id,
         name: localizedName(panel.name),

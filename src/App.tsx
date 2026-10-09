@@ -53,6 +53,7 @@ import { ShowcaseView } from '@/features/showcase/ShowcaseView';
 import { navigateToPublishedTarget, publishedTabFromResolved } from '@/lib/publishedNavigation';
 import { navKey } from '@/lib/navState';
 import { apiCache } from '@/lib/apiCache';
+import { isAdminScreen } from '@/features/admin-center/sections';
 
 const PENDING_ROUTE_INVITATION_KEY = 'north-pending-route-invitation-v1';
 type PendingRouteInvitation = { token: string; path: string; userId?: string };
@@ -186,10 +187,14 @@ function RestoredPanels() {
   useEffect(() => {
     if (isLoading || !activeOrganization?.slug) return;
     for (const tab of tabs) {
-      if (!tab.restorePanelId || tab.publishedPanel || requested.current.has(tab.id)) continue;
+      if (tab.publishedPanel || requested.current.has(tab.id)) continue;
       const category = categories.find((item) => item.id === tab.route.categoryId);
       const subcategory = category?.subcategories.find((item) => item.id === tab.route.subcategoryId);
-      const panel = subcategory?.publishedPanels?.find((item) => item.id === tab.restorePanelId);
+      // A restored tab names its panel; a route-only tab on a subcategory that has published panels opens the first one,
+      // exactly like choosing that subcategory in the sidebar would.
+      const panel = tab.restorePanelId
+        ? subcategory?.publishedPanels?.find((item) => item.id === tab.restorePanelId)
+        : category?.slug !== 'admin' ? subcategory?.publishedPanels?.[0] : undefined;
       if (!category?.slug || !subcategory?.slug || !panel) continue;
       requested.current.add(tab.id);
       void resolvePublishedPanel({ organizationSlug: activeOrganization.slug, categorySlug: category.slug, subcategorySlug: subcategory.slug, panelSlug: panel.slug })
@@ -572,8 +577,7 @@ function PublishedRouteIntent({ route }: { route: NorthRoute }) {
   // The access screens (settings, users, invitations, groups, permissions, audit) are catalog routes too and do not
   // change the URL, so any admin tab in this category counts as already resolved.
   const isViewsAdminTarget = knownCategory?.slug === 'admin' && activeTab?.route.categoryId === knownCategory.id
-    && ((knownSubcategory?.slug === 'settings' && activeTab.route.subcategoryId === knownSubcategory.id)
-      || Boolean(activeTab.route.subcategoryId?.startsWith('access-')));
+    && isAdminScreen(knownCategory.subcategories.find((subcategory) => subcategory.id === activeTab.route.subcategoryId));
   const alreadyResolved = Boolean(
     isViewsAdminTarget
     || (knownPanelId && activeTab?.publishedPanel?.id === knownPanelId),
