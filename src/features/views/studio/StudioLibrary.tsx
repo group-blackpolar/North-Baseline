@@ -1,5 +1,5 @@
 import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { ChartBar, ChartDonut, ChartLine, Code, CreditCard, FileText, Gauge, Image, Link, ListBullets, MagnifyingGlass, Minus, Table, TextAlignLeft, TextT, VideoCamera, Lock, ChatsTeardrop } from '@phosphor-icons/react';
+import { ChartBar, ChartDonut, ChartLine, Code, CreditCard, FileText, Funnel, Gauge, GlobeHemisphereWest, Image, Lightbulb, SquaresFour, Link, ListBullets, MagnifyingGlass, Minus, Table, TextAlignLeft, TextT, VideoCamera, Lock, ChatsTeardrop } from '@phosphor-icons/react';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { allDefinitions, CATEGORY_ORDER, type ComponentDefinition } from './registry';
@@ -8,6 +8,7 @@ import { LIBRARY_MIME } from './StudioCanvas';
 
 const ICONS: Record<string, typeof TextT> = {
   heading: TextT, richText: TextAlignLeft, card: CreditCard, link: Link, list: ListBullets, divider: Minus, metric: Gauge,
+  kpiCard: Gauge, dataGrid: SquaresFour, geoMap: GlobeHemisphereWest, insights: Lightbulb, filterBar: Funnel,
   barChart: ChartBar, lineChart: ChartLine, donutChart: ChartDonut, table: Table, embed: Code, image: Image, video: VideoCamera, file: FileText, documents: ChatsTeardrop,
 };
 

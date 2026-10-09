@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowsClockwise, Calculator, Database, FloppyDisk, Graph, Plugs, SquaresFour, TreeStructure, Warning } from '@phosphor-icons/react';
+import { ArrowsClockwise, Calculator, Database, FloppyDisk, Graph, Plugs, SquaresFour, TreeStructure, UploadSimple, Warning } from '@phosphor-icons/react';
 import { DashboardCard } from '@/components/dashboard/primitives';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -15,6 +15,7 @@ import { KeyValue, Loading, Notice, SectionTabs, Shell, Unavailable, invalidateO
 import { flattenTree, localName, type TreeCategory } from '@/features/views/workspace/resources';
 import { buildDependencyReport, extractDatasetRefs, type DatasetRef, type DependencyReport } from './dependencies';
 import { QueryExplorer } from './QueryExplorer';
+import { ImportWizard } from './import/ImportWizard';
 
 type Tab = 'overview' | 'sources' | 'datasets' | 'explorer' | 'saved' | 'calculated' | 'dependencies';
 
@@ -106,9 +107,10 @@ function DatasetsTab({ organizationId, onExplore }: { organizationId: string; on
   const { t, locale } = useI18n();
   const datasets = useResource(() => listDatasets(organizationId), [organizationId]);
   const [selected, setSelected] = useState<DatasetSummary | null>(null);
+  const [importing, setImporting] = useState<{ datasetId: string | null } | null>(null);
   if (datasets.status === 'forbidden') return <Unavailable tone="forbidden" title={t('adm2.q.forbidden')} body={t('adm2.q.forbiddenBody')} />;
   return (
-    <DashboardCard title={t('adm2.q.tab.datasets')} description={t('adm2.q.datasets.hint')} actions={<Button size="sm" variant="ghost" onClick={() => { invalidateOrganization(organizationId); void datasets.reload(); }}><ArrowsClockwise className="size-3.5" />{t('access.refresh')}</Button>}>
+    <DashboardCard title={t('adm2.q.tab.datasets')} description={t('adm2.q.datasets.hint')} actions={<div className="flex gap-1.5"><Button size="sm" variant="accent" onClick={() => setImporting({ datasetId: null })}><UploadSimple className="size-3.5" />{t('imp.open')}</Button><Button size="sm" variant="ghost" onClick={() => { invalidateOrganization(organizationId); void datasets.reload(); }}><ArrowsClockwise className="size-3.5" />{t('access.refresh')}</Button></div>}>
       {datasets.status === 'loading' ? <Loading /> : datasets.status === 'error' ? <Notice error={datasets.error} /> : (datasets.data ?? []).length === 0 ? <EmptyState icon={Database} title={t('adm2.q.noDatasets')} body={t('adm2.q.noDatasetsBody')} /> : (
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="min-w-full border-separate border-spacing-0">
@@ -127,12 +129,13 @@ function DatasetsTab({ organizationId, onExplore }: { organizationId: string; on
           </table>
         </div>
       )}
-      <DatasetSheet organizationId={organizationId} dataset={selected} onClose={() => setSelected(null)} onExplore={onExplore} />
+      <DatasetSheet organizationId={organizationId} dataset={selected} onClose={() => setSelected(null)} onExplore={onExplore} onImport={(datasetId) => { setSelected(null); setImporting({ datasetId }); }} />
+      <ImportWizard key={importing?.datasetId ?? 'new'} organizationId={organizationId} open={importing !== null} onOpenChange={(open) => { if (!open) setImporting(null); }} initialDatasetId={importing?.datasetId ?? null} onDone={() => { invalidateOrganization(organizationId); void datasets.reload(); }} />
     </DashboardCard>
   );
 }
 
-function DatasetSheet({ organizationId, dataset, onClose, onExplore }: { organizationId: string; dataset: DatasetSummary | null; onClose: () => void; onExplore: (id: string) => void }) {
+function DatasetSheet({ organizationId, dataset, onClose, onExplore, onImport }: { organizationId: string; dataset: DatasetSummary | null; onClose: () => void; onExplore: (id: string) => void; onImport?: (id: string) => void }) {
   const { t, locale } = useI18n();
   const id = dataset?.id ?? '';
   const fields = useResource<DatasetField[]>(() => (id ? listDatasetFields(organizationId, id) : Promise.resolve([])), [organizationId, id]);
@@ -163,7 +166,10 @@ function DatasetSheet({ organizationId, dataset, onClose, onExplore }: { organiz
             <KeyValue label={t('adm2.q.created')}>{new Date(dataset.createdAt).toLocaleString(locale)}</KeyValue>
             <KeyValue label="ID" mono>{dataset.id}</KeyValue>
           </dl>
-          <Button variant="accent" disabled={dataset.status !== 'ACTIVE'} onClick={() => { onClose(); onExplore(dataset.id); }}><Graph />{t('adm2.q.explore')}</Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="accent" disabled={dataset.status !== 'ACTIVE'} onClick={() => { onClose(); onExplore(dataset.id); }}><Graph />{t('adm2.q.explore')}</Button>
+            {onImport && dataset.status === 'ACTIVE' ? <Button variant="secondary" onClick={() => onImport(dataset.id)}><UploadSimple />{t('imp.openFile')}</Button> : null}
+          </div>
 
           <section>
             <h3 className="ui-label mb-1.5">{t('adm2.q.fields')}</h3>

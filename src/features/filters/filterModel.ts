@@ -75,18 +75,29 @@ export function toggleValue(selection: FilterSelection | undefined, value: Filte
   return { ...selection, values };
 }
 
-export type FilterChip = { key: string; fieldId: string; part: 'value' | 'text' | 'from' | 'to'; value?: FilterScalar; text: string };
+export type FilterChip = { key: string; fieldId: string; part: 'value' | 'text' | 'from' | 'to' | 'period'; value?: FilterScalar; text: string; label: string; display: string };
 
 /** Removable chips for every active part of every selection, in a stable order (definition order, then part). */
-export function chipsOf(definitions: Array<Definition & { label: string }>, selections: FilterSelections, format: (value: FilterScalar) => string = String): FilterChip[] {
+export function chipsOf(
+  definitions: Array<Definition & { label: string }>,
+  selections: FilterSelections,
+  format: (value: FilterScalar) => string = String,
+  /** When given, a date selection becomes ONE chip named by this function ("October 2025") instead of two bounds. */
+  period?: (from: string | undefined, to: string | undefined) => string,
+): FilterChip[] {
   return definitions.flatMap((definition) => {
     const selection = selections[definition.fieldId];
     if (!selection) return [];
     const chips: FilterChip[] = [];
-    for (const value of selection.values ?? []) chips.push({ key: `${definition.fieldId}:v:${String(value)}`, fieldId: definition.fieldId, part: 'value', value, text: `${definition.label}: ${format(value)}` });
-    if (selection.text?.trim()) chips.push({ key: `${definition.fieldId}:t`, fieldId: definition.fieldId, part: 'text', text: `${definition.label} ∋ ${selection.text.trim()}` });
-    if (selection.from) chips.push({ key: `${definition.fieldId}:f`, fieldId: definition.fieldId, part: 'from', text: `${definition.label} ≥ ${selection.from}` });
-    if (selection.to) chips.push({ key: `${definition.fieldId}:to`, fieldId: definition.fieldId, part: 'to', text: `${definition.label} ≤ ${selection.to}` });
+    const chip = (key: string, part: FilterChip['part'], display: string, text: string, value?: FilterScalar): FilterChip => ({ key: `${definition.fieldId}:${key}`, fieldId: definition.fieldId, part, ...(value !== undefined ? { value } : {}), text, label: definition.label, display });
+    for (const value of selection.values ?? []) chips.push(chip(`v:${String(value)}`, 'value', format(value), `${definition.label}: ${format(value)}`, value));
+    if (selection.text?.trim()) chips.push(chip('t', 'text', `∋ ${selection.text.trim()}`, `${definition.label} ∋ ${selection.text.trim()}`));
+    const dated = period && (definition.type === 'DATE' || definition.type === 'DATETIME') && (selection.from || selection.to);
+    if (dated) chips.push(chip('p', 'period', period(selection.from, selection.to), `${definition.label}: ${period(selection.from, selection.to)}`));
+    else {
+      if (selection.from) chips.push(chip('f', 'from', `≥ ${selection.from}`, `${definition.label} ≥ ${selection.from}`));
+      if (selection.to) chips.push(chip('to', 'to', `≤ ${selection.to}`, `${definition.label} ≤ ${selection.to}`));
+    }
     return chips;
   });
 }
@@ -98,6 +109,7 @@ export function removeChip(selections: FilterSelections, chip: FilterChip): Filt
   if (chip.part === 'value') next.values = (selection.values ?? []).filter((item) => item !== chip.value);
   else if (chip.part === 'text') delete next.text;
   else if (chip.part === 'from') delete next.from;
+  else if (chip.part === 'period') { delete next.from; delete next.to; }
   else delete next.to;
   const rest = { ...selections };
   delete rest[chip.fieldId];

@@ -18,6 +18,8 @@ export interface ComponentDefinition {
   binding: BindingKind;
   /** Whether the library may add it today. Assets need object storage + scanner, which CORECROW keeps fail-closed. */
   addable: boolean;
+  /** Named bindings the component reads besides `data` (e.g. `total` for a share, `trend` for sparklines). */
+  slots?: string[];
   /** Inspector property groups that apply. */
   appearance: Array<'variant' | 'align' | 'level' | 'size' | 'spacing' | 'height' | 'color' | 'orientation' | 'stacking' | 'chartVariant' | 'striped' | 'ordered' | 'newTab'>;
 }
@@ -32,7 +34,12 @@ const DEFINITIONS: ComponentDefinition[] = [
   { type: 'metric', category: 'metrics', iconKey: 'metric', size: { w: 3, h: 2 }, binding: 'optional', addable: true, appearance: ['variant'] },
   { type: 'bar_chart', category: 'charts', iconKey: 'barChart', size: { w: 6, h: 6 }, binding: 'required', addable: true, appearance: ['height', 'orientation', 'stacking', 'color'] },
   { type: 'line_chart', category: 'charts', iconKey: 'lineChart', size: { w: 6, h: 6 }, binding: 'required', addable: true, appearance: ['height', 'chartVariant', 'color'] },
-  { type: 'donut_chart', category: 'charts', iconKey: 'donutChart', size: { w: 4, h: 6 }, binding: 'required', addable: true, appearance: ['height', 'chartVariant', 'color'] },
+  { type: 'donut_chart', category: 'charts', iconKey: 'donutChart', size: { w: 4, h: 6 }, binding: 'required', addable: true, slots: ['total'], appearance: ['height', 'chartVariant', 'color'] },
+  { type: 'kpi_card', category: 'metrics', iconKey: 'kpiCard', size: { w: 2, h: 2 }, binding: 'required', addable: true, slots: ['total'], appearance: [] },
+  { type: 'insights', category: 'metrics', iconKey: 'insights', size: { w: 6, h: 4 }, binding: 'required', addable: true, appearance: [] },
+  { type: 'geo_map', category: 'charts', iconKey: 'geoMap', size: { w: 6, h: 7 }, binding: 'required', addable: true, appearance: [] },
+  { type: 'data_grid', category: 'data', iconKey: 'dataGrid', size: { w: 8, h: 14 }, binding: 'required', addable: true, slots: ['trend'], appearance: [] },
+  { type: 'filter_bar', category: 'data', iconKey: 'filterBar', size: { w: 12, h: 3 }, binding: 'none', addable: true, appearance: [] },
   { type: 'table', category: 'data', iconKey: 'table', size: { w: 12, h: 5 }, binding: 'optional', addable: true, appearance: ['striped'] },
   { type: 'embed', category: 'advanced', iconKey: 'embed', size: { w: 6, h: 4 }, binding: 'none', addable: true, appearance: [] },
   { type: 'image', category: 'content', iconKey: 'image', size: { w: 4, h: 3 }, binding: 'none', addable: false, appearance: [] },
@@ -62,6 +69,9 @@ export function defaultSizes(type: string): Record<Device, { w: number; h: numbe
 
 /** Chart/metric/table components read `bindings.data`; the renderer picks the first dataset binding by key. */
 export const DATA_BINDING_KEY = 'data';
+
+/** Components drawn by the shared analytics renderer; they read named bindings and need no per-type preview code. */
+export const ANALYTICS_TYPES: ReadonlySet<string> = new Set(['kpi_card', 'data_grid', 'geo_map', 'insights']);
 
 export function isChart(type: string): boolean {
   return type === 'bar_chart' || type === 'line_chart' || type === 'donut_chart';

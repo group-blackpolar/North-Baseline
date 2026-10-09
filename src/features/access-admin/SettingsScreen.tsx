@@ -11,6 +11,7 @@ import { useOrganization } from '@/context/OrganizationContext';
 import { usePermissions } from '@/context/PermissionContext';
 import { useI18n } from '@/lib/i18n';
 import { PERM } from '@/lib/permission';
+import { isBrandHex } from '@/lib/brand';
 import { getOrganizations, updateOrganization } from '@/lib/organizations';
 import { LoadError, Loading, Notice, Shell, errorText, useList } from './ui';
 import { blobToDataUrl, toIconBlob } from './orgIcon';
@@ -23,7 +24,7 @@ export function SettingsScreen({ organizationId }: { organizationId: string }) {
   const { push } = useNotifications();
   const canEdit = can(PERM.organizationUpdate);
   const current = useList(async () => (await getOrganizations()).find((item) => item.id === organizationId) ?? null, [organizationId]);
-  type Draft = { name: string; slug: string; description: string; iconTouched: boolean; icon: string | null; assetId: string | null };
+  type Draft = { name: string; slug: string; description: string; iconTouched: boolean; icon: string | null; assetId: string | null; brandPrimary: string; brandAccent: string };
   const [draft, setDraft] = useState<Draft | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,8 +39,8 @@ export function SettingsScreen({ organizationId }: { organizationId: string }) {
   useEffect(() => discardPending, []); // eslint-disable-line
 
   const organization = current.data;
-  const form: Draft | null = draft ?? (organization ? { name: organization.name, slug: organization.slug ?? '', description: organization.description ?? '', iconTouched: false, icon: null, assetId: null } : null);
-  const dirty = Boolean(draft && organization && (draft.iconTouched || draft.name !== organization.name || draft.slug !== (organization.slug ?? '') || draft.description !== (organization.description ?? '')));
+  const form: Draft | null = draft ?? (organization ? { name: organization.name, slug: organization.slug ?? '', description: organization.description ?? '', iconTouched: false, icon: null, assetId: null, brandPrimary: organization.brandPrimary ?? '', brandAccent: organization.brandAccent ?? '' } : null);
+  const dirty = Boolean(draft && organization && (draft.iconTouched || draft.name !== organization.name || draft.slug !== (organization.slug ?? '') || draft.description !== (organization.description ?? '') || draft.brandPrimary !== (organization.brandPrimary ?? '') || draft.brandAccent !== (organization.brandAccent ?? '')));
   const hasIcon = form ? (form.iconTouched ? form.icon !== null : Boolean(organization?.iconAssetId || organization?.iconData)) : false;
 
   /**
@@ -70,6 +71,8 @@ export function SettingsScreen({ organizationId }: { organizationId: string }) {
         ...(draft.slug !== (organization.slug ?? '') ? { slug: draft.slug.trim() } : {}),
         ...(draft.iconTouched ? (draft.icon === null ? { iconData: null, iconAssetId: null } : draft.assetId ? { iconAssetId: draft.assetId } : { iconData: draft.icon }) : {}),
         ...(draft.description !== (organization.description ?? '') ? { description: draft.description.trim() || null } : {}),
+        ...(draft.brandPrimary !== (organization.brandPrimary ?? '') ? { brandPrimary: draft.brandPrimary || null } : {}),
+        ...(draft.brandAccent !== (organization.brandAccent ?? '') ? { brandAccent: draft.brandAccent || null } : {}),
       });
       push({ type: 'success', title: t('adm.settings.saved') });
       if (draft.iconTouched && organization.iconAssetId && organization.iconAssetId !== draft.assetId) void deleteAsset(organizationId, organization.iconAssetId).catch(() => undefined);
@@ -102,6 +105,19 @@ export function SettingsScreen({ organizationId }: { organizationId: string }) {
               <label className="block space-y-1"><span className="ui-label">{t('adm.settings.name')}</span><Input required minLength={2} maxLength={100} value={form.name} disabled={!canEdit || busy} onChange={(event) => setDraft({ ...form, name: event.target.value })} /></label>
               <label className="block space-y-1"><span className="ui-label">{t('adm.settings.slug')}</span><Input required maxLength={100} value={form.slug} disabled={!canEdit || busy} onChange={(event) => setDraft({ ...form, slug: event.target.value })} className="font-mono" /><span className="block text-[11px] text-text-muted">{t('adm.settings.slugHint')}</span></label>
               <label className="block space-y-1"><span className="ui-label">{t('adm.settings.description')}</span><textarea rows={3} maxLength={500} value={form.description} disabled={!canEdit || busy} onChange={(event) => setDraft({ ...form, description: event.target.value })} className="w-full resize-y rounded-md border border-border bg-background px-2 py-1.5 text-sm outline-none focus-visible:border-accent disabled:opacity-50" /></label>
+              <fieldset className="space-y-1" disabled={!canEdit || busy}>
+                <legend className="ui-label">{t('brand.colors')}</legend>
+                <div className="flex flex-wrap items-center gap-4">
+                  {(['brandPrimary', 'brandAccent'] as const).map((key) => (
+                    <label key={key} className="flex items-center gap-2 text-xs text-text-secondary">
+                      <input type="color" aria-label={t(key === 'brandPrimary' ? 'brand.primary' : 'brand.accent')} value={isBrandHex(form[key]) ? form[key] : '#0FA396'} onChange={(event) => setDraft({ ...form, [key]: event.target.value.toUpperCase() })} className="size-8 cursor-pointer rounded-md border border-border bg-transparent p-0.5" />
+                      <span>{t(key === 'brandPrimary' ? 'brand.primary' : 'brand.accent')}<span className="ml-1.5 font-mono text-text-muted">{form[key] || t('brand.default')}</span></span>
+                      {form[key] ? <button type="button" className="text-[11px] font-medium text-accent hover:underline" onClick={() => setDraft({ ...form, [key]: '' })}>{t('brand.reset')}</button> : null}
+                    </label>
+                  ))}
+                </div>
+                <p className="text-[11px] text-text-muted">{t('brand.hint')}</p>
+              </fieldset>
               {organization?.status && <p className="text-xs text-text-secondary"><span className="ui-label mr-2">{t('adm.settings.status')}</span>{organization.status}</p>}
               <div className="flex items-center gap-3"><Button type="submit" variant="accent" loading={busy} disabled={!canEdit || !dirty}>{t('adm.settings.save')}</Button><Notice error={error} /></div>
             </div>

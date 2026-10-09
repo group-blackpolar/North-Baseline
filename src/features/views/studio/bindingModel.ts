@@ -63,6 +63,19 @@ export function suggestProps(type: string, columns: ReadonlyArray<ResultColumn>)
     if (!numeric.length) return { compatibility: 'NO_NUMERIC', props: {} };
     return { compatibility: 'ok', props: { categoryKey: categories[0]!.key, valueKey: numeric[0]!.key } };
   }
+  if (type === 'kpi_card') {
+    const value = numeric[0] ?? columns[0];
+    return value ? { compatibility: 'ok', props: { valueKey: value.key, format: value.numeric ? 'number' : 'text' } } : { compatibility: 'NO_NUMERIC', props: {} };
+  }
+  if (type === 'geo_map') {
+    if (!categories.length) return { compatibility: 'NO_DIMENSION', props: {} };
+    if (!numeric.length) return { compatibility: 'NO_NUMERIC', props: {} };
+    return { compatibility: 'ok', props: { regionKey: categories[0]!.key, valueKey: numeric[0]!.key, ...(numeric[1] ? { secondaryKey: numeric[1].key } : {}) } };
+  }
+  if (type === 'data_grid') {
+    if (!columns.length) return { compatibility: 'NO_DIMENSION', props: {} };
+    return { compatibility: 'ok', props: { columns: columns.slice(0, 30).map((column) => ({ key: column.key, label: localizedLabel(column.label), kind: column.numeric ? 'number' : 'text' })) } };
+  }
   // Tables (and any future data component) render every column of the binding as-is.
   return { compatibility: 'ok', props: {} };
 }
@@ -72,8 +85,11 @@ export function staleKeys(type: string, props: Record<string, unknown>, columns:
   const available = new Set(columns.map((column) => column.key));
   const keys: string[] = [];
   if (typeof props.fieldKey === 'string' && type === 'metric') keys.push(props.fieldKey);
+  if (type === 'kpi_card' && typeof props.valueKey === 'string') keys.push(props.valueKey);
+  if (type === 'geo_map') for (const key of [props.regionKey, props.valueKey, props.secondaryKey]) if (typeof key === 'string') keys.push(key);
+  if (type === 'data_grid' && Array.isArray(props.columns)) for (const column of props.columns) { const item = column as { key?: unknown; kind?: unknown }; if (typeof item.key === 'string' && item.kind !== 'sparkline' && item.kind !== 'actions') keys.push(item.key); }
   if (typeof props.categoryKey === 'string') keys.push(props.categoryKey);
-  if (typeof props.valueKey === 'string') keys.push(props.valueKey);
+  if (typeof props.valueKey === 'string' && type !== 'kpi_card' && type !== 'geo_map') keys.push(props.valueKey);
   if (Array.isArray(props.series)) for (const item of props.series) if (item && typeof (item as { key?: unknown }).key === 'string') keys.push((item as { key: string }).key);
   return keys.filter((key) => !available.has(key));
 }

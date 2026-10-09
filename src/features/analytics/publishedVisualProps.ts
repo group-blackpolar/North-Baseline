@@ -8,6 +8,7 @@ export type PublishedBarChartProps = {
   horizontal: boolean;
   stacked: boolean;
   height: number;
+  showValues: boolean;
 };
 
 export type PublishedLineChartProps = {
@@ -23,6 +24,11 @@ export type PublishedDonutChartProps = {
   variant: 'donut' | 'pie';
   color?: string;
   height: number;
+  centerLabel?: string;
+  showTotal: boolean;
+  legend: 'right' | 'bottom' | 'none';
+  maxSlices?: number;
+  totalKey?: string;
 };
 
 function knownKey(value: unknown, availableKeys: ReadonlySet<string>): string | null {
@@ -75,7 +81,7 @@ export function publishedBarChartProps(props: Props, availableKeys: ReadonlySet<
   const configuredHeight = height(props.height);
   const variant = props.variant === undefined ? 'grouped' : props.variant;
   if (!categoryKey || !configuredSeries || configuredHeight === null || (props.horizontal !== undefined && typeof props.horizontal !== 'boolean') || (variant !== 'grouped' && variant !== 'stacked')) return null;
-  return { categoryKey, series: configuredSeries, horizontal: props.horizontal === true, stacked: variant === 'stacked', height: configuredHeight };
+  return { categoryKey, series: configuredSeries, horizontal: props.horizontal === true, stacked: variant === 'stacked', height: configuredHeight, showValues: props.showValues === true };
 }
 
 export function publishedLineChartProps(props: Props, availableKeys: ReadonlySet<string>, locales: string[]): PublishedLineChartProps | null {
@@ -87,13 +93,13 @@ export function publishedLineChartProps(props: Props, availableKeys: ReadonlySet
   return { categoryKey, series: configuredSeries, variant, height: configuredHeight };
 }
 
-export function publishedDonutChartProps(props: Props, availableKeys: ReadonlySet<string>): PublishedDonutChartProps | null {
+export function publishedDonutChartProps(props: Props, availableKeys: ReadonlySet<string>, locales: string[] = []): PublishedDonutChartProps | null {
   const categoryKey = knownKey(props.categoryKey, availableKeys);
   const valueKey = knownKey(props.valueKey, availableKeys);
   const configuredHeight = height(props.height);
   const variant = props.variant === undefined ? 'donut' : props.variant;
   const configuredColor = color(props.color);
   return categoryKey && valueKey && configuredHeight !== null && (variant === 'donut' || variant === 'pie')
-    ? { categoryKey, valueKey, variant, ...(configuredColor ? { color: configuredColor } : {}), height: configuredHeight }
+    ? { categoryKey, valueKey, variant, ...(configuredColor ? { color: configuredColor } : {}), height: configuredHeight, ...(localized(props.centerLabel, locales) ? { centerLabel: localized(props.centerLabel, locales)! } : {}), showTotal: props.showTotal === true, ...(typeof props.maxSlices === 'number' && props.maxSlices >= 2 && props.maxSlices <= 12 ? { maxSlices: Math.round(props.maxSlices) } : {}), ...(typeof props.totalKey === 'string' ? { totalKey: props.totalKey } : {}), legend: props.legend === 'right' || props.legend === 'bottom' ? props.legend : 'none' }
     : null;
 }

@@ -9,14 +9,15 @@ import { assistantEs, assistantEn, type AssistantDictionary } from '@/locales/as
 import { pack12Es, pack12En, type Pack12Dictionary } from '@/locales/pack12';
 import { pack13Es, pack13En, type Pack13Dictionary } from '@/locales/pack13';
 import { studioEs, studioEn, type StudioDictionary } from '@/locales/studio';
+import { pack16Es, pack16En, type Pack16Dictionary } from '@/locales/pack16';
 
-export type Dictionary = BaseDictionary & AuthDictionary & AdminDictionary & MediaDictionary & AssistantDictionary & Pack12Dictionary & Pack13Dictionary & StudioDictionary;
+export type Dictionary = BaseDictionary & AuthDictionary & AdminDictionary & MediaDictionary & AssistantDictionary & Pack12Dictionary & Pack13Dictionary & StudioDictionary & Pack16Dictionary;
 export type Locale = 'es' | 'en';
 
 /** Registrar un idioma nuevo = añadir su archivo base + auth */
 const REGISTRIES: Record<Locale, Dictionary> = {
-  es: { ...baseEs, ...authEs, ...adminEs, ...mediaEs, ...assistantEs, ...pack12Es, ...pack13Es, ...studioEs },
-  en: { ...baseEn, ...authEn, ...adminEn, ...mediaEn, ...assistantEn, ...pack12En, ...pack13En, ...studioEn },
+  es: { ...baseEs, ...authEs, ...adminEs, ...mediaEs, ...assistantEs, ...pack12Es, ...pack13Es, ...studioEs, ...pack16Es },
+  en: { ...baseEn, ...authEn, ...adminEn, ...mediaEn, ...assistantEn, ...pack12En, ...pack13En, ...studioEn, ...pack16En },
 };
 
 const STORAGE_KEY = 'north-locale';

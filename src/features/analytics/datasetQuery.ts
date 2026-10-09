@@ -40,18 +40,21 @@ export type DatasetAggregateMeasure = {
 type DatasetQueryBase = {
   filters?: DatasetQueryFilter[];
   limit?: number;
+  offset?: number;
+  includeTotal?: boolean;
+  search?: { fieldIds: string[]; text: string };
 };
 
 export type DatasetRowsQuery = DatasetQueryBase & {
   mode: 'ROWS';
   fields: string[];
   orderBy?: DatasetQueryOrder[];
-  offset?: number;
 };
 
 export type DatasetAggregateQuery = DatasetQueryBase & {
   mode: 'AGGREGATE';
   groupBy?: string[];
+  granularity?: Record<string, 'DAY' | 'MONTH' | 'QUARTER' | 'YEAR'>;
   measures: DatasetAggregateMeasure[];
   orderBy?: Array<{ key: string; direction: 'ASC' | 'DESC' }>;
 };
@@ -59,6 +62,7 @@ export type DatasetAggregateQuery = DatasetQueryBase & {
 export type DatasetQueryRequest = DatasetRowsQuery | DatasetAggregateQuery;
 
 type DatasetQueryResponseBase = {
+  totalRows?: number;
   datasetId: string;
   activeRevisionId: string;
   schemaVersionId: string;
