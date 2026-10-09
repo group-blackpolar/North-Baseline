@@ -9,7 +9,8 @@ import { TableFields } from '../InspectorTableFields';
 import { DataTab } from './DataTab';
 import { findComponent, setComponentBinding, setComponentCell, setComponentProps, removeComponent, duplicateComponent, removeSection, duplicateSection, setSectionLayout, setSectionName, type Component } from './documentOps';
 import { ColorField, Group, NumberField, SegmentedField, SelectField, SliderField, TextField, ToggleField } from './fields';
-import { DATA_BINDING_KEY, definitionOf } from './registry';
+import { ANALYTICS_TYPES, DATA_BINDING_KEY, definitionOf } from './registry';
+import { AnalyticsFields, SlotBindings, useSlotColumns } from './AnalyticsInspector';
 import { componentLabelKey } from './labels';
 import type { DraftIssue, PanelBinding } from './studioApi';
 import { useViewsEditor } from '../ViewsEditorContext';
@@ -76,7 +77,7 @@ export function StudioInspector({ panelId, bindings, onBindingsChanged, issues, 
               {mine.map((issue, index) => <li key={index} className={cn('flex items-start gap-1.5 text-[11px] leading-4', issue.severity === 'error' ? 'text-error' : 'text-warning')}><WarningCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />{issue.message}</li>)}
             </ul>
           ) : null}
-          {current === 'general' ? <GeneralTab component={found.component} sectionId={found.section.id} /> : null}
+          {current === 'general' ? <GeneralTab component={found.component} sectionId={found.section.id} bindings={bindings} /> : null}
           {current === 'appearance' ? <AppearanceTab component={found.component} /> : null}
           {current === 'data' ? <DataTabHost panelId={panelId} organizationId={organizationId} component={found.component} bindings={bindings} onBindingsChanged={onBindingsChanged} /> : null}
           {current === 'advanced' ? <AdvancedTab component={found.component} /> : null}
@@ -116,9 +117,11 @@ function SectionPanel({ sectionId, onOpenLibrary }: { sectionId: string; onOpenL
   );
 }
 
-function GeneralTab({ component, sectionId }: { component: Component; sectionId: string }) {
+function GeneralTab({ component, sectionId, bindings }: { component: Component; sectionId: string; bindings: ReadonlyArray<PanelBinding> }) {
   const { t, locale } = useI18n();
-  const { updateComponentProps, edit, device, epoch } = useViewsEditor();
+  const { updateComponentProps, edit, device, epoch, organizationId } = useViewsEditor();
+  const columnsBySlot = useSlotColumns(organizationId, component, bindings);
+  const analytics = ANALYTICS_TYPES.has(component.type) || component.type === 'filter_bar';
   const set = (patch: Record<string, unknown>) => updateComponentProps(sectionId, component.id, patch);
   const setLocalized = (key: string, value: string) => {
     const current = { ...((component.props[key] as Record<string, string> | undefined) ?? {}) };
@@ -132,7 +135,8 @@ function GeneralTab({ component, sectionId }: { component: Component; sectionId:
   const embedUrl = String(component.props.url ?? '');
   return (
     <>
-      <Group title={t('st.group.content')}>
+      {analytics ? <AnalyticsFields component={component} columnsBySlot={columnsBySlot} /> : null}
+      {analytics ? null : <Group title={t('st.group.content')}>
         {component.type === 'heading' ? localizedField('text', t('st.prop.text')) : null}
         {component.type === 'card' ? <>{localizedField('title', t('st.prop.title'))}{localizedField('body', t('st.prop.body'), 2000)}</> : null}
         {component.type === 'link' ? (
@@ -161,7 +165,7 @@ function GeneralTab({ component, sectionId }: { component: Component; sectionId:
         {component.type === 'table' ? <TableFields key={`${component.id}:${epoch}`} component={component} sectionId={sectionId} /> : null}
         {['divider'].includes(component.type) ? <p className="text-xs text-text-muted">{t('st.prop.noContent')}</p> : null}
         {['image', 'video', 'file', 'document_workspace'].includes(component.type) ? <p className="rounded-lg bg-surface-hover/60 p-3 text-[11px] leading-4 text-text-muted">{t('views.props.assetNote')}</p> : null}
-      </Group>
+      </Group>}
       <Group title={t('st.group.position', { device: t(`st.device.${device}` as 'st.device.desktop') })}>
         <div className="grid grid-cols-2 gap-2">
           <NumberField label={t('st.layout.x')} value={cell.x + 1} min={1} max={12} onChange={(value) => place({ x: value - 1 })} />
@@ -213,6 +217,14 @@ function AppearanceTab({ component }: { component: Component }) {
           )) : null}
         </Group>
       ) : null}
+      {component.type === 'bar_chart' ? <Group title={t('ai.chart.group')}><ToggleField label={t('ai.chart.showValues')} checked={props.showValues === true} onChange={(value) => set({ showValues: value || undefined })} /></Group> : null}
+      {component.type === 'donut_chart' ? (
+        <Group title={t('ai.chart.group')}>
+          <SegmentedField label={t('ai.chart.legend')} value={String(props.legend ?? 'none')} options={(['none', 'right', 'bottom'] as const).map((value) => ({ value, label: t(`ai.chart.legend.${value}` as 'ai.chart.legend.none') }))} onChange={(value) => set({ legend: value === 'none' ? undefined : value })} />
+          <ToggleField label={t('ai.chart.showTotal')} checked={props.showTotal === true} onChange={(value) => set({ showTotal: value || undefined })} />
+          <NumberField label={t('ai.chart.maxSlices')} value={Number(props.maxSlices ?? 12)} min={2} max={12} onChange={(value) => set({ maxSlices: value >= 12 ? undefined : value })} help={t('ai.chart.maxSlicesHelp')} />
+        </Group>
+      ) : null}
       <p className="text-[11px] leading-4 text-text-muted">{t('st.appearance.note')}</p>
     </>
   );
@@ -221,6 +233,7 @@ function AppearanceTab({ component }: { component: Component }) {
 function DataTabHost({ panelId, organizationId, component, bindings, onBindingsChanged }: { panelId: string; organizationId: string; component: Component; bindings: ReadonlyArray<PanelBinding>; onBindingsChanged: () => Promise<void> }) {
   const { edit, updateComponentProps } = useViewsEditor();
   return (
+    <>
     <DataTab
       organizationId={organizationId}
       panelId={panelId}
@@ -231,6 +244,8 @@ function DataTabHost({ panelId, organizationId, component, bindings, onBindingsC
       onDetach={() => edit((doc) => setComponentBinding(doc, component.id, DATA_BINDING_KEY, null))}
       onProps={(props) => updateComponentProps('', component.id, props)}
     />
+    <SlotBindings component={component} bindings={bindings} />
+    </>
   );
 }
 

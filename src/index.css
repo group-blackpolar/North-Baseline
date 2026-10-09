@@ -36,7 +36,7 @@
   size-adjust: 100%;
 }
 
-@theme {
+@theme static {
   /* ── Paleta NORTH: neutros fríos, sin negro/blanco puros ── */
   --color-background: #F6F7F9;
   --color-surface: #FBFCFD;
@@ -164,6 +164,23 @@
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--color-border-strong); border-radius: 999px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
+
+  /* Organization branding: `data-brand` + `--brand-accent`/`--brand-primary` are set on the shell by App.tsx.
+     Light themes use the brand accent as is; dark themes lift it toward white so it stays legible. */
+  .north-app-shell[data-brand] {
+    --color-accent: var(--brand-accent);
+    --color-accent-hover: color-mix(in srgb, var(--brand-accent) 82%, black);
+    --color-accent-soft: color-mix(in srgb, var(--brand-accent) 12%, transparent);
+    --color-border-selected: color-mix(in srgb, var(--brand-accent) 40%, transparent);
+    --chart-1: var(--brand-accent);
+  }
+  :root[data-theme="dark"] .north-app-shell[data-brand],
+  [data-theme='midnight'] .north-app-shell[data-brand] {
+    --color-accent: color-mix(in srgb, var(--brand-accent) 68%, white);
+    --color-accent-hover: color-mix(in srgb, var(--brand-accent) 52%, white);
+    --color-accent-soft: color-mix(in srgb, var(--brand-accent) 22%, transparent);
+    --chart-1: color-mix(in srgb, var(--brand-accent) 68%, white);
+  }
 
   :root[data-theme="dark"] .north-primary {
     background: var(--color-text);

@@ -7,9 +7,12 @@ import { publishedBarChartProps, publishedDonutChartProps, publishedLineChartPro
 import type { AnalyticsResult } from '@/features/analytics/types';
 import { useI18n } from '@/lib/i18n';
 import { SafeComponent } from '@/views/ViewsRenderer';
+import { BindingSourceProvider } from '@/features/analytics/pro/bindingSource';
+import { ProComponent } from '@/features/analytics/pro/ProComponent';
+import { makePreviewSource } from './previewSource';
 import type { Component } from './documentOps';
 import { cachedQuery } from './previewCache';
-import { DATA_BINDING_KEY, isChart } from './registry';
+import { ANALYTICS_TYPES, DATA_BINDING_KEY, isChart } from './registry';
 import type { PanelBinding } from './studioApi';
 
 const localizedOf = (value: unknown, locales: string[]): string => {
@@ -89,6 +92,14 @@ export interface ComponentPreviewProps {
 /** One component, rendered the way the published page renders it; bound components show their real data. */
 export const ComponentPreview = memo(function ComponentPreview({ organizationId, component, locales, bindings, live }: ComponentPreviewProps) {
   const { t } = useI18n();
+  const previewSource = useMemo(() => makePreviewSource(organizationId, bindings), [bindings, organizationId]);
+  if (component.type === 'filter_bar') return <Notice icon={Database}>{t('st.preview.filterBar')}</Notice>;
+  if (ANALYTICS_TYPES.has(component.type)) {
+    const attached = Object.values(component.bindings).some((item) => (item as { sourceType?: string })?.sourceType === 'dataset');
+    if (!attached) return <Notice icon={ChartBar}>{t('st.preview.unbound')}</Notice>;
+    if (!live) return <Notice icon={Database}>{t('st.preview.boundGeneric')}</Notice>;
+    return <BindingSourceProvider source={previewSource}><ProComponent component={component} panelKey="studio-preview" locales={locales} /></BindingSourceProvider>;
+  }
   const reference = component.bindings[DATA_BINDING_KEY] as { sourceType?: string; sourceId?: string } | undefined;
   const datasetRef = reference?.sourceType === 'dataset' ? reference : Object.values(component.bindings).find((item) => (item as { sourceType?: string })?.sourceType === 'dataset') as { sourceId?: string } | undefined;
   if (datasetRef?.sourceId) {

@@ -7,6 +7,7 @@ import { CategoryRail } from '@/components/organization/CategoryRail';
 import { ContextSidebar } from '@/views/Sidebar';
 import { TabBar } from '@/components/tabs/TabBar';
 import { CurrentPath } from '@/components/tabs/CurrenPath';
+import { brandStyle, identityOf } from '@/lib/brand';
 import { WorkspaceContent } from '@/components/layout/WorkspaceContent';
 import { AssistantBar } from '@/components/layout/AssistantBar';
 import { OrganizationProvider, useOrganization } from '@/context/OrganizationContext';
@@ -276,10 +277,11 @@ function AppShell({
   if (isLoading) return <ShellSkeleton />;
   if (!activeOrganization) return <NoOrganizationState />;
   const inspecting = inspection && inspection.id === activeOrganization.id ? inspection : null;
+  const brand = brandStyle(identityOf(activeOrganization)) as React.CSSProperties | undefined;
 
   return (
     <>
-      <div className="north-app-shell flex flex-col bg-background text-text">
+      <div className="north-app-shell flex flex-col bg-background text-text" style={brand} data-brand={brand ? '' : undefined}>
         {inspecting && <InspectionBanner organization={inspecting} />}
         <div className="flex min-h-0 flex-1">
         {!compact && <OrganizationRail />}

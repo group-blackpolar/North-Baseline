@@ -20,7 +20,8 @@ import { DocumentWorkspaceHost } from '@/features/documents/DocumentsWorkspace';
 import { useShowcaseSlug } from '@/features/showcase/ShowcaseContext';
 import { FilterBar, type FacetLoader, type FilterControl } from '@/features/filters/FilterBar';
 import { queryPanelFacet } from '@/features/filters/facetsApi';
-import { BindingSourceProvider, type BindingResponse, type BindingSource } from '@/features/analytics/pro/bindingSource';
+import { analyticsRows, bindingIdOf, BindingSourceProvider, useBindingResult, type BindingResponse, type BindingSource } from '@/features/analytics/pro/bindingSource';
+import { asNumber } from '@/features/analytics/pro/format';
 import { PRO_TYPES, ProComponent } from '@/features/analytics/pro/ProComponent';
 import { queryPanelAnalyticsBinding } from '@/features/analytics/panelBindingQuery';
 import { queryShowcaseBinding } from '@/lib/showcase';
@@ -163,6 +164,9 @@ function PublishedAnalyticsContent({
 }) {
   const binding = datasetBinding(component.bindings);
   const { result, response } = usePanelBindingQuery(organizationId, panelId, binding?.sourceId, filters);
+  // A donut may bind a second result named `total` (the page's unique count) to state exact shares and the centre figure.
+  const totalBinding = component.type === 'donut_chart' ? bindingIdOf(component.bindings, 'total') : null;
+  const totalResult = useBindingResult(totalBinding);
   useEffect(() => {
     if (binding && response) {
       onFilterDefinitions(binding.sourceId, response.filterDefinitions);
@@ -190,7 +194,11 @@ function PublishedAnalyticsContent({
   }
   if (component.type === 'donut_chart') {
     const config = publishedDonutChartProps(component.props, availableKeys, locales);
-    if (config) return withChartTitle(component.props, locales, <AnalyticsDonutChart result={result} {...config} />);
+    if (config) {
+      const totalRow = totalResult.response ? analyticsRows(totalResult.response)[0] : undefined;
+      const total = config.totalKey && totalRow ? asNumber(totalRow[config.totalKey]) : null;
+      return withChartTitle(component.props, locales, <AnalyticsDonutChart result={result} {...config} total={total} />);
+    }
   }
 
   return <AnalyticsDataGrid result={result} />;
@@ -297,7 +305,7 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
       const { filters = [], ...options } = request;
       const response = showcaseSlug
         ? await queryShowcaseBinding(showcaseSlug, panelId, bindingId, filters, signal)
-        : await queryPanelAnalyticsBinding(organizationId, panelId, bindingId, filters, signal, options);
+        : await queryPanelAnalyticsBinding(organizationId, panelId, bindingId, filters, signal, live.current.version > 0 ? { ...options, fresh: true } : options);
       return response as BindingResponse;
     },
     report: (bindingId, response) => {

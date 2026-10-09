@@ -16,6 +16,8 @@ export type BindingRuntimeOptions = {
   limit?: number;
   search?: string;
   compare?: boolean;
+  /** Skip CORECROW's short-lived result cache (set after an explicit refresh). */
+  fresh?: boolean;
 };
 
 export type PanelBindingQueryResult = DatasetQueryResponse & {

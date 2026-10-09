@@ -9,6 +9,9 @@ export interface Organization {
   /** Managed icon (CORECROW asset). Wins over `iconData`, which stays as the legacy fallback. */
   iconAssetId?: string | null;
   description?: string | null;
+  /** Brand colors (#RRGGBB) applied across the shell for members of this organization. */
+  brandPrimary?: string | null;
+  brandAccent?: string | null;
   status?: 'ACTIVE' | 'SUSPENDED' | 'ARCHIVED';
 }
 
@@ -61,7 +64,7 @@ export async function getOrganizations(options?: { force?: boolean }): Promise<O
   return organizations.map((organization) => ({ ...organization, avatarUrl: organization.iconData ?? organization.avatarUrl ?? null }));
 }
 
-export function updateOrganization(organizationId: string, input: { name?: string; slug?: string; iconData?: string | null; iconAssetId?: string | null; description?: string | null }) {
+export function updateOrganization(organizationId: string, input: { name?: string; slug?: string; iconData?: string | null; iconAssetId?: string | null; description?: string | null; brandPrimary?: string | null; brandAccent?: string | null }) {
   return apiRequest<Organization>(`/v1/organizations/${encodeURIComponent(organizationId)}`, { method: 'PATCH', body: JSON.stringify(input) });
 }
 

@@ -91,7 +91,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
   // Sparklines: one request for the rows on screen, limited to their own keys.
   const trendRequest = useMemo(() => {
     if (!trend || !trendId || !rows.length || columns.every((column) => column.kind !== 'sparkline')) return null;
-    const filters: DatasetQueryFilter[] = trend.rowKeys.map((key) => ({ fieldId: key, operator: 'IN', value: [...new Set(rows.map((row) => row[key]).filter((value): value is string | number => typeof value === 'string' || typeof value === 'number'))].slice(0, 100) }));
+    const filters: DatasetQueryFilter[] = trend.rowKeys.slice(0, 2).map((key) => ({ fieldId: key, operator: 'IN', value: [...new Set(rows.map((row) => row[key]).filter((value): value is string | number => typeof value === 'string' || typeof value === 'number'))].slice(0, 100) }));
     return filters.every((filter) => Array.isArray(filter.value) && filter.value.length) ? { filters } : null;
   }, [columns, rows, trend, trendId]);
   const trendData = useBindingResult(trendRequest ? trendId : null, trendRequest ?? {});

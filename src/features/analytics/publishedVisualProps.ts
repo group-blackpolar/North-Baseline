@@ -27,6 +27,8 @@ export type PublishedDonutChartProps = {
   centerLabel?: string;
   showTotal: boolean;
   legend: 'right' | 'bottom' | 'none';
+  maxSlices?: number;
+  totalKey?: string;
 };
 
 function knownKey(value: unknown, availableKeys: ReadonlySet<string>): string | null {
@@ -98,6 +100,6 @@ export function publishedDonutChartProps(props: Props, availableKeys: ReadonlySe
   const variant = props.variant === undefined ? 'donut' : props.variant;
   const configuredColor = color(props.color);
   return categoryKey && valueKey && configuredHeight !== null && (variant === 'donut' || variant === 'pie')
-    ? { categoryKey, valueKey, variant, ...(configuredColor ? { color: configuredColor } : {}), height: configuredHeight, ...(localized(props.centerLabel, locales) ? { centerLabel: localized(props.centerLabel, locales)! } : {}), showTotal: props.showTotal === true, legend: props.legend === 'right' || props.legend === 'bottom' ? props.legend : 'none' }
+    ? { categoryKey, valueKey, variant, ...(configuredColor ? { color: configuredColor } : {}), height: configuredHeight, ...(localized(props.centerLabel, locales) ? { centerLabel: localized(props.centerLabel, locales)! } : {}), showTotal: props.showTotal === true, ...(typeof props.maxSlices === 'number' && props.maxSlices >= 2 && props.maxSlices <= 12 ? { maxSlices: Math.round(props.maxSlices) } : {}), ...(typeof props.totalKey === 'string' ? { totalKey: props.totalKey } : {}), legend: props.legend === 'right' || props.legend === 'bottom' ? props.legend : 'none' }
     : null;
 }

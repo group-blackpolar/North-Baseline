@@ -27,6 +27,16 @@ import type { AnalyticsColumn, AnalyticsData, AnalyticsFilter, AnalyticsResult, 
 
 const PALETTE = CHART_PALETTE;
 
+/** Date buckets arrive as ISO timestamps; chart axes and tooltips name them as "Aug 2026" (UTC, so no day shifts). */
+function categoryLabel(value: unknown, locale: string): string {
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T00:00:00(\.000)?Z$/.test(value)) {
+    const date = new Date(value);
+    const monthStart = value.slice(8, 10) === '01';
+    return new Intl.DateTimeFormat(locale === 'es' ? 'es-419' : locale, { timeZone: 'UTC', month: 'short', year: 'numeric', ...(monthStart ? {} : { day: 'numeric' }) }).format(date);
+  }
+  return String(value ?? '');
+}
+
 function number(value: AnalyticsValue): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
@@ -152,11 +162,13 @@ export function AnalyticsBarChart({ result, categoryKey, series, horizontal = fa
   const labelWidth = useLabelAxisWidth();
   const { locale } = useI18n();
   const valueLabel = (value: unknown) => (typeof value === 'number' ? new Intl.NumberFormat(locale === 'es' ? 'es-419' : locale, { maximumFractionDigits: value >= 1000 ? 0 : 2 }).format(value) : '');
-  return <ChartState result={result} series={series}>{(rows) => <div style={{ height }}><ResponsiveContainer width="100%" height="100%"><BarChart data={rows} layout={horizontal ? 'vertical' : 'horizontal'} margin={{ top: 8, right: showValues && horizontal ? 44 : 8, left: horizontal ? 20 : -12, bottom: 0 }} barCategoryGap={horizontal ? '28%' : '20%'}><CartesianGrid {...GRID} vertical={!horizontal} horizontal={!horizontal ? true : false} />{horizontal ? <><XAxis type="number" hide /><YAxis type="category" dataKey={categoryKey} width={labelWidth} tick={AXIS_TICK} tickLine={false} axisLine={false} interval={0} /></> : <><XAxis dataKey={categoryKey} tick={AXIS_TICK} tickLine={false} axisLine={false} /><YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} /></>}<Tooltip cursor={{ fill: 'var(--color-surface-hover)' }} content={<NorthChartTooltip />} />{series.map((item, index) => <Bar key={item.key} dataKey={item.key} name={item.label} stackId={stacked ? 'values' : undefined} fill={item.color ?? PALETTE[index % PALETTE.length]} radius={horizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]} maxBarSize={horizontal ? 14 : 36} isAnimationActive={false}>{showValues ? <LabelList dataKey={item.key} position={horizontal ? 'right' : 'top'} formatter={valueLabel} style={{ fontSize: 10, fill: 'var(--color-text-secondary)' }} /> : null}</Bar>)}</BarChart></ResponsiveContainer></div>}</ChartState>;
+  return <ChartState result={result} series={series}>{(rows) => <div style={{ height }}><ResponsiveContainer width="100%" height="100%"><BarChart data={rows} layout={horizontal ? 'vertical' : 'horizontal'} margin={{ top: 8, right: showValues && horizontal ? 44 : 8, left: horizontal ? 20 : -12, bottom: 0 }} barCategoryGap={horizontal ? '28%' : '20%'}><CartesianGrid {...GRID} vertical={!horizontal} horizontal={!horizontal ? true : false} />{horizontal ? <><XAxis type="number" hide /><YAxis type="category" dataKey={categoryKey} width={labelWidth} tick={AXIS_TICK} tickLine={false} axisLine={false} interval={0} tickFormatter={(value) => categoryLabel(value, locale)} /></> : <><XAxis dataKey={categoryKey} tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={(value) => categoryLabel(value, locale)} /><YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} /></>}<Tooltip cursor={{ fill: 'var(--color-surface-hover)' }} content={<NorthChartTooltip labelFormat={(label) => categoryLabel(label, locale)} />} />{series.map((item, index) => <Bar key={item.key} dataKey={item.key} name={item.label} stackId={stacked ? 'values' : undefined} fill={item.color ?? PALETTE[index % PALETTE.length]} radius={horizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]} maxBarSize={horizontal ? 14 : 36} isAnimationActive={false}>{showValues ? <LabelList dataKey={item.key} position={horizontal ? 'right' : 'top'} formatter={valueLabel} style={{ fontSize: 10, fill: 'var(--color-text-secondary)' }} /> : null}</Bar>)}</BarChart></ResponsiveContainer></div>}</ChartState>;
 }
 
 export function AnalyticsLineAreaChart({ result, categoryKey, series, variant = 'line', height = 240 }: { result: AnalyticsResult; categoryKey: string; series: AnalyticsSeries[]; variant?: 'line' | 'area'; height?: number }) {
-  return <ChartState result={result} series={series}>{(rows) => <div style={{ height }}><ResponsiveContainer width="100%" height="100%">{variant === 'area' ? <AreaChart data={rows} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}><CartesianGrid {...GRID} vertical={false} /><XAxis dataKey={categoryKey} tick={AXIS_TICK} tickLine={false} axisLine={false} /><YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} /><Tooltip content={<NorthChartTooltip />} />{series.map((item, index) => <Area key={item.key} type="monotone" dataKey={item.key} name={item.label} stroke={item.color ?? PALETTE[index % PALETTE.length]} fill={item.color ?? PALETTE[index % PALETTE.length]} fillOpacity={0.18} strokeWidth={2} />)}</AreaChart> : <LineChart data={rows} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}><CartesianGrid {...GRID} vertical={false} /><XAxis dataKey={categoryKey} tick={AXIS_TICK} tickLine={false} axisLine={false} /><YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} /><Tooltip content={<NorthChartTooltip />} />{series.map((item, index) => <Line key={item.key} type="monotone" dataKey={item.key} name={item.label} stroke={item.color ?? PALETTE[index % PALETTE.length]} strokeWidth={2} dot={false} />)}</LineChart>}</ResponsiveContainer></div>}</ChartState>;
+  const { locale } = useI18n();
+  const tick = (value: unknown) => categoryLabel(value, locale);
+  return <ChartState result={result} series={series}>{(rows) => <div style={{ height }}><ResponsiveContainer width="100%" height="100%">{variant === 'area' ? <AreaChart data={rows} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}><CartesianGrid {...GRID} vertical={false} /><XAxis dataKey={categoryKey} tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={tick} minTickGap={24} /><YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} /><Tooltip content={<NorthChartTooltip labelFormat={(label) => tick(label)} />} />{series.map((item, index) => <Area key={item.key} type="monotone" dataKey={item.key} name={item.label} stroke={item.color ?? PALETTE[index % PALETTE.length]} fill={item.color ?? PALETTE[index % PALETTE.length]} fillOpacity={0.18} strokeWidth={2} />)}</AreaChart> : <LineChart data={rows} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}><CartesianGrid {...GRID} vertical={false} /><XAxis dataKey={categoryKey} tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={tick} minTickGap={24} /><YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} /><Tooltip content={<NorthChartTooltip labelFormat={(label) => tick(label)} />} />{series.map((item, index) => <Line key={item.key} type="monotone" dataKey={item.key} name={item.label} stroke={item.color ?? PALETTE[index % PALETTE.length]} strokeWidth={2} dot={false} />)}</LineChart>}</ResponsiveContainer></div>}</ChartState>;
 }
 
 /** Two numeric measures against each other (one point per row). Non-numeric rows are skipped, never plotted as zero. */
@@ -169,7 +181,7 @@ export function AnalyticsScatterChart({ result, xKey, yKey, xLabel, yLabel, size
   }}</ResultState>;
 }
 
-export function AnalyticsDonutChart({ result, categoryKey, valueKey, variant = 'donut', color, height = 240, centerLabel, showTotal = false, legend = 'none', maxSlices }: { result: AnalyticsResult; categoryKey: string; valueKey: string; variant?: 'donut' | 'pie'; color?: string; height?: number; centerLabel?: string; showTotal?: boolean; legend?: 'right' | 'bottom' | 'none'; maxSlices?: number }) {
+export function AnalyticsDonutChart({ result, categoryKey, valueKey, variant = 'donut', color, height = 240, centerLabel, showTotal = false, legend = 'none', maxSlices, total: totalOverride }: { result: AnalyticsResult; categoryKey: string; valueKey: string; variant?: 'donut' | 'pie'; color?: string; height?: number; centerLabel?: string; showTotal?: boolean; legend?: 'right' | 'bottom' | 'none'; maxSlices?: number; total?: number | null }) {
   const { t, locale } = useI18n();
   return <ResultState result={result}>{(data) => {
     const numeric = data.rows.filter((row) => number(row[valueKey]) !== null);
@@ -177,7 +189,8 @@ export function AnalyticsDonutChart({ result, categoryKey, valueKey, variant = '
     // Beyond `maxSlices` the remaining groups are summed into one "Others" slice (their own values, nothing estimated).
     const sorted = [...numeric].sort((a, b) => (number(b[valueKey]) ?? 0) - (number(a[valueKey]) ?? 0));
     const rows = maxSlices && sorted.length > maxSlices ? [...sorted.slice(0, maxSlices - 1), { [categoryKey]: t('analytics.others'), [valueKey]: sorted.slice(maxSlices - 1).reduce((sum, row) => sum + (number(row[valueKey]) ?? 0), 0) }] : numeric;
-    const total = rows.reduce((sum, row) => sum + (number(row[valueKey]) ?? 0), 0);
+    // Percentages and the centre use the page's own unique total when one is bound (a container never counts twice).
+    const total = totalOverride && totalOverride > 0 ? totalOverride : rows.reduce((sum, row) => sum + (number(row[valueKey]) ?? 0), 0);
     const fill = (index: number) => (index === 0 && color ? color : PALETTE[index % PALETTE.length]);
     const percent = (value: number) => `${new Intl.NumberFormat(locale === 'es' ? 'es-419' : locale, { maximumFractionDigits: 1, minimumFractionDigits: 1 }).format(total ? (value / total) * 100 : 0)}%`;
     return (
