@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ArrowsIn, ArrowsOut, Barricade, Presentation } from '@phosphor-icons/react';
+import { ArrowsClockwise, ArrowsIn, ArrowsOut, Barricade, Presentation } from '@phosphor-icons/react';
 import type { SessionUser } from '@/lib/auth';
 import type { Tab } from '@/context/TabsContext';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -20,6 +20,10 @@ import { DocumentWorkspaceHost } from '@/features/documents/DocumentsWorkspace';
 import { useShowcaseSlug } from '@/features/showcase/ShowcaseContext';
 import { FilterBar, type FacetLoader, type FilterControl } from '@/features/filters/FilterBar';
 import { queryPanelFacet } from '@/features/filters/facetsApi';
+import { BindingSourceProvider, type BindingResponse, type BindingSource } from '@/features/analytics/pro/bindingSource';
+import { PRO_TYPES, ProComponent } from '@/features/analytics/pro/ProComponent';
+import { queryPanelAnalyticsBinding } from '@/features/analytics/panelBindingQuery';
+import { queryShowcaseBinding } from '@/lib/showcase';
 import { chipsOf, filterModeOf, filtersForDefinitions, loadSelections, saveSelections, type FilterSelections } from '@/features/filters/filterModel';
 import { PresentationMode } from '@/features/presentation/PresentationMode';
 import { cn } from '@/lib/utils';
@@ -81,7 +85,8 @@ function gridStyle(position: GridPosition) {
 }
 
 function PublishedGridItem({ component, breakpoint, children }: { component: PublishedPanelDocument['sections'][number]['components'][number]; breakpoint: Breakpoint; children: ReactNode }) {
-  return <div className="min-w-0 rounded-xl border border-border bg-surface p-4" style={gridStyle(component.layout[breakpoint])}>{children}</div>;
+  const tight = component.type === 'kpi_card';
+  return <div className={cn('min-w-0 rounded-xl border border-border bg-surface shadow-xs', tight ? 'p-3' : 'p-4')} style={gridStyle(component.layout[breakpoint])}>{children}</div>;
 }
 
 function storedTableResult(props: Record<string, unknown>, locales: string[]): { result: AnalyticsResult; columns: AnalyticsColumn[] } | null {
@@ -184,7 +189,7 @@ function PublishedAnalyticsContent({
     if (config) return withChartTitle(component.props, locales, <AnalyticsLineAreaChart result={result} {...config} />);
   }
   if (component.type === 'donut_chart') {
-    const config = publishedDonutChartProps(component.props, availableKeys);
+    const config = publishedDonutChartProps(component.props, availableKeys, locales);
     if (config) return withChartTitle(component.props, locales, <AnalyticsDonutChart result={result} {...config} />);
   }
 
@@ -239,6 +244,7 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
   // A presentation works on a frozen snapshot of the filters; the dashboard's own selections are never touched by it.
   const [presenting, setPresenting] = useState<FilterSelections | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [version, setVersion] = useState(0);
   useEffect(() => {
     setDefinitionsByBinding({});
     setExecutedByBinding({});
@@ -271,18 +277,53 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
   }, [canFacet, definitionsByBinding, locales]);
   const filtersFor = useCallback((source: FilterSelections) => Object.fromEntries(Object.entries(definitionsByBinding).map(([bindingId, definitions]) => [bindingId, filtersForDefinitions(definitions, source)])) as Record<string, DatasetQueryFilter[]>, [definitionsByBinding]);
   const filtersByBinding = useMemo(() => filtersFor(presenting ?? selections), [filtersFor, presenting, selections]);
-  const loadFacet = useCallback<FacetLoader>(async (fieldId, search, signal) => {
+  const loadFacet = useCallback<FacetLoader>(async (fieldId, search, offset, signal, granularity) => {
     const entry = Object.entries(definitionsByBinding).find(([, definitions]) => definitions.some((definition) => definition.fieldId === fieldId));
     if (!entry || !organizationId) return { values: [], truncated: false };
-    const result = await queryPanelFacet(organizationId, panelId, entry[0], { fieldId, ...(search ? { search } : {}), filters: filtersForDefinitions(entry[1], selections, fieldId) }, signal);
-    return { values: result.values, truncated: result.truncated };
+    const result = await queryPanelFacet(organizationId, panelId, entry[0], { fieldId, ...(search ? { search } : {}), ...(offset ? { offset } : {}), ...(granularity ? { granularity, limit: 100 } : {}), filters: filtersForDefinitions(entry[1], selections, fieldId) }, signal);
+    return { values: result.values, truncated: result.truncated, ...(result.total !== undefined ? { total: result.total } : {}) };
   }, [definitionsByBinding, organizationId, panelId, selections]);
+
+  // One source for every analytics component on the page: same filters, same refresh, same CORECROW contract.
+  // The object is stable (identity never changes while the panel is open) and reads the live state through a ref, so
+  // a filter change refetches only the bindings whose own filters changed instead of the whole page.
+  const live = useRef({ filtersByBinding, version, selections, controls, canFacet });
+  live.current = { filtersByBinding, version, selections, controls, canFacet };
+  const bindingSource = useMemo<BindingSource>(() => ({
+    get version() { return live.current.version; },
+    filtersFor: (bindingId) => live.current.filtersByBinding[bindingId] ?? [],
+    fetch: async (bindingId, request, signal) => {
+      if (!organizationId) throw new Error('No organization');
+      const { filters = [], ...options } = request;
+      const response = showcaseSlug
+        ? await queryShowcaseBinding(showcaseSlug, panelId, bindingId, filters, signal)
+        : await queryPanelAnalyticsBinding(organizationId, panelId, bindingId, filters, signal, options);
+      return response as BindingResponse;
+    },
+    report: (bindingId, response) => {
+      if (response.filterDefinitions) registerFilterDefinitions(bindingId, response.filterDefinitions);
+      registerExecuted(bindingId, response.executedAt);
+    },
+    canFilter: (fieldId) => live.current.canFacet && live.current.controls.some((control) => control.fieldId === fieldId && (control.mode === 'multi' || control.mode === 'single')),
+    applyFilter: (fieldId, value) => {
+      const { selections: current } = live.current;
+      const values = current[fieldId]?.values ?? [];
+      updateSelections({ ...current, [fieldId]: { ...current[fieldId], values: values.includes(value) ? values : [...values, value] } });
+    },
+  }), [organizationId, panelId, registerExecuted, registerFilterDefinitions, showcaseSlug, updateSelections]);
 
   if (!document) return <div className="p-6 text-sm text-text-muted">Este panel publicado no tiene contenido disponible.</div>;
   const sections = document.sections.slice().sort((a, b) => a.order - b.order);
+  const filterTitle = localized(sections.flatMap((section) => section.components).find((component) => component.type === 'filter_bar')?.props.title, locales) || undefined;
+  const hasFilterSlot = sections.some((section) => section.components.some((component) => component.type === 'filter_bar'));
+  const filterBar = <FilterBar controls={controls} selections={selections} onChange={updateSelections} loadFacet={canFacet ? loadFacet : undefined} title={filterTitle} />;
   const renderSection = (section: (typeof sections)[number]) => <section key={section.id} className={`grid grid-cols-12 auto-rows-[minmax(2rem,auto)] ${GAP[section.layout.gap]}`}>{section.components.slice().sort((a, b) => a.order - b.order).map((component) => {
     const binding = datasetBinding(component.bindings);
-    const content = binding
+    // The filter bar placed by the author is live on the page and absent from presentation scenes (those use a frozen snapshot).
+    if (component.type === 'filter_bar') return presenting ? null : <div key={component.id} className="min-w-0" style={gridStyle(component.layout[breakpoint])}>{filterBar}</div>;
+    const content = PRO_TYPES.has(component.type)
+      ? <ProComponent component={component} panelKey={panelId} locales={locales} />
+      : binding
       ? <PublishedAnalyticsContent component={component} organizationId={organizationId} panelId={panelId} locales={locales} filters={filtersByBinding[binding.sourceId] ?? []} onFilterDefinitions={registerFilterDefinitions} onExecuted={registerExecuted} />
       : component.type === 'document_workspace'
         ? <DocumentWorkspaceHost organizationId={organizationId} props={component.props} />
@@ -296,15 +337,17 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
   };
   const toolbarButton = 'inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs font-medium text-text-secondary transition-colors duration-(--duration-fast) hover:bg-surface-hover hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 pointer-coarse:h-(--touch-min)';
 
-  return <article ref={articleRef} className={cn('north-enter mx-auto w-full max-w-[1680px] space-y-5 p-4 lg:p-5', fullscreen && 'max-w-none overflow-auto bg-background')}>
+  return <BindingSourceProvider source={bindingSource}><article ref={articleRef} className={cn('north-enter mx-auto w-full max-w-[1680px] space-y-5 p-4 lg:p-5', fullscreen && 'max-w-none overflow-auto bg-background')}>
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h1 className="font-display text-2xl font-semibold">{title}</h1>
       <div className="flex items-center gap-2">
+        {updatedAt ? <span className="mr-1 hidden text-right text-[11px] leading-tight text-text-muted sm:block"><span className="block">{t('pres.updated')}</span><span className="block tabular-nums text-text-secondary">{new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(updatedAt))}</span></span> : null}
+        <button type="button" className={toolbarButton} onClick={() => setVersion((value) => value + 1)}><ArrowsClockwise className="size-3.5" aria-hidden="true" />{t('panel.refresh')}</button>
         {sections.length > 0 ? <button type="button" className={toolbarButton} onClick={() => setPresenting(selections)}><Presentation className="size-3.5" aria-hidden="true" />{t('pres.start')}</button> : null}
         {window.document.fullscreenEnabled ? <button type="button" className={toolbarButton} onClick={toggleFullscreen} aria-pressed={fullscreen}>{fullscreen ? <ArrowsIn className="size-3.5" aria-hidden="true" /> : <ArrowsOut className="size-3.5" aria-hidden="true" />}{fullscreen ? t('pres.exitFullscreen') : t('pres.fullscreen')}</button> : null}
       </div>
     </div>
-    <FilterBar controls={controls} selections={selections} onChange={updateSelections} loadFacet={canFacet ? loadFacet : undefined} />
+    {hasFilterSlot ? null : filterBar}
     {presenting ? null : sections.map(renderSection)}
     {presenting ? <PresentationMode
       title={title}
@@ -313,7 +356,7 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
       updatedAt={updatedAt}
       onExit={() => setPresenting(null)}
     /> : null}
-  </article>;
+  </article></BindingSourceProvider>;
 }
 
 export function ViewRenderer({ user, tab }: { user: SessionUser; tab: Tab | null }) {
