@@ -3,7 +3,6 @@ import { Barricade } from '@phosphor-icons/react';
 import type { SessionUser } from '@/lib/auth';
 import type { Tab } from '@/context/TabsContext';
 import { EmptyState } from '@/components/ui/empty-state';
-import { SharkView } from '@/features/shark/SharkView';
 import { adminSectionOf } from '@/features/admin-center/sections';
 import { PersonalView } from '@/features/personal/PersonalView';
 import { AnalyticsBarChart, AnalyticsDataGrid, AnalyticsDonutChart, AnalyticsFilterControls, AnalyticsKpi, AnalyticsLineAreaChart } from '@/features/analytics/AnalyticsVisuals';
@@ -23,7 +22,6 @@ import { DocumentWorkspaceHost } from '@/features/documents/DocumentsWorkspace';
 const AdminCenter = lazy(() => import('@/features/admin-center/AdminCenter').then((module) => ({ default: module.AdminCenter })));
 
 const PERSONAL_CATEGORIES = new Set(['home', 'profile', 'billing', 'preferences', 'settings']);
-const SHARK_CATEGORIES = new Set(['shark-home', 'master-house']);
 const GAP = { none: 'gap-0', sm: 'gap-2', md: 'gap-4', lg: 'gap-6' } as const;
 
 const localized = (value: unknown, locales: string[]) => {
@@ -275,6 +273,5 @@ export function ViewRenderer({ user, tab }: { user: SessionUser; tab: Tab | null
   }
   if (tab.publishedPanel) return <PublishedPanel title={tab.publishedPanel.title} document={tab.publishedPanel.document} locales={tab.publishedPanel.localeOrder} organizationId={activeOrganization?.id} panelId={tab.publishedPanel.id} />;
   if (PERSONAL_CATEGORIES.has(tab.route.categoryId)) return <PersonalView route={tab.route} user={user} />;
-  if (SHARK_CATEGORIES.has(tab.route.categoryId)) return <SharkView route={tab.route} />;
   return <div className="p-6"><EmptyState icon={Barricade} title="Vista en construcción" body={`La categoría "${tab.route.categoryId}" está siendo preparada.`} className="max-w-md" /></div>;
 }

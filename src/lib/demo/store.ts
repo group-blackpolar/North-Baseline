@@ -24,9 +24,7 @@ const STORAGE_KEY = 'north-demo-orgs-v1';
 
 // IDs canónicos
 export const PERSONAL_ORG_ID = 'personal';
-export const SHARK_ORG_ID = 'shark';
 export const PERSONAL_WS_ID = 'personal-ws';
-export const SHARK_WS_ID = 'shark-ws';
 
 // Utilidades
 export function initialsFor(name: string): string {
@@ -54,15 +52,6 @@ const SEED_ORGS: DemoOrganization[] = [
     initials: 'P',
     kind: 'personal',
   },
-  {
-    id: SHARK_ORG_ID,
-    name: 'SHARK',
-    slug: 'shark',
-    avatarUrl: null,
-    description: 'Maritime Imports Intelligence',
-    initials: 'S',
-    kind: 'demo',
-  },
 ];
 
 const SEED_WORKSPACES: DemoWorkspace[] = [
@@ -72,13 +61,6 @@ const SEED_WORKSPACES: DemoWorkspace[] = [
     name: 'Personal Workspace',
     slug: 'personal',
     description: 'Tu espacio personal',
-  },
-  {
-    id: SHARK_WS_ID,
-    organizationId: SHARK_ORG_ID,
-    name: 'SHARK Workspace',
-    slug: 'shark',
-    description: 'Panama maritime import intelligence',
   },
 ];
 
