@@ -31,6 +31,9 @@ export type TaxonomyPanel = {
   slug: string;
   status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
   audienceType: 'ALL_MEMBERS' | 'ROLES' | 'GROUPS' | 'PERMISSIONS' | 'SPECIFIC_USERS';
+  /** Revision pointers served by the management tree (null when never saved / never published). */
+  publishedRevisionId?: string | null;
+  draftRevisionId?: string | null;
 };
 
 export type ManagementCategory = TaxonomyCategory & {
@@ -39,7 +42,7 @@ export type ManagementCategory = TaxonomyCategory & {
 
 export type MetadataInput = { name: LocalizedText; slug?: string };
 export type PanelDocument = { schemaVersion: 1; defaultLocale: string; fallbackLocales: string[]; sections: Array<{ id: string; name?: LocalizedText; order: number; layout: { variant: 'grid'; gap: 'none' | 'sm' | 'md' | 'lg' }; components: Array<{ id: string; type: ComponentType; schemaVersion: 1; props: Record<string, unknown>; bindings: Record<string, unknown>; layout: ResponsiveLayout; order: number }> }> };
-export type ComponentType = 'heading' | 'rich_text' | 'image' | 'video' | 'link' | 'file' | 'table' | 'card' | 'list' | 'metric' | 'divider' | 'embed';
+export type ComponentType = 'heading' | 'rich_text' | 'image' | 'video' | 'link' | 'file' | 'table' | 'card' | 'list' | 'metric' | 'divider' | 'embed' | 'bar_chart' | 'line_chart' | 'donut_chart' | 'document_workspace';
 export type ResponsiveLayout = { desktop: GridPosition; tablet: GridPosition; mobile: GridPosition };
 export type GridPosition = { x: number; y: number; w: number; h: number };
 export type PanelRevision = { id: string; panelId: string; revisionNumber: number; etag: string; defaultLocale: string; fallbackLocales: string[]; message: string | null; publishAt: string | null; unpublishAt: string | null; createdBy: string; createdAt: string; document: PanelDocument };

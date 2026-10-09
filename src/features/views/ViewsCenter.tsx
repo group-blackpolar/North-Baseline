@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { CaretLeft, WarningCircle } from '@phosphor-icons/react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+import { WarningCircle } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -8,57 +8,30 @@ import { useAppErrorSafe } from '@/context/ErrorContext';
 import { ApiError } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { listAuthorizedTaxonomy, type ManagementCategory } from '@/lib/northAdmin';
-import { ComponentLibraryModal } from './ComponentLibraryModal';
-import { DevJsonModal } from './DevJsonModal';
 import { ViewsDialogs } from './ViewsDialogs';
-import { ViewsEditorCanvas } from './ViewsEditorCanvas';
-import { ViewsEditorProvider, useViewsEditor } from './ViewsEditorContext';
-import { ViewsInspectorPane } from './ViewsInspectorPane';
-import { ViewsStructurePane } from './ViewsStructurePane';
+import { ViewsEditorProvider } from './ViewsEditorContext';
 import { ViewsWorkspace } from './workspace/ViewsWorkspace';
 
-/** The Views editor (structure · canvas · inspector) that existed before the workspace, unchanged, behind "Edit". */
-function EditorLayout({ onBack }: { onBack: () => void }) {
-  const { t } = useI18n();
-  const { isDirty, saveNow, activePanel } = useViewsEditor();
-  const [leaving, setLeaving] = useState(false);
-  const back = async () => {
-    // Leave only after the draft is safe: a failed save keeps the editor open (conflicts are shown by the toolbar).
-    setLeaving(true);
-    const ok = !isDirty || (await saveNow());
-    setLeaving(false);
-    if (ok) onBack();
-  };
-  return (
-    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background">
-      <div className="flex shrink-0 items-center gap-2 border-b border-border bg-surface px-3 py-1.5">
-        <Button size="sm" variant="ghost" loading={leaving} onClick={() => void back()}><CaretLeft />{t('adm2.views.backToWorkspace')}</Button>
-        {activePanel ? <span className="min-w-0 truncate text-xs text-text-secondary">{activePanel.slug}</span> : null}
-      </div>
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        <ViewsStructurePane />
-        <ViewsEditorCanvas />
-        <ViewsInspectorPane />
-      </div>
-    </div>
-  );
-}
+// The Studio (canvas, charts, inspector) is the heaviest part of Views and most sessions only browse: load it on demand.
+const StudioEditor = lazy(() => import('./studio/StudioEditor').then((module) => ({ default: module.StudioEditor })));
 
 function Surface({ loadError, onRetry }: { loadError: string | null; onRetry: () => void }) {
   const [editing, setEditing] = useState(false);
   return (
     <>
-      {editing ? <EditorLayout onBack={() => setEditing(false)} /> : <ViewsWorkspace loadError={loadError} onRetry={onRetry} onOpenEditor={() => setEditing(true)} />}
+      {editing ? (
+        <Suspense fallback={<div className="w-full space-y-3 p-4 lg:p-5" aria-busy="true"><Skeleton className="h-8 w-56" /><Skeleton className="h-64 w-full rounded-xl" /></div>}>
+          <StudioEditor onExit={() => setEditing(false)} />
+        </Suspense>
+      ) : <ViewsWorkspace loadError={loadError} onRetry={onRetry} onOpenEditor={() => setEditing(true)} />}
       <ViewsDialogs />
-      <ComponentLibraryModal />
-      <DevJsonModal />
     </>
   );
 }
 
 /**
  * Administration → Views. Loads the management tree CORECROW serves to people allowed to manage structure, then renders
- * the workspace (overview · explorer · results · inspector). The pre-existing visual editor is reachable per view.
+ * the workspace (overview · explorer · results · inspector). The Views Studio (visual editor) opens per view.
  */
 export function ViewsCenter({ organizationId }: { organizationId: string }) {
   const { t } = useI18n();

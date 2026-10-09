@@ -38,7 +38,7 @@ export interface PublishedPanelDocument {
   schemaVersion: 1;
   defaultLocale: string;
   fallbackLocales: string[];
-  sections: Array<{ id: string; order: number; layout: { variant: 'grid'; gap: 'none' | 'sm' | 'md' | 'lg' }; components: Array<{ id: string; type: string; schemaVersion: number; props: Record<string, unknown>; bindings?: Record<string, PublishedPanelBinding>; layout: { desktop: { x: number; y: number; w: number; h: number }; tablet: { x: number; y: number; w: number; h: number }; mobile: { x: number; y: number; w: number; h: number } }; order: number }> }>;
+  sections: Array<{ id: string; name?: Record<string, string>; order: number; layout: { variant: 'grid'; gap: 'none' | 'sm' | 'md' | 'lg' }; components: Array<{ id: string; type: string; schemaVersion: number; props: Record<string, unknown>; bindings?: Record<string, PublishedPanelBinding>; layout: { desktop: { x: number; y: number; w: number; h: number }; tablet: { x: number; y: number; w: number; h: number }; mobile: { x: number; y: number; w: number; h: number } }; order: number }> }>;
 }
 
 /** Canonical, server-validated reference stored in a published panel document. */

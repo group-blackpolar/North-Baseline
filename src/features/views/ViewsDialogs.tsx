@@ -182,14 +182,15 @@ export function ViewsDialogs() {
               </label>
               <div>
                 <span className="block text-xs font-medium text-text-secondary mb-1.5">{t('views.templateLabel')}</span>
-                <div className="grid grid-cols-1 gap-1 max-h-36 overflow-y-auto pr-1">
+                <div className="grid grid-cols-1 gap-1 max-h-52 overflow-y-auto pr-1">
                   {(
                     [
-                      { id: 'blank', title: t('views.template.blank') },
-                      { id: 'dashboard', title: t('views.template.dashboard') },
-                      { id: 'table', title: t('views.template.table') },
-                      { id: 'settings', title: t('views.template.settings') },
-                      { id: 'profile', title: t('views.template.profile') },
+                      { id: 'blank', title: t('st.tpl.blank'), hint: t('st.tpl.blank.hint') },
+                      { id: 'executive', title: t('st.tpl.executive'), hint: t('st.tpl.executive.hint') },
+                      { id: 'analytics', title: t('st.tpl.analytics'), hint: t('st.tpl.analytics.hint') },
+                      { id: 'operations', title: t('st.tpl.operations'), hint: t('st.tpl.operations.hint') },
+                      { id: 'explorer', title: t('st.tpl.explorer'), hint: t('st.tpl.explorer.hint') },
+                      { id: 'presentation', title: t('st.tpl.presentation'), hint: t('st.tpl.presentation.hint') },
                     ] as const
                   ).map((tpl) => (
                     <button
@@ -200,7 +201,7 @@ export function ViewsDialogs() {
                         template === tpl.id ? 'border-accent bg-accent/5 font-medium text-accent' : 'border-border bg-surface-hover/50 text-text-secondary'
                       }`}
                     >
-                      <span>{tpl.title}</span>
+                      <span className="min-w-0"><span className="block">{tpl.title}</span><span className="block truncate text-[11px] font-normal text-text-muted">{tpl.hint}</span></span>
                       {template === tpl.id && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}
                     </button>
                   ))}
