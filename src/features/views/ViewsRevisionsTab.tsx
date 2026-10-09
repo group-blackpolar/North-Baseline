@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 
 /** Fase 6: historial visual con preview seguro y restore como borrador. */
 export function ViewsRevisionsTab() {
-  const { organizationId, selection, etag, saveNow, setActiveDocument, setIsDirty } = useViewsEditor();
+  const { organizationId, selection, etag, saveNow, setActiveDocument, setIsDirty, setEtag } = useViewsEditor();
   const { t } = useI18n();
   const [items, setItems] = useState<PanelRevisionSummary[]>([]);
   const [loading, setLoading] = useState(false);
@@ -50,6 +50,8 @@ export function ViewsRevisionsTab() {
       if (!etag) await saveNow();
       const next = await restoreRevision(organizationId, selection.panelId, revisionId, etag);
       setActiveDocument(next.document);
+      // The restore created a new draft revision: keep its ETag, or the next autosave would conflict with itself.
+      setEtag(next.etag);
       setIsDirty(false);
       setNotice(t('views.revisions.restored'));
       await load();

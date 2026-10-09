@@ -191,7 +191,7 @@ function PublishedAnalyticsContent({
   return <AnalyticsDataGrid result={result} />;
 }
 
-function SafeComponent({ type, props, locales }: { type: string; props: Record<string, unknown>; locales: string[] }): ReactNode {
+export function SafeComponent({ type, props, locales }: { type: string; props: Record<string, unknown>; locales: string[] }): ReactNode {
   if (type === 'heading') return <h2 className="font-display text-xl font-semibold">{localized(props.text, locales)}</h2>;
   if (type === 'rich_text') {
     const documents = props.documents as Record<string, unknown> | undefined;
@@ -210,12 +210,20 @@ function SafeComponent({ type, props, locales }: { type: string; props: Record<s
       return <li key={typeof value.id === 'string' ? value.id : index}>{href ? <a className="text-accent underline" href={href} target="_blank" rel="noreferrer">{label}</a> : label}</li>;
     })}</List>;
   }
+  if (type === 'card') {
+    const title = localized(props.title, locales);
+    const body = localized(props.body, locales);
+    return <div className="space-y-1"><p className="text-sm font-semibold text-text">{title}</p>{body ? <p className="text-sm leading-6 text-text-secondary">{body}</p> : null}</div>;
+  }
   // Assets need authorized signed reads. Unknown schemas fail closed.
-  if (['image', 'video', 'file', 'card', 'embed'].includes(type)) return <p className="text-sm text-text-muted">Contenido disponible cuando los recursos autorizados estén configurados.</p>;
+  if (['image', 'video', 'file', 'embed'].includes(type)) return <p className="text-sm text-text-muted">Contenido disponible cuando los recursos autorizados estén configurados.</p>;
   return null;
 }
 
 function sceneTitle(section: PublishedPanelDocument['sections'][number], locales: string[]): string {
+  // A section the author named in the Studio is the scene title; otherwise its first heading.
+  const named = localized(section.name, locales);
+  if (named) return named;
   const heading = section.components.slice().sort((a, b) => a.order - b.order).find((component) => component.type === 'heading');
   return heading ? localized(heading.props.text, locales) : '';
 }
