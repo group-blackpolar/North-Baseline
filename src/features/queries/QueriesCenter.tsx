@@ -78,7 +78,7 @@ function OverviewTab({ organizationId, onOpen }: { organizationId: string; onOpe
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         {cards.map((card) => (
-          <button key={card.id} type="button" disabled={!card.tab} onClick={() => card.tab && onOpen(card.tab)} className="np-card np-press-flat p-3.5 text-left transition-colors duration-(--duration-fast) enabled:hover:border-border-hover">
+          <button key={card.id} type="button" disabled={!card.tab} onClick={() => card.tab && onOpen(card.tab)} className="np-card np-press-flat min-w-0 p-3.5 text-left transition-colors duration-(--duration-fast) enabled:hover:border-border-hover">
             <p className="ui-label pb-1">{card.label}</p>
             {datasets.status === 'loading' && typeof card.value !== 'string' ? <Skeleton className="h-7 w-12" /> : <p className={`font-display font-semibold tabular-nums text-text ${card.value === t('adm2.q.na') ? 'text-sm text-text-muted' : 'text-2xl'}`}>{card.value ?? '—'}</p>}
             {card.note ? <p className="mt-0.5 text-[11px] text-text-muted">{card.note}</p> : null}

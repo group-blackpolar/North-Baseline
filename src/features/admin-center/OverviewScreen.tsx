@@ -20,7 +20,7 @@ import { Shell, Unavailable, invalidateOrganization, toneForStatus } from './ui'
 function Kpi({ label, value, icon, state, hint }: { label: string; value: string | number | null; icon: IconComponent; state: Resource<unknown>['status']; hint?: string }) {
   const { t } = useI18n();
   return (
-    <div className="np-card flex items-start justify-between gap-2 p-3.5" title={state === 'forbidden' ? t('adm2.kpi.forbidden') : state === 'error' ? t('adm2.kpi.error') : undefined}>
+    <div className="np-card flex min-w-0 items-start justify-between gap-2 p-3.5" title={state === 'forbidden' ? t('adm2.kpi.forbidden') : state === 'error' ? t('adm2.kpi.error') : undefined}>
       <div className="min-w-0">
         <p className="ui-label pb-1">{label}</p>
         {state === 'loading' ? <Skeleton className="h-7 w-14" /> : <p className="font-display text-2xl font-semibold tabular-nums text-text">{value ?? '—'}</p>}

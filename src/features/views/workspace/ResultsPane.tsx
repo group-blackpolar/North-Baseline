@@ -39,7 +39,9 @@ function StatusPill({ resource }: { resource: ViewResource }) {
 
 const kindIcon = (resource: ViewResource) => (resource.kind === 'PANEL' ? FileText : resource.kind === 'CATEGORY' ? Folder : FolderSimple);
 
-export function ResultsPane({ matched, total, loading, error, onRetry, filters, onSort, mode, onMode, groupBy, onGroupBy, selectedId, onSelect, onActivate, menuFor, revisions, userName, locale: localeOverride, onClearFilters, hasFilters }: {
+export function ResultsPane({ matched, total, loading, error, onRetry, filters, onSort, mode, onMode, groupBy, onGroupBy, selectedId, onSelect, onActivate, menuFor, revisions, userName, locale: localeOverride, onClearFilters, hasFilters, narrow }: {
+  /** Too little room for a table: it is replaced by the compact list (the stored preference is untouched). */
+  narrow?: boolean;
   matched: ViewResource[];
   total: number;
   loading: boolean;
@@ -66,12 +68,13 @@ export function ResultsPane({ matched, total, loading, error, onRetry, filters, 
   const [pageSize, setPageSize] = useState(PAGE_SIZES[1]!);
   const [page, setPage] = useState(1);
   const [menu, setMenu] = useState<{ x: number; y: number; resource: ViewResource } | null>(null);
+  const shown: DisplayMode = narrow && mode === 'table' ? 'list' : mode;
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
   // A new result set (filters, sort, data) starts on its first page.
   useEffect(() => { setPage(1); }, [matched, pageSize]);
   const paged = useMemo(() => paginate(matched, page, pageSize), [matched, page, pageSize]);
-  const grouped = useMemo(() => (mode === 'grouped' ? groupResources(paged.items, groupBy === 'none' ? 'category' : groupBy, locale) : []), [mode, paged.items, groupBy, locale]);
+  const grouped = useMemo(() => (shown === 'grouped' ? groupResources(paged.items, groupBy === 'none' ? 'category' : groupBy, locale) : []), [shown, paged.items, groupBy, locale]);
 
   const openMenu = (resource: ViewResource, x: number, y: number) => { onSelect(resource); setMenu({ x, y, resource }); };
   const rowProps = (resource: ViewResource) => ({
@@ -203,7 +206,7 @@ export function ResultsPane({ matched, total, loading, error, onRetry, filters, 
           {loading ? t('admin.loading') : error ? t('adm2.views.queryError') : t('adm2.views.countSummary', { matched: matched.length, total, from: paged.from, to: paged.to })}
         </p>
         <div className="flex flex-wrap items-center gap-2">
-          {mode === 'grouped' ? (
+          {shown === 'grouped' ? (
             <label className="flex items-center gap-1.5 text-xs text-text-secondary">{t('adm2.views.groupBy')}
               <select value={groupBy === 'none' ? 'category' : groupBy} onChange={(event) => onGroupBy(event.target.value as GroupBy)} className="h-8 rounded-md border border-border bg-surface px-2 text-xs text-text">
                 {(['category', 'status', 'kind', 'month'] as const).map((by) => <option key={by} value={by}>{t(`adm2.views.group.${by}` as never)}</option>)}
@@ -216,8 +219,8 @@ export function ResultsPane({ matched, total, loading, error, onRetry, filters, 
             </select>
           </label>
           <div role="group" aria-label={t('adm2.views.mode')} className="inline-flex gap-0.5 rounded-lg bg-surface-hover p-0.5">
-            {modes.map((item) => (
-              <button key={item.id} type="button" aria-pressed={mode === item.id} title={item.label} aria-label={item.label} onClick={() => onMode(item.id)} className={cn('grid size-7 place-items-center rounded-md transition-colors duration-(--duration-fast) pointer-coarse:size-(--touch-min)', mode === item.id ? 'bg-surface text-text shadow-soft' : 'text-text-muted hover:text-text')}><item.icon className="size-4" /></button>
+            {modes.filter((item) => !(narrow && item.id === 'table')).map((item) => (
+              <button key={item.id} type="button" aria-pressed={shown === item.id} title={item.label} aria-label={item.label} onClick={() => onMode(item.id)} className={cn('grid size-7 place-items-center rounded-md transition-colors duration-(--duration-fast) pointer-coarse:size-(--touch-min)', shown === item.id ? 'bg-surface text-text shadow-soft' : 'text-text-muted hover:text-text')}><item.icon className="size-4" /></button>
             ))}
           </div>
         </div>
@@ -230,8 +233,8 @@ export function ResultsPane({ matched, total, loading, error, onRetry, filters, 
       ) : matched.length === 0 ? (
         <EmptyState icon={MagnifyingGlass} title={hasFilters ? t('adm2.views.noResults') : t('adm2.views.empty')} body={hasFilters ? t('adm2.views.noResultsBody') : t('adm2.views.emptyBody')} className="py-12" action={hasFilters ? <Button size="sm" variant="secondary" onClick={onClearFilters}>{t('adm2.filters.clear')}</Button> : undefined} />
       ) : (
-        <div key={`${mode}`} className="np-fade-in">
-          {mode === 'table' ? tableFor(paged.items) : mode === 'grid' ? gridFor(paged.items) : mode === 'list' ? listFor(paged.items) : (
+        <div key={`${shown}`} className="np-fade-in">
+          {shown === 'table' ? tableFor(paged.items) : shown === 'grid' ? gridFor(paged.items) : shown === 'list' ? listFor(paged.items) : (
             <div className="space-y-3">
               {grouped.map((group) => {
                 const closed = collapsedGroups.has(group.key);

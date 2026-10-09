@@ -164,9 +164,9 @@ export function ViewsWorkspace({ loadError, onRetry, onOpenEditor }: { loadError
       <div className="@container flex min-w-0 flex-1 flex-col">
         <header className="flex flex-wrap items-center gap-2 border-b border-border bg-surface px-3 py-2 lg:px-4">
           {!dockExplorer ? <Button size="icon" variant="ghost" aria-label={t('adm2.views.structure')} onClick={() => setExplorerOpen(true)}><Tree /></Button> : null}
-          <nav aria-label="breadcrumb" className="flex min-w-0 flex-1 items-center gap-1 text-xs text-text-secondary">
-            <button type="button" onClick={() => goAdmin('overview')} className="shrink-0 hover:text-text">{t('personal.administration')}</button>
-            <CaretRight className="size-3 shrink-0 text-text-muted" />
+          <nav aria-label="breadcrumb" className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-xs text-text-secondary">
+            <button type="button" onClick={() => goAdmin('overview')} className="hidden shrink-0 hover:text-text @lg:inline">{t('personal.administration')}</button>
+            <CaretRight className="hidden size-3 shrink-0 text-text-muted @lg:block" />
             <button type="button" onClick={() => { setSelectedId(null); clear(); }} className={cn('shrink-0', pathParts.length ? 'hover:text-text' : 'font-medium text-text')}>{t('adm.nav.views')}</button>
             {pathParts.map((part, index) => <span key={`${part}-${index}`} className="flex min-w-0 items-center gap-1"><CaretRight className="size-3 shrink-0 text-text-muted" /><span className={cn('truncate', index === pathParts.length - 1 && 'font-medium text-text')}>{part}</span></span>)}
           </nav>
@@ -174,8 +174,8 @@ export function ViewsWorkspace({ loadError, onRetry, onOpenEditor }: { loadError
             <MagnifyingGlass className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-text-muted" />
             <Input className="pl-7" value={filters.q} onChange={(event) => patch({ q: event.target.value })} placeholder={t('adm2.views.search')} aria-label={t('adm2.views.search')} />
           </div>
-          <div className="flex items-center gap-1">
-            <Button size="sm" variant="accent" disabled={!canCreate} onClick={() => (targetSub ? setModal({ type: 'create_view', categoryId: targetSub.categoryId, subcategoryId: targetSub.id }) : setModal({ type: 'create_category' }))} title={targetSub ? undefined : t('adm2.views.createViewHint')}><Plus />{targetSub ? t('adm2.views.qa.createView') : t('adm2.views.qa.createCategory')}</Button>
+          <div className="ml-auto flex shrink-0 items-center gap-1">
+            <Button size="sm" variant="accent" disabled={!canCreate} onClick={() => (targetSub ? setModal({ type: 'create_view', categoryId: targetSub.categoryId, subcategoryId: targetSub.id }) : setModal({ type: 'create_category' }))} title={targetSub ? undefined : t('adm2.views.createViewHint')}><Plus /><span className="hidden @md:inline">{targetSub ? t('adm2.views.qa.createView') : t('adm2.views.qa.createCategory')}</span><span className="sr-only @md:hidden">{targetSub ? t('adm2.views.qa.createView') : t('adm2.views.qa.createCategory')}</span></Button>
             <Button size="icon" variant="ghost" aria-label={t('access.refresh')} title={t('access.refresh')} onClick={onRetry}><ArrowsClockwise /></Button>
             <Button size="icon" variant="ghost" aria-label={t('adm2.views.inspector.toggle')} aria-pressed={wide ? inspectorOpen : inspectorSheet} onClick={() => (wide ? setInspectorOpen((value) => !value) : setInspectorSheet(true))}><SidebarSimple className="-scale-x-100" /></Button>
           </div>
@@ -194,9 +194,9 @@ export function ViewsWorkspace({ loadError, onRetry, onOpenEditor }: { loadError
               </div>
               {overviewOpen ? (
                 <>
-                  <div className="grid grid-cols-2 gap-2 @xl:grid-cols-4 @6xl:grid-cols-8">
+                  <div className="grid grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] gap-2">
                     {cards.map((card) => (
-                      <button key={card.id} type="button" disabled={!card.apply} onClick={() => card.apply && setFilters({ ...emptyFilters(), ...card.apply })} className="np-card np-press-flat flex items-start justify-between gap-2 p-3 text-left transition-[border-color,transform] duration-(--duration-fast) enabled:hover:border-border-hover">
+                      <button key={card.id} type="button" disabled={!card.apply} onClick={() => card.apply && setFilters({ ...emptyFilters(), ...card.apply })} className="np-card np-press-flat flex min-w-0 items-start justify-between gap-2 p-3 text-left transition-[border-color,transform] duration-(--duration-fast) enabled:hover:border-border-hover">
                         <div className="min-w-0">
                           <p className="ui-label truncate pb-0.5">{card.label}</p>
                           {loading && !taxonomy ? <Skeleton className="h-7 w-10" /> : <p className="font-display text-xl font-semibold tabular-nums text-text">{card.value}</p>}
@@ -275,7 +275,7 @@ export function ViewsWorkspace({ loadError, onRetry, onOpenEditor }: { loadError
               matched={matched} total={resources.length} loading={loading && !taxonomy} error={loadError} onRetry={onRetry} filters={filters}
               onSort={(sort, dir) => patch({ sort, dir })} mode={display} onMode={setDisplay} groupBy={groupBy} onGroupBy={setGroupBy}
               selectedId={selectedId} onSelect={selectFromResults} onActivate={activate} menuFor={actions.menuFor} revisions={revisions} userName={userName}
-              onClearFilters={clear} hasFilters={activeFilters > 0}
+              onClearFilters={clear} hasFilters={activeFilters > 0} narrow={width < 640}
             />
           </div>
         </div>

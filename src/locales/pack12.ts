@@ -69,6 +69,11 @@ export const pack12Es = {
   'adm2.members.tab.invitations': 'Invitaciones',
   'adm2.members.tab.groups': 'Grupos',
   'adm2.members.tab.permissions': 'Permisos',
+  'adm2.members.allStatus': 'Todos los estados',
+  'adm2.members.count': 'Mostrando {shown} de {total}',
+  'adm2.members.direct': 'Permisos directos',
+  'adm2.members.viaGroups': 'Permisos por grupos',
+  'adm2.members.sheetNote': 'Rol, permisos y pertenencia a grupos se cambian en las pestañas Miembros, Grupos y Permisos; CORECROW autoriza cada cambio.',
 
   // --- audit ----------------------------------------------------------------------------------------------------
   'adm2.audit.title': 'Actividad y auditoría',
@@ -580,6 +585,11 @@ export const pack12En: Pack12Dictionary = {
   'adm2.members.tab.invitations': 'Invitations',
   'adm2.members.tab.groups': 'Groups',
   'adm2.members.tab.permissions': 'Permissions',
+  'adm2.members.allStatus': 'All statuses',
+  'adm2.members.count': 'Showing {shown} of {total}',
+  'adm2.members.direct': 'Direct permissions',
+  'adm2.members.viaGroups': 'Permissions via groups',
+  'adm2.members.sheetNote': 'Role, permissions and group membership are changed in the Members, Groups and Permissions tabs; CORECROW authorizes every change.',
 
   'adm2.audit.title': 'Activity & audit',
   'adm2.audit.hint': "CORECROW's record of what happened in the organization: who, what, on which resource and when.",
