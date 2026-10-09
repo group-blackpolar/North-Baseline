@@ -10,6 +10,7 @@ import { useOrganization } from '@/context/OrganizationContext';
 import { useTabs } from '@/context/TabsContext';
 import { useI18n } from '@/lib/i18n';
 import type { SessionUser } from '@/lib/auth';
+import { AssistantLauncher } from '@/features/assistant/AssistantLauncher';
 
 /** Phone / portrait-tablet header: menu, current view, open-views switcher. Replaces rails, breadcrumb and tab strip. */
 export function MobileHeader({ user }: { user: SessionUser }) {
@@ -29,6 +30,7 @@ export function MobileHeader({ user }: { user: SessionUser }) {
           <h1 className="truncate font-display text-[15px] font-semibold leading-tight text-text">{title}</h1>
           {activeOrganization && <p className="truncate text-[11px] leading-tight text-text-muted">{activeOrganization.name}</p>}
         </div>
+        <AssistantLauncher variant="header" />
         <button type="button" aria-label={t('tabs.switcher', { n: tabs.length })} onClick={() => setSwitcher(true)} className="relative flex size-(--touch-min) items-center justify-center rounded-lg text-text-secondary hover:bg-surface-hover hover:text-text">
           <Icon icon={Stack} size="lg" />
           <span className="absolute right-1 top-1 min-w-4 rounded-full bg-accent px-1 text-center text-[10px] font-semibold leading-4 text-white">{tabs.length}</span>

@@ -3,6 +3,7 @@ import { useLayout } from '@/context/LayoutContext';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useI18n, type Dictionary } from '@/lib/i18n';
+import { AssistantLauncher } from '@/features/assistant/AssistantLauncher';
 
 const MODES = [
   { id: 'single', icon: Square, label: 'layout.single' },
@@ -40,6 +41,10 @@ export function LayoutSwitcher() {
           </Tooltip>
         );
       })}
+      {/* Cuervo, the NORTH assistant, sits at the bottom of the layout bar. */}
+      <div className="mt-auto flex flex-col items-center border-t border-border pt-2">
+        <AssistantLauncher variant="bar" />
+      </div>
     </div>
   );
 }
