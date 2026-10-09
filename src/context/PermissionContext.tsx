@@ -6,10 +6,13 @@ import { PERSONAL_ORG_ID } from '@/lib/demo/store';
 interface PermissionContextValue {
   can: (permission: string) => boolean;
   permissions: string[];
+  /** True until the first discovery for this organization has settled (allowed, denied or failed). */
   isLoading: boolean;
 }
 
 const PermissionContext = createContext<PermissionContextValue | null>(null);
+
+const isTenant = (organizationId?: string) => Boolean(organizationId) && organizationId !== PERSONAL_ORG_ID;
 
 export function PermissionProvider({
   organizationId,
@@ -19,27 +22,27 @@ export function PermissionProvider({
   children: ReactNode;
 }) {
   const [permissions, setPermissions] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  // A real tenant starts in the loading state: "not loaded yet" must never look like "denied".
+  const [isLoading, setIsLoading] = useState(() => isTenant(organizationId));
 
   useEffect(() => {
     // Personal is a user-scoped surface, not a tenant. It has no organization
     // permissions and must never be sent to CoreCrow as an organization id.
-    if (!organizationId || organizationId === PERSONAL_ORG_ID) {
+    if (!organizationId || !isTenant(organizationId)) {
       setPermissions([]);
       setIsLoading(false);
       return;
     }
 
     let live = true;
-    setPermissions([]);
     setIsLoading(true);
     void fetchPermissions(organizationId)
       .then((result) => {
         if (live) setPermissions(result.permissions);
       })
       .catch(() => {
-        // Navigation is default-deny when capability discovery fails.
-        if (live) setPermissions([]);
+        // Navigation is default-deny when capability discovery fails (CORECROW still decides every request).
+        if (live) setPermissions((current) => current);
       })
       .finally(() => {
         if (live) setIsLoading(false);

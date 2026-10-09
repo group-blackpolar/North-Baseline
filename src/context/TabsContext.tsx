@@ -1,6 +1,7 @@
 /* oxlint-disable react/only-export-components */
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import { uuid } from '@/lib/utils';
+import { loadNavState, saveNavState } from '@/lib/navState';
 
 export interface TabRoute {
   categoryId: string;
@@ -18,6 +19,8 @@ export interface Tab {
   id: string;
   route: TabRoute;
   publishedPanel?: PublishedPanelTab;
+  /** A restored tab whose published panel still has to be resolved (documents are never persisted). */
+  restorePanelId?: string;
 }
 
 interface TabsContextValue {
@@ -27,73 +30,83 @@ interface TabsContextValue {
   openNewTab: () => void;
   closeTab: (tabId: string) => void;
   setActiveTab: (tabId: string) => void;
+  /** Attaches a resolved published panel to a restored tab without changing which tab is active. */
+  hydratePanel: (tabId: string, panel: PublishedPanelTab) => void;
 }
 
 const TabsContext = createContext<TabsContextValue | null>(null);
 
-export function TabsProvider({ children }: { children: ReactNode }) {
-  const [tabs, setTabs] = useState<Tab[]>([]);
-  const [activeId, setActiveId] = useState<string>('');
+interface TabsState { tabs: Tab[]; activeId: string }
+
+function initialState(persistKey: string | null | undefined): TabsState {
+  const restored = loadNavState(persistKey ?? null);
+  if (!restored) return { tabs: [], activeId: '' };
+  return {
+    activeId: restored.activeId,
+    tabs: restored.tabs.map((tab) => ({ id: tab.id, route: { categoryId: tab.categoryId, subcategoryId: tab.subcategoryId }, ...(tab.panelId ? { restorePanelId: tab.panelId } : {}) })),
+  };
+}
+
+export function TabsProvider({ children, persistKey }: { children: ReactNode; persistKey?: string | null }) {
+  const [state, setState] = useState<TabsState>(() => initialState(persistKey));
+  const { tabs, activeId } = state;
 
   const activeTab = tabs.find((t) => t.id === activeId) ?? tabs[0] ?? null;
 
-  /** Navegar = mutar la ruta de la tab activa, o crear una nueva si no hay tabs. */
-  const navigate = useCallback((categoryId: string, subcategoryId?: string | null, publishedPanel?: PublishedPanelTab) => {
-    setTabs((prev) => {
-      const current = prev.find((t) => t.id === activeId) ?? prev[0];
-      if (!current) {
-        // No hay tabs: crear una nueva
-        const newTab: Tab = {
-          id: uuid(),
-          route: { categoryId, subcategoryId: subcategoryId ?? null }, publishedPanel,
-        };
-        setActiveId(newTab.id);
-        return [newTab];
-      }
-      // Mutar la tab activa
-      return prev.map((t) =>
-        t.id === current.id
-          ? { ...t, route: { categoryId, subcategoryId: subcategoryId ?? null }, publishedPanel }
-          : t
-      );
+  // Reload / discarded page / restored browser tab: remember where the person was (ids only).
+  useEffect(() => {
+    saveNavState(persistKey ?? null, {
+      activeId: activeTab?.id ?? '',
+      tabs: tabs.map((tab) => ({ id: tab.id, categoryId: tab.route.categoryId, subcategoryId: tab.route.subcategoryId, ...((tab.publishedPanel?.id ?? tab.restorePanelId) ? { panelId: (tab.publishedPanel?.id ?? tab.restorePanelId)! } : {}) })),
     });
-  }, [activeId]);
+  }, [activeTab?.id, persistKey, tabs]);
+
+  /** Navegar = mutar la ruta de la tab activa, o crear una nueva si no hay tabs.
+   *  Stable identity (no dependency on the active tab) so effects that call it do not re-run on every tab change. */
+  const navigate = useCallback((categoryId: string, subcategoryId?: string | null, publishedPanel?: PublishedPanelTab) => {
+    setState((prev) => {
+      const route = { categoryId, subcategoryId: subcategoryId ?? null };
+      const current = prev.tabs.find((t) => t.id === prev.activeId) ?? prev.tabs[0];
+      if (!current) {
+        const newTab: Tab = { id: uuid(), route, publishedPanel };
+        return { tabs: [newTab], activeId: newTab.id };
+      }
+      return { ...prev, tabs: prev.tabs.map((t) => (t.id === current.id ? { id: t.id, route, publishedPanel } : t)), activeId: current.id };
+    });
+  }, []);
 
   const openNewTab = useCallback(() => {
-    setTabs((prev) => {
-      const current = prev.find((t) => t.id === activeId) ?? prev[0];
-      const categoryId = current?.route.categoryId ?? 'home';
-      const newTab: Tab = {
-        id: uuid(),
-        route: { categoryId, subcategoryId: null },
-      };
-      setActiveId(newTab.id);
-      return [...prev, newTab];
+    setState((prev) => {
+      const current = prev.tabs.find((t) => t.id === prev.activeId) ?? prev.tabs[0];
+      const newTab: Tab = { id: uuid(), route: { categoryId: current?.route.categoryId ?? 'home', subcategoryId: null } };
+      return { tabs: [...prev.tabs, newTab], activeId: newTab.id };
     });
-  }, [activeId]);
+  }, []);
 
   const closeTab = useCallback((tabId: string) => {
-    setTabs((prev) => {
-      const index = prev.findIndex((t) => t.id === tabId);
+    setState((prev) => {
+      const index = prev.tabs.findIndex((t) => t.id === tabId);
       if (index === -1) return prev;
-      const next = prev.filter((t) => t.id !== tabId);
-      setActiveId((currentActive) => {
-        if (currentActive !== tabId) return currentActive;
-        return (next[index] ?? next[index - 1] ?? next[0] ?? null)?.id ?? '';
-      });
-      return next;
+      const next = prev.tabs.filter((t) => t.id !== tabId);
+      const activeId = prev.activeId !== tabId ? prev.activeId : (next[index] ?? next[index - 1] ?? next[0])?.id ?? '';
+      return { tabs: next, activeId };
     });
   }, []);
 
   const setActiveTab = useCallback((tabId: string) => {
-    setActiveId(tabId);
+    setState((prev) => (prev.activeId === tabId ? prev : { ...prev, activeId: tabId }));
   }, []);
 
-  return (
-    <TabsContext.Provider value={{ tabs, activeTab, navigate, openNewTab, closeTab, setActiveTab }}>
-      {children}
-    </TabsContext.Provider>
+  const hydratePanel = useCallback((tabId: string, panel: PublishedPanelTab) => {
+    setState((prev) => ({ ...prev, tabs: prev.tabs.map((t) => (t.id === tabId && !t.publishedPanel ? { id: t.id, route: t.route, publishedPanel: panel } : t)) }));
+  }, []);
+
+  const value = useMemo(
+    () => ({ tabs, activeTab, navigate, openNewTab, closeTab, setActiveTab, hydratePanel }),
+    [tabs, activeTab, navigate, openNewTab, closeTab, setActiveTab, hydratePanel],
   );
+
+  return <TabsContext.Provider value={value}>{children}</TabsContext.Provider>;
 }
 
 export function useTabs() {

@@ -262,16 +262,32 @@ export async function changeTemporaryPassword(
   return updated
 }
 
-export async function getSession(): Promise<SessionUser | null> {
-  if (isTauri()) return memorySession?.user ?? null
+/**
+ * Three-way session probe. "No session" (`anonymous`) is what CORECROW says about the cookie; `unreachable` is a
+ * network failure or a 5xx/429 and says NOTHING about the session. Callers must never sign the person out, or send
+ * them to the login form, because of `unreachable`.
+ */
+export type SessionCheck =
+  | { status: 'authenticated'; user: SessionUser }
+  | { status: 'anonymous' }
+  | { status: 'unreachable' }
+
+export async function checkSession(): Promise<SessionCheck> {
+  if (isTauri()) return memorySession ? { status: 'authenticated', user: memorySession.user } : { status: 'anonymous' }
   try {
     const res = await betterAuthFetch('/get-session')
-    if (!res.ok) return null
+    if (res.status === 401 || res.status === 403) return { status: 'anonymous' }
+    if (!res.ok) return { status: 'unreachable' }
     const data = await res.json()
-    return data?.user ? parseUser(data.user) : null
+    return data?.user ? { status: 'authenticated', user: parseUser(data.user) } : { status: 'anonymous' }
   } catch {
-    return null
+    return { status: 'unreachable' }
   }
+}
+
+export async function getSession(): Promise<SessionUser | null> {
+  const check = await checkSession()
+  return check.status === 'authenticated' ? check.user : null
 }
 
 export async function getOwnProfile(): Promise<SessionUser> {

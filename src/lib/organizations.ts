@@ -1,4 +1,4 @@
-import { apiRequest } from '@/lib/api';
+import { apiRequest, cachedGet } from '@/lib/api';
 
 export interface Organization {
   id: string;
@@ -54,8 +54,10 @@ export interface Workspace {
   description?: string | null;
 }
 
-export async function getOrganizations(): Promise<Organization[]> {
-  const organizations = await apiRequest<Organization[]>('/v1/organizations');
+export async function getOrganizations(options?: { force?: boolean }): Promise<Organization[]> {
+  // Short window: it only collapses simultaneous reads (shell + settings screen). Any write to an organization or an
+  // invitation acceptance invalidates it, and explicit refreshes pass `force`.
+  const organizations = await cachedGet<Organization[]>('/v1/organizations', { ttlMs: 5_000, tags: ['orgs'] }, options);
   return organizations.map((organization) => ({ ...organization, avatarUrl: organization.iconData ?? organization.avatarUrl ?? null }));
 }
 
@@ -67,8 +69,10 @@ export function resolvePublicOrganization(slug: string) {
   return apiRequest<PublicOrganization>(`/v1/organizations/resolve/${encodeURIComponent(slug)}`);
 }
 
-export function getOrganizationNavigation(organizationId: string) {
-  return apiRequest<NavigationCategory[]>(`/v1/organizations/${encodeURIComponent(organizationId)}/navigation`);
+export function getOrganizationNavigation(organizationId: string, options?: { force?: boolean }) {
+  // Stale-while-revalidate: switching back to a recent organization paints instantly and refreshes in the background.
+  // Publishing, restructuring or any other write to the organization invalidates it.
+  return cachedGet<NavigationCategory[]>(`/v1/organizations/${encodeURIComponent(organizationId)}/navigation`, { ttlMs: 15_000, staleMs: 120_000 }, options);
 }
 
 export function resolvePublishedPanel(input: { organizationSlug: string; categorySlug: string; subcategorySlug: string; panelSlug: string }) {

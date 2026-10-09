@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { fetchCatalog } from '@/lib/catalog';
 import type { CategoryModel, SubcategoryModel } from '@/lib/models';
 import { getOrganizationNavigation, type NavigationCategory } from '@/lib/organizations';
@@ -8,7 +8,10 @@ import { ACCESS_SECTIONS, type AccessSection } from '@/features/access-admin/Acc
 
 interface CatalogContextValue {
   categories: CategoryModel[];
+  /** True only while there is nothing to show yet. A background refresh keeps the current catalog on screen. */
   isLoading: boolean;
+  /** The last load failed (network / API). The previous catalog, if any, is kept; this is never an access decision. */
+  error: string | null;
   getCategory: (categoryId: string) => CategoryModel | undefined;
   getSubcategory: (categoryId: string, subcategoryId: string | null) => SubcategoryModel | undefined;
   refresh: () => Promise<void>;
@@ -29,28 +32,41 @@ export function CatalogProvider({
 }) {
   const [categories, setCategories] = useState<CategoryModel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const loadedRef = useRef(false);
 
-  const refresh = useCallback(async () => {
-    setIsLoading(true);
+  const load = useCallback(async (force: boolean) => {
     const catalog = organizationId === PERSONAL_ORG_ID
       ? fetchCatalog(workspaceId, { includePlatformAdministration: platformRole === 'ADMIN' || platformRole === 'SUPERADMIN' })
-      : getOrganizationNavigation(organizationId).then(navigationToCatalog);
-    try {
-      setCategories(await catalog);
-    } finally {
-      setIsLoading(false);
-    }
+      : getOrganizationNavigation(organizationId, { force }).then(navigationToCatalog);
+    return catalog;
   }, [organizationId, platformRole, workspaceId]);
+
+  /** Explicit refresh (after a structural edit): always asks CORECROW, never blanks the navigation. */
+  const refresh = useCallback(async () => {
+    try {
+      setCategories(await load(true));
+      setError(null);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Request failed');
+      throw reason;
+    }
+  }, [load]);
 
   useEffect(() => {
     let alive = true;
-    setIsLoading(true);
-    const catalog = organizationId === PERSONAL_ORG_ID
-      ? fetchCatalog(workspaceId, { includePlatformAdministration: platformRole === 'ADMIN' || platformRole === 'SUPERADMIN' })
-      : getOrganizationNavigation(organizationId).then(navigationToCatalog);
-    catalog
-      .then((catalog) => {
-        if (alive) setCategories(catalog);
+    // Only the very first load shows a skeleton; later reloads (role change, workspace) are silent.
+    if (!loadedRef.current) setIsLoading(true);
+    load(false)
+      .then((next) => {
+        if (!alive) return;
+        loadedRef.current = true;
+        setCategories(next);
+        setError(null);
+      })
+      .catch((reason) => {
+        // Keep whatever is already on screen: an API failure must not empty (and so redirect) the shell.
+        if (alive) setError(reason instanceof Error ? reason.message : 'Request failed');
       })
       .finally(() => {
         if (alive) setIsLoading(false);
@@ -58,7 +74,7 @@ export function CatalogProvider({
     return () => {
       alive = false;
     };
-  }, [organizationId, platformRole, workspaceId]);
+  }, [load]);
 
   const getCategory = useCallback(
     (categoryId: string) => categories.find((c) => c.id === categoryId),
@@ -72,7 +88,7 @@ export function CatalogProvider({
   );
 
   return (
-    <CatalogContext.Provider value={{ categories, isLoading, getCategory, getSubcategory, refresh }}>
+    <CatalogContext.Provider value={{ categories, isLoading, error, getCategory, getSubcategory, refresh }}>
       {children}
     </CatalogContext.Provider>
   );

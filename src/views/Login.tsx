@@ -7,6 +7,7 @@ import { ThemeToggle } from '@/components/ThemeToggle'
 import { expandWindow, isTauri } from '@/lib/tauri'
 import { isInvitationCredential, useInvitationPreview } from '@/lib/invitationKey'
 import { OrganizationAvatar } from '@/components/organization/OrganizationAvatar'
+import { clearAuthFlow, loadAuthFlow, resendSecondsLeft, saveAuthFlow } from '@/lib/authFlow'
 import { useI18n, type Locale } from '@/lib/i18n'
 import {
   completePendingOnboarding,
@@ -63,12 +64,15 @@ interface LoginProps {
 export function Login({ onSuccess, onOnboardingIssue, initialMode = 'login' }: LoginProps) {
   const [expanded, setExpanded] = useState(false)
   const [stage, setStage] = useState<Stage>('boot')
-  const [mode, setMode] = useState<Mode>(initialMode)
+  // A mobile browser can discard this page while the person reads the code in their mail app. Only the step and the
+  // email survive (see authFlow.ts); the password and the code never do.
+  const [restored] = useState(() => (new URLSearchParams(window.location.search).get('token') ? null : loadAuthFlow()))
+  const [mode, setMode] = useState<Mode>(restored ? 'verification' : initialMode)
   const { t, locale: lang, setLocale: setLang } = useI18n();
   const [showPass, setShowPass] = useState(false)
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(restored?.email ?? '')
   const [pass, setPass] = useState('')
   const [confirmPass, setConfirmPass] = useState('')
   const [adminSecret, setAdminSecret] = useState('')
@@ -79,7 +83,7 @@ export function Login({ onSuccess, onOnboardingIssue, initialMode = 'login' }: L
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [verificationCode, setVerificationCode] = useState('')
-  const [resendIn, setResendIn] = useState(0)
+  const [resendIn, setResendIn] = useState(() => (restored ? resendSecondsLeft(restored) : 0))
   const [termsVersion, setTermsVersion] = useState(FALLBACK_TERMS_VERSION)
   const [googleEnabled, setGoogleEnabled] = useState(false)
   const [resetToken] = useState(() => new URLSearchParams(window.location.search).get('token') ?? '')
@@ -123,6 +127,14 @@ export function Login({ onSuccess, onOnboardingIssue, initialMode = 'login' }: L
     ).then((dispose) => { unlisten = dispose }).catch(() => {})
     return () => { clearTimeout(timer); unlisten() }
   }, [finish, resetToken])
+
+  useEffect(() => {
+    // Keep the resumable step in sync with the visible one; leaving it (login, success, forgot…) forgets it.
+    if (mode === 'verification' && email.trim()) saveAuthFlow({ email, resendIn })
+    else clearAuthFlow()
+    // resendIn is only read to stamp the cooldown at the moment the step is entered/edited.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, email])
 
   useEffect(() => {
     if (resendIn <= 0) return

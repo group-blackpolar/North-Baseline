@@ -1,17 +1,24 @@
 /* oxlint-disable react/only-export-components */
 import { createContext, useCallback, useContext, useMemo, useRef, useState, useEffect, type ReactNode } from 'react';
 import { getOrganizations } from '@/lib/organizations';
-import { hasEstablishedSession, markSessionEstablished } from '@/lib/sessionState';
+import { checkSession } from '@/lib/auth';
+import { markSessionEstablished } from '@/lib/sessionState';
 import { useInspection } from '@/lib/inspection';
 import { getDemoOrganizations, PERSONAL_ORG_ID, type DemoOrganization } from '@/lib/demo/store';
+import { shallowEqualOrganization } from '@/lib/organizationState';
 
 type ApiOrganization = Awaited<ReturnType<typeof getOrganizations>>[number];
 type Organization = ApiOrganization | DemoOrganization;
+
+/** initializing: first list not resolved yet. ready: the last load succeeded. error: the last load failed for a
+ *  reason that says nothing about access (network, 5xx); the previous list, if any, is kept untouched. */
+export type OrganizationStatus = 'initializing' | 'ready' | 'error';
 
 interface OrganizationContextValue {
   organizations: Organization[];
   activeOrganization: Organization | null;
   isLoading: boolean;
+  status: OrganizationStatus;
   error: string | null;
   switchOrganization: (orgId: string) => void;
   refresh: () => Promise<Organization[]>;
@@ -47,47 +54,70 @@ export function OrganizationProvider({
   );
   const [activeOrganization, setActiveOrganization] = useState<Organization | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [status, setStatus] = useState<OrganizationStatus>('initializing');
   const [error, setError] = useState<string | null>(null);
   // Parents recreate `onAuthError` on every render. Reading it through a ref keeps
   // `loadOrganizations` stable; otherwise each parent render re-fetched the list
   // and flipped `isLoading`, unmounting the whole shell (flashes / Profile loop).
   const onAuthErrorRef = useRef(onAuthError);
   useEffect(() => { onAuthErrorRef.current = onAuthError; }, [onAuthError]);
-  const loadedRef = useRef(false);
+  /** True once an authoritative list has been received for this user. Only then is a failure "non-destructive". */
+  const hasListRef = useRef(false);
+  const listRef = useRef<Organization[]>([]);
 
   const loadOrganizations = useCallback(async () => {
     // Only the first load may blank the shell; later refreshes are silent.
-    if (!loadedRef.current) setIsLoading(true);
-    setError(null);
+    if (!hasListRef.current) setIsLoading(true);
     try {
-      const apiOrgs = await getOrganizations();
+      const apiOrgs = await getOrganizations({ force: hasListRef.current });
       markSessionEstablished();
-      loadedRef.current = true;
+      hasListRef.current = true;
       // Demo organizations must never stand in for an authoritative tenant list.
       const effective = ensurePersonalWorkspace(apiOrgs);
+      listRef.current = effective;
       setOrganizations(effective);
-      setActiveOrganization((current) => current ?? effective[0] ?? null);
+      setError(null);
+      setStatus('ready');
+      setActiveOrganization((current) => {
+        if (!current) return effective[0] ?? null;
+        const fresh = effective.find((org) => org.id === current.id);
+        // Membership really ended (authoritative list): leave the tenant. Otherwise keep the object identity unless
+        // something visible changed, so a silent refresh never re-renders the whole shell.
+        if (!fresh) return effective[0] ?? null;
+        return shallowEqualOrganization(current, fresh) ? current : fresh;
+      });
       return effective;
     } catch (err) {
-      const status = (err as { status?: number }).status;
-      if (status === 401 && !hasEstablishedSession()) {
-        onAuthErrorRef.current?.();
-        return [];
+      const httpStatus = (err as { status?: number }).status;
+      // A 401 only means "expired" when CORECROW also says there is no session. A 401 with a live session, a 5xx
+      // or a network failure is an API problem: never treat it as an access decision.
+      if (httpStatus === 401) {
+        const check = await checkSession();
+        if (check.status === 'anonymous') {
+          onAuthErrorRef.current?.();
+          return [];
+        }
       }
-      // The isolated personal workspace remains available offline. Do not invent
-      // organization membership or organization data after an API failure.
-      loadedRef.current = true;
-      const personalOnly = ensurePersonalWorkspace([]);
-      setOrganizations(personalOnly);
-      setActiveOrganization((current) => current?.id === PERSONAL_ORG_ID ? current : personalOnly[0] ?? null);
-      return personalOnly;
+      setError(err instanceof Error ? err.message : 'Request failed');
+      setStatus('error');
+      if (!hasListRef.current) {
+        // First load failed: Personal stays usable, but no organization membership is invented. Routes that need a
+        // real organization show a retryable connection problem (see AuthenticatedRouter), not "no access".
+        const personalOnly = ensurePersonalWorkspace([]);
+        listRef.current = personalOnly;
+        setOrganizations(personalOnly);
+        setActiveOrganization((current) => current ?? personalOnly[0] ?? null);
+        return personalOnly;
+      }
+      // A refresh failed: keep the tenant, its rail and the user's place exactly as they are.
+      return listRef.current;
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadedRef.current = false;
+    hasListRef.current = false;
     void loadOrganizations();
   }, [loadOrganizations, user.id]);
 
@@ -99,8 +129,8 @@ export function OrganizationProvider({
   }, [organizations]);
 
   const value = useMemo(
-    () => ({ organizations, activeOrganization, isLoading, error, switchOrganization, refresh: loadOrganizations }),
-    [organizations, activeOrganization, isLoading, error, switchOrganization, loadOrganizations],
+    () => ({ organizations, activeOrganization, isLoading, status, error, switchOrganization, refresh: loadOrganizations }),
+    [organizations, activeOrganization, isLoading, status, error, switchOrganization, loadOrganizations],
   );
 
   return (

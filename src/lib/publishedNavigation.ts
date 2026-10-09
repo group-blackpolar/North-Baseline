@@ -11,6 +11,19 @@ function panelTitle(names: Record<string, string>, localeOrder: string[], fallba
   );
 }
 
+/** The tab payload for a resolved published panel (shared by catalog navigation, deep links and tab restore). */
+export function publishedTabFromResolved(result: Awaited<ReturnType<typeof resolvePublishedPanel>>): PublishedPanelTab {
+  const localeOrder = result.revision
+    ? [result.revision.locale.resolved, ...result.revision.locale.fallbackChain, result.revision.defaultLocale]
+    : [];
+  return {
+    id: result.panel.id,
+    title: panelTitle(result.panel.name, localeOrder, result.panel.slug),
+    document: result.revision?.document ?? null,
+    localeOrder,
+  };
+}
+
 export async function navigateToPublishedTarget(input: {
   organizationSlug?: string;
   category: CategoryModel;
@@ -36,15 +49,7 @@ export async function navigateToPublishedTarget(input: {
     subcategorySlug: subcategory.slug,
     panelSlug: panel.slug,
   });
-  const localeOrder = result.revision
-    ? [result.revision.locale.resolved, ...result.revision.locale.fallbackChain, result.revision.defaultLocale]
-    : [];
-  input.navigate(result.category.id, result.subcategory.id, {
-    id: result.panel.id,
-    title: panelTitle(result.panel.name, localeOrder, result.panel.slug),
-    document: result.revision?.document ?? null,
-    localeOrder,
-  });
+  input.navigate(result.category.id, result.subcategory.id, publishedTabFromResolved(result));
   if (result.canonicalPath && input.history === 'push') pushPath(result.canonicalPath);
   if (result.canonicalPath && input.history === 'replace') replacePath(result.canonicalPath);
   return true;
