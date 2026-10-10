@@ -63,7 +63,9 @@ export function ImportWizard({ organizationId, open, onOpenChange, initialDatase
       const current = await readImport(organizationId, ds, id, signal);
       setJob(current);
       if (done(current.status)) return current;
-      if (FAILED_STATES.has(current.status)) throw new Error(`${t('imp.failed')}: ${current.errorCode ?? current.status}`);
+      // The worker parks a job as blocked with a *_UNAVAILABLE code while it retries (e.g. the malware scanner is busy): keep waiting.
+      const retrying = current.status !== 'FAILED' && current.status !== 'CANCELLED' && /_UNAVAILABLE$/.test(current.errorCode ?? '');
+      if (FAILED_STATES.has(current.status) && !retrying) throw new Error(`${t('imp.failed')}: ${current.errorCode ?? current.status}`);
       await delay(wait, signal);
     }
   }, [organizationId, t]);
