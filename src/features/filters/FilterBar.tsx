@@ -10,7 +10,7 @@ import { describePeriod } from './periodModel';
 import { PeriodSelect } from './PeriodSelect';
 import type { PanelBindingFilterDefinition } from '@/features/analytics/panelBindingQuery';
 
-export type FilterControl = { fieldId: string; label: string; type: PanelBindingFilterDefinition['type']; operators: PanelBindingFilterDefinition['operators']; mode: FilterMode };
+export type FilterControl = { fieldId: string; /** Dataset field key (stable name used by the assistant). */ key: string; label: string; type: PanelBindingFilterDefinition['type']; operators: PanelBindingFilterDefinition['operators']; mode: FilterMode };
 export type FacetLoader = (fieldId: string, search: string, offset: number, signal: AbortSignal, granularity?: FacetGranularity) => Promise<FacetPage>;
 
 const inputClass = 'h-9 w-full rounded-lg border border-border bg-surface px-2 text-base text-text outline-none transition-[border-color,box-shadow] duration-(--duration-fast) placeholder:text-text-muted hover:border-border-strong focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 pointer-coarse:h-(--touch-min) md:text-xs';

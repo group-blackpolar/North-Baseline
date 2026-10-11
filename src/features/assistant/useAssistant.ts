@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { ApiError } from '@/lib/api';
 import { uuid } from '@/lib/utils';
-import { cancelRun, createConversation, createRun, listConversations, readConversation, readRun, streamRun } from './api.ts';
+import { cancelAction, cancelRun, confirmAction, createConversation, createRun, listConversations, readConversation, readRun, streamRun } from './api.ts';
 import { chatReducer, initialChatState } from './protocol.ts';
 
 const codeOf = (error: unknown) => {
@@ -99,5 +99,17 @@ export function useAssistant(organizationId: string) {
     loaded.current = true; // a new conversation must not be replaced by the previous one
   }, []);
 
-  return { state, loading, loadError, load, send, cancel, startOver };
+  /** The user decided on a proposed action: nothing was done before this call. */
+  const decide = useCallback(async (actionId: string, accept: boolean) => {
+    dispatch({ type: 'action.update', id: actionId, status: accept ? 'confirming' : 'cancelled' });
+    try {
+      if (accept) { await confirmAction(actionId); dispatch({ type: 'action.update', id: actionId, status: 'confirmed' }); }
+      else await cancelAction(actionId);
+    } catch (error) {
+      const code = codeOf(error);
+      dispatch({ type: 'action.update', id: actionId, status: code === 'AI_ACTION_EXPIRED' ? 'expired' : 'failed', error: code });
+    }
+  }, []);
+
+  return { state, loading, loadError, load, send, cancel, startOver, decide };
 }

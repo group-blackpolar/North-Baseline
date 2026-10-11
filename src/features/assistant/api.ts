@@ -5,7 +5,7 @@ import { isTerminal, reconnectDelay, SseParser, type SseEvent } from './protocol
 export interface ConversationSummary { id: string; title: string | null; updatedAt: string }
 export interface StoredMessage { id: string; role: 'USER' | 'ASSISTANT' | 'TOOL'; content: string }
 
-const post = <T>(path: string, body: unknown) => apiRequest<T>(path, { method: 'POST', body: JSON.stringify(body) });
+const post = <T>(path: string, body: unknown) => apiRequest<T>(path, { method: 'POST', ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
 
 /** Conversations are always created and read inside the active organization; CORECROW re-authorizes membership on every call. */
 export const createConversation = (organizationId: string) =>
@@ -19,6 +19,10 @@ export const readConversation = (organizationId: string, conversationId: string)
 
 export const createRun = (organizationId: string, conversationId: string, message: string) =>
   post<{ runId: string }>('/v1/ai/runs', { organizationId, conversationId, application: 'north', message });
+
+/** Executes a pending action the user confirmed; CORECROW re-authorizes it, runs it once and audits it. */
+export const confirmAction = (actionId: string) => post<{ id: string; status: string; summary: string | null }>(`/v1/ai/actions/${encodeURIComponent(actionId)}/confirm`, undefined);
+export const cancelAction = (actionId: string) => post<{ id: string; status: string }>(`/v1/ai/actions/${encodeURIComponent(actionId)}/cancel`, undefined);
 
 export const cancelRun = (organizationId: string, runId: string) =>
   post<unknown>(`/v1/ai/runs/${encodeURIComponent(runId)}/cancel`, { organizationId });

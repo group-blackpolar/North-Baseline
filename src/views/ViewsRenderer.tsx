@@ -25,6 +25,8 @@ import { asNumber } from '@/features/analytics/pro/format';
 import { PRO_TYPES, ProComponent } from '@/features/analytics/pro/ProComponent';
 import { queryPanelAnalyticsBinding } from '@/features/analytics/panelBindingQuery';
 import { queryShowcaseBinding } from '@/lib/showcase';
+import { consumePanelRequest, peekPanelRequest, subscribePanelRequests } from '@/features/assistant/panelBus';
+import { selectionsFromFilters } from '@/features/assistant/directives';
 import { chipsOf, filterModeOf, filtersForDefinitions, loadSelections, saveSelections, type FilterSelections } from '@/features/filters/filterModel';
 import { PresentationMode } from '@/features/presentation/PresentationMode';
 import { cn } from '@/lib/utils';
@@ -371,10 +373,25 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
     for (const bindingId of Object.keys(definitionsByBinding).sort((a, b) => definitionsByBinding[b]!.length - definitionsByBinding[a]!.length || a.localeCompare(b))) for (const definition of definitionsByBinding[bindingId]!) {
       if (byField.has(definition.fieldId)) continue;
       const mode = filterModeOf(definition);
-      byField.set(definition.fieldId, { fieldId: definition.fieldId, label: localized(labelOverrides[definition.key], locales) || localized(definition.displayName, locales) || definition.key, type: definition.type, operators: definition.operators, mode: !canFacet && (mode === 'multi' || mode === 'single') ? 'text' : mode });
+      byField.set(definition.fieldId, { fieldId: definition.fieldId, key: definition.key, label: localized(labelOverrides[definition.key], locales) || localized(definition.displayName, locales) || definition.key, type: definition.type, operators: definition.operators, mode: !canFacet && (mode === 'multi' || mode === 'single') ? 'text' : mode });
     }
     return [...byField.values()];
   }, [canFacet, definitionsByBinding, labelOverrides, locales]);
+  // The assistant may ask this dashboard for filters (or to clear them). The request waits until the controls CORECROW
+  // described are known, then is applied once through the same selection state a person would use.
+  useEffect(() => {
+    const apply = () => {
+      const request = peekPanelRequest(panelId);
+      if (!request) return;
+      if (request.kind === 'clear') { consumePanelRequest(request.id); updateSelections({}); return; }
+      if (!controls.length) return;
+      const { selections: asked } = selectionsFromFilters(request.filters, controls);
+      consumePanelRequest(request.id);
+      updateSelections(request.replace ? asked : { ...live.current.selections, ...asked });
+    };
+    apply();
+    return subscribePanelRequests(apply);
+  }, [controls, panelId, updateSelections]);
   const filtersFor = useCallback((source: FilterSelections) => Object.fromEntries(Object.entries(definitionsByBinding).map(([bindingId, definitions]) => [bindingId, filtersForDefinitions(definitions, source)])) as Record<string, DatasetQueryFilter[]>, [definitionsByBinding]);
   const filtersByBinding = useMemo(() => filtersFor(presenting ?? selections), [filtersFor, presenting, selections]);
   const loadFacet = useCallback<FacetLoader>(async (fieldId, search, offset, signal, granularity) => {
@@ -492,7 +509,7 @@ function PanelNavigationBridge({ children }: { children: ReactNode }) {
   const open = useCallback((panelSlug: string) => {
     for (const category of categories) {
       const subcategory = category.subcategories.find((item) => item.publishedPanels?.some((panel) => panel.slug === panelSlug));
-      if (subcategory) { void navigateToPublishedTarget({ organizationSlug: activeOrganization?.slug, category, subcategory, navigate, history: 'push' }).catch(() => undefined); return; }
+      if (subcategory) { void navigateToPublishedTarget({ organizationSlug: activeOrganization?.slug, category, subcategory, navigate, history: 'push', panelSlug }).catch(() => undefined); return; }
     }
   }, [activeOrganization?.slug, categories, navigate]);
   return <PanelNavigationContext.Provider value={open}>{children}</PanelNavigationContext.Provider>;

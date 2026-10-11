@@ -1,6 +1,8 @@
 // Pure protocol + state of the NORTH assistant (Cuervo). No React and no `@/` imports: unit-tested with `node --test`.
 // It consumes only the CORECROW `/v1/ai/*` contract: persisted SSE events with a numeric `id`, replayable with `after`.
 
+import { parseDirective, type UiDirective } from './directives.ts';
+
 export interface SseEvent { id: number | null; type: string; data: unknown }
 
 const NEWLINE = String.fromCharCode(10);
@@ -49,18 +51,26 @@ export const isTerminal = (event: SseEvent) => TERMINAL_EVENTS.has(event.type);
 export type Phase = 'idle' | 'sending' | 'streaming' | 'cancelling';
 export interface ChatMessage { id: string; role: 'user' | 'assistant'; text: string; pending?: boolean; stopped?: boolean }
 export interface ToolStep { id: string; name: string; status: 'running' | 'done' | 'failed' }
+/** An administrative action the assistant PROPOSED. Nothing has happened until the user confirms it. */
+export type ActionStatus = 'pending' | 'confirming' | 'confirmed' | 'cancelled' | 'failed' | 'expired';
+export interface ActionCard { id: string; toolName: string; summary: string; /** The validated arguments, to word the card in the user's language. */ input: Record<string, string>; status: ActionStatus; expiresAt: string | null; error?: string }
+export interface Directive { id: string; ui: UiDirective }
+
 export interface ChatState {
   conversationId: string | null;
   runId: string | null;
   phase: Phase;
   messages: ChatMessage[];
   tools: ToolStep[];
+  actions: ActionCard[];
+  /** UI instructions from tools of the current run, in order, each delivered once (the replay of a reconnect never repeats one). */
+  directives: Directive[];
   lastSequence: number;
   /** Normalized error code of the last failed operation, for the UI to translate. */
   error: string | null;
 }
 
-export const initialChatState: ChatState = { conversationId: null, runId: null, phase: 'idle', messages: [], tools: [], lastSequence: 0, error: null };
+export const initialChatState: ChatState = { conversationId: null, runId: null, phase: 'idle', messages: [], tools: [], actions: [], directives: [], lastSequence: 0, error: null };
 
 export type ChatAction =
   | { type: 'reset' }
@@ -70,6 +80,7 @@ export type ChatAction =
   | { type: 'run.created'; runId: string }
   | { type: 'event'; event: SseEvent }
   | { type: 'failed'; code: string }
+  | { type: 'action.update'; id: string; status: ActionStatus; error?: string }
   | { type: 'cancelling' };
 
 const text = (value: unknown) => (value && typeof value === 'object' && typeof (value as { text?: unknown }).text === 'string' ? (value as { text: string }).text : '');
@@ -96,13 +107,15 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       };
     case 'sending':
       return {
-        ...state, conversationId: action.conversationId ?? state.conversationId, runId: null, phase: 'sending', tools: [], lastSequence: 0, error: null,
+        ...state, conversationId: action.conversationId ?? state.conversationId, runId: null, phase: 'sending', tools: [], directives: [], lastSequence: 0, error: null,
         messages: [...finishPending(state.messages), { id: action.localId, role: 'user', text: action.text }, { id: `${action.localId}-reply`, role: 'assistant', text: '', pending: true }],
       };
     case 'conversation':
       return { ...state, conversationId: action.conversationId };
     case 'run.created':
       return { ...state, runId: action.runId, phase: 'streaming' };
+    case 'action.update':
+      return { ...state, actions: state.actions.map((card) => (card.id === action.id ? { ...card, status: action.status, ...(action.error ? { error: action.error } : {}) } : card)) };
     case 'cancelling':
       return state.phase === 'streaming' || state.phase === 'sending' ? { ...state, phase: 'cancelling' } : state;
     case 'failed':
@@ -120,8 +133,19 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
           return { ...next, messages: next.messages.map((m) => (m.pending ? { ...m, text: text(event.data) || m.text, pending: false } : m)) };
         case 'tool.proposed': case 'tool.started':
           return { ...next, tools: upsertTool(next.tools, field(event.data, 'toolCallId'), field(event.data, 'name'), 'running') };
-        case 'tool.completed':
-          return { ...next, tools: upsertTool(next.tools, field(event.data, 'toolCallId'), field(event.data, 'name'), 'done') };
+        case 'tool.completed': {
+          const ui = event.data && typeof event.data === 'object' ? parseDirective((event.data as { ui?: unknown }).ui) : null;
+          const callId = field(event.data, 'toolCallId');
+          const tools = upsertTool(next.tools, callId, field(event.data, 'name'), 'done');
+          return ui && !next.directives.some((entry) => entry.id === callId) ? { ...next, tools, directives: [...next.directives, { id: callId, ui }] } : { ...next, tools };
+        }
+        case 'action.proposed': {
+          const actionId = field(event.data, 'actionId');
+          if (!actionId || next.actions.some((card) => card.id === actionId)) return next;
+          const raw = event.data && typeof event.data === 'object' ? (event.data as { input?: unknown }).input : null;
+          const input = Object.fromEntries(Object.entries(raw && typeof raw === 'object' && !Array.isArray(raw) ? raw as Record<string, unknown> : {}).filter((entry): entry is [string, string] => typeof entry[1] === 'string').map(([key, value]) => [key, value.slice(0, 200)]));
+          return { ...next, actions: [...next.actions, { id: actionId, toolName: field(event.data, 'toolName'), summary: field(event.data, 'summary'), input, status: 'pending', expiresAt: field(event.data, 'expiresAt') || null }] };
+        }
         case 'tool.failed':
           return { ...next, tools: upsertTool(next.tools, field(event.data, 'toolCallId'), field(event.data, 'name'), 'failed') };
         case 'run.completed':

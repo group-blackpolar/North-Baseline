@@ -96,3 +96,51 @@ test('rich text never produces markup: tags, links and images stay literal text'
   assert.deepEqual(blocks.map((b) => b.kind), ['p', 'ol', 'ul', 'p']);
   assert.equal((blocks[1] as { items: unknown[] }).items.length, 2);
 });
+
+test('UI directives: only the three known shapes with bounded fields are accepted', async () => {
+  const { parseDirective, selectionsFromFilters } = await import('./directives.ts');
+  assert.deepEqual(parseDirective({ type: 'open_panel', panelId: 'p1' }), { type: 'open_panel', panelId: 'p1' });
+  assert.deepEqual(parseDirective({ type: 'clear_filters', panelId: 'p1' }), { type: 'clear_filters', panelId: 'p1' });
+  const apply = parseDirective({ type: 'apply_filters', panelId: 'p1', filters: [{ fieldKey: 'country', values: ['CHINA'] }, { fieldKey: 'day', from: '2026-05-01', to: '2026-05-31' }] });
+  assert.equal(apply?.type, 'apply_filters');
+  assert.equal(apply?.type === 'apply_filters' && apply.replace, true);
+  for (const bad of [null, 'x', { type: 'run_script', panelId: 'p1' }, { type: 'open_panel' }, { type: 'apply_filters', panelId: 'p1', filters: [] }, { type: 'apply_filters', panelId: 'p1', filters: [{ fieldKey: 'a' }] },
+    { type: 'apply_filters', panelId: 'p1', filters: [{ fieldKey: 'a', values: Array.from({ length: 101 }, (_, i) => String(i)) }] }, { type: 'apply_filters', panelId: 'p1', filters: [{ fieldKey: 'a', values: [{}] }] },
+    { type: 'open_panel', panelId: 'x'.repeat(200) }]) assert.equal(parseDirective(bad), null);
+  const mapped = selectionsFromFilters(apply?.type === 'apply_filters' ? apply.filters : [], [{ fieldId: 'f-country', key: 'country' }, { fieldId: 'f-day', key: 'day' }]);
+  assert.deepEqual(mapped.selections, { 'f-country': { values: ['CHINA'] }, 'f-day': { from: '2026-05-01', to: '2026-05-31' } });
+  assert.deepEqual(selectionsFromFilters([{ fieldKey: 'shipper', text: 'x' }], [{ fieldId: 'f-country', key: 'country' }]).unresolved, ['shipper']);
+});
+
+test('chat state: directives arrive once, proposals wait for the user, and a replay never repeats either', () => {
+  const ui = { type: 'apply_filters', panelId: 'p1', replace: true, filters: [{ fieldKey: 'country', values: ['CHINA'] }] };
+  const events = [ev(1, 'tool.proposed', { toolCallId: 't1', name: 'views.apply_filters' }), ev(2, 'tool.completed', { toolCallId: 't1', name: 'views.apply_filters', ui }),
+    ev(3, 'tool.completed', { toolCallId: 't2', name: 'views.panel.query', ui: { type: 'delete_everything', panelId: 'p1' } }),
+    ev(4, 'action.proposed', { actionId: 'a1', toolName: 'views.category.create', summary: 'Create category "X"', expiresAt: '2026-10-12T00:00:00.000Z' })];
+  const once = run(events);
+  assert.equal(once.directives.length, 1, 'an unknown directive type is dropped');
+  assert.deepEqual(once.actions.map((card) => [card.id, card.status]), [['a1', 'pending']]);
+  const replay = events.reduce((state, event) => chatReducer(state, { type: 'event', event }), once);
+  assert.equal(replay.directives.length, 1);
+  assert.equal(replay.actions.length, 1);
+  const decided = chatReducer(replay, { type: 'action.update', id: 'a1', status: 'confirmed' });
+  assert.equal(decided.actions[0]!.status, 'confirmed');
+  assert.equal(chatReducer(decided, { type: 'sending', localId: 'u2', text: 'otra' }).directives.length, 0, 'a new request starts without the previous directives');
+});
+
+test('panel bus: a request waits for its panel, is taken once and expires', async () => {
+  const { consumePanelRequest, peekPanelRequest, postPanelRequest, resetPanelRequests, subscribePanelRequests } = await import('./panelBus.ts');
+  resetPanelRequests();
+  let notified = 0;
+  const stop = subscribePanelRequests(() => { notified += 1; });
+  postPanelRequest({ id: 'r1', panelId: 'p1', kind: 'apply', replace: true, filters: [{ fieldKey: 'country', values: ['CHINA'] }] }, 1_000);
+  assert.equal(notified, 1);
+  assert.equal(peekPanelRequest('p2', 2_000), null, 'another panel never sees it');
+  assert.equal(peekPanelRequest('p1', 2_000)?.id, 'r1');
+  consumePanelRequest('r1');
+  assert.equal(peekPanelRequest('p1', 2_000), null, 'taken once');
+  postPanelRequest({ id: 'r2', panelId: 'p1', kind: 'clear', replace: true, filters: [] }, 1_000);
+  assert.equal(peekPanelRequest('p1', 1_000 + 61_000), null, 'a request nobody takes is dropped after a minute');
+  stop();
+  resetPanelRequests();
+});

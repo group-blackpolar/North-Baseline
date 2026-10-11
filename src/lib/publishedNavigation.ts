@@ -30,6 +30,8 @@ export async function navigateToPublishedTarget(input: {
   subcategory?: SubcategoryModel;
   navigate: (categoryId: string, subcategoryId?: string | null, publishedPanel?: PublishedPanelTab) => void;
   history?: 'push' | 'replace' | 'none';
+  /** Open this panel of the subcategory (default: its first one). */
+  panelSlug?: string;
 }) {
   const subcategory = input.subcategory ?? input.category.subcategories[0];
   // A screen without a published panel has no panel URL: leave the organization root, never a stale panel path
@@ -46,7 +48,7 @@ export async function navigateToPublishedTarget(input: {
     return false;
   }
 
-  const panel = subcategory.publishedPanels?.[0];
+  const panel = (input.panelSlug ? subcategory.publishedPanels?.find((item) => item.slug === input.panelSlug) : undefined) ?? subcategory.publishedPanels?.[0];
   if (!input.organizationSlug || !input.category.slug || !subcategory.slug || !panel) {
     input.navigate(input.category.id, subcategory.id);
     leavePanelUrl();
