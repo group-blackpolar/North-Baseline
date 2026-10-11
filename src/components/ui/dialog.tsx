@@ -15,11 +15,11 @@ export interface DialogProps {
   description?: string;
   footer?: ReactNode;
   /** Desktop max width. */
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   children: ReactNode;
 }
 
-const WIDTH = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-3xl' } as const;
+const WIDTH = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-3xl', xl: 'max-w-6xl' } as const;
 
 /** Centered modal on desktop; the same content as a bottom sheet on phone/tablet-portrait. */
 export function Dialog({ size = 'md', ...props }: DialogProps) {

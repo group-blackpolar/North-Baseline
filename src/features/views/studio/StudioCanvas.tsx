@@ -435,7 +435,7 @@ function SectionBlock({ section, index, count, readOnly, device, selected, local
 }) {
   const { t } = useI18n();
   const gridRef = useRef<HTMLDivElement | null>(null);
-  const matrix = Boolean(section.layout.rowHeight) && device !== 'mobile';
+  const matrix = Boolean(section.layout.rowHeight) && device === 'desktop';
   const setRef = useCallback((element: HTMLDivElement | null) => { gridRef.current = element; registerGrid(element); }, [registerGrid]);
   return (
     <section

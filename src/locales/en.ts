@@ -586,6 +586,7 @@ const en: Dictionary = {
   'pa.templates.emptyBody': 'No global templates published in catalog.',
   'analytics.loading': 'Loading data…',
   'analytics.error': 'We could not load this data.',
+  'panel.expand': 'Expand', 'panel.drillBack': 'Back', 'panel.drillHint': 'Click a bar to see its detail',
   'analytics.empty': 'No data is available for this view.',
   'analytics.noNumericValues': 'There are no numeric values for this chart.',
   'analytics.filters': 'Filters',

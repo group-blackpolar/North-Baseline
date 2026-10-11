@@ -101,7 +101,9 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
 
   const shown = visibleColumns(columns, view);
   const maxima = useMemo(() => Object.fromEntries(columns.filter((column) => column.kind === 'bar' || column.heat).map((column) => [column.key, Math.max(0, ...rows.map((row) => asNumber(row[column.key]) ?? 0))])), [columns, rows]);
-  const rowId = (row: AnalyticsRow, index: number) => (trend ? rowKeyOf(row, trend.rowKeys) : `${page}:${index}`);
+  // Several rows may share one trend series (a consignee over many months): the row id is positional, the series key is not.
+  const rowId = (_row: AnalyticsRow, index: number) => `${page}:${index}`;
+  const seriesOf = (row: AnalyticsRow) => (trend ? series.get(rowKeyOf(row, trend.rowKeys)) : undefined);
   const numberFormat = new Intl.NumberFormat(locale);
 
   const toggleSort = (column: GridColumn) => {
@@ -142,11 +144,11 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
     }
   };
 
-  const cell = (column: GridColumn, row: AnalyticsRow, id: string, index: number) => {
+  const cell = (column: GridColumn, row: AnalyticsRow, _id: string, index: number) => {
     const raw = row[column.key] ?? null;
     if (column.kind === 'rank') return <span className="tabular-nums text-text-secondary">{numberFormat.format((page - 1) * pageSize + index + 1)}</span>;
     if (column.kind === 'sparkline') {
-      const values = series.get(id);
+      const values = seriesOf(row);
       if (!values || values.length < 2) return <span className="text-text-muted">{trendData.status === 'loading' ? '' : '—'}</span>;
       const direction = trendDirection(values);
       const color = direction === 'up' ? '#1F9D63' : direction === 'down' ? '#E0475B' : 'var(--color-text-muted)';
@@ -274,7 +276,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
       </div>
 
       <Sheet open={inspected !== null} onOpenChange={(open) => { if (!open) setInspected(null); }} side="right" title={inspected ? String(inspected[shown[0]?.key ?? columns[0]?.key ?? ''] ?? t('grid.details')) : t('grid.details')} description={t('grid.details')}>
-        {inspected ? <Inspector row={inspected} columns={(inspectorKeys ? inspectorKeys.map((key) => columns.find((column) => column.key === key)).filter((column): column is GridColumn => Boolean(column)) : columns).filter((column) => column.kind !== 'actions' && column.kind !== 'sparkline' && column.kind !== 'rank')} series={series.get(rowId(inspected, rows.indexOf(inspected)))} filterable={filterable} onFilter={(key, value) => { source?.applyFilter?.(key, value); setInspected(null); }} /> : null}
+        {inspected ? <Inspector row={inspected} columns={(inspectorKeys ? inspectorKeys.map((key) => columns.find((column) => column.key === key)).filter((column): column is GridColumn => Boolean(column)) : columns).filter((column) => column.kind !== 'actions' && column.kind !== 'sparkline' && column.kind !== 'rank')} series={seriesOf(inspected)} filterable={filterable} onFilter={(key, value) => { source?.applyFilter?.(key, value); setInspected(null); }} /> : null}
       </Sheet>
     </div>
   );

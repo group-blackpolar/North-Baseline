@@ -109,11 +109,11 @@ export function FilterBar({ controls, selections, onChange, loadFacet, title, co
 
   if (compact) {
     return (
-      <section className="np-card flex h-full min-h-0 flex-col justify-center gap-1 overflow-visible px-2 py-1" role="group" aria-label={title || t('analytics.filters')}>
+      <section className="np-card flex h-full min-h-0 flex-col justify-center gap-1 overflow-y-auto px-2 py-1" role="group" aria-label={title || t('analytics.filters')}>
         <div className="flex items-center gap-2">
           <Funnel className="size-4 shrink-0 text-accent" weight="fill" aria-hidden="true" />
-          <div className="grid min-w-0 flex-1 grid-cols-[repeat(auto-fit,minmax(10.5rem,1fr))] gap-1.5"><ResponsiveFilters activeCount={count} onClear={() => onChange({})}>{controlsView}</ResponsiveFilters></div>
-          {count > 0 ? <button type="button" className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent-soft" onClick={() => onChange({})}>{t('flt.clearAll')} ({count})</button> : null}
+          <div className="grid min-w-0 flex-1 grid-cols-[repeat(auto-fit,minmax(8.75rem,1fr))] gap-1.5"><ResponsiveFilters activeCount={count} onClear={() => onChange({})}>{controlsView}</ResponsiveFilters></div>
+          {count > 0 ? <button type="button" className="shrink-0 rounded-md px-1.5 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent-soft" onClick={() => onChange({})}>{t('flt.clearAll')} ({count})</button> : null}
         </div>
         {chips.length ? (
           <ul className="flex min-w-0 flex-wrap gap-1 overflow-y-auto" aria-label={t('flt.active')}>

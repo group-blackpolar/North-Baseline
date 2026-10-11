@@ -1,5 +1,5 @@
 import { createContext, lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ArrowsClockwise, ArrowsIn, ArrowsOut, Barricade, Presentation } from '@phosphor-icons/react';
+import { ArrowsClockwise, ArrowsIn, ArrowsOut, ArrowsOutSimple, Barricade, CaretLeft, Presentation } from '@phosphor-icons/react';
 import type { SessionUser } from '@/lib/auth';
 import type { Tab } from '@/context/TabsContext';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -9,7 +9,7 @@ import { AnalyticsBarChart, AnalyticsDataGrid, AnalyticsDonutChart, AnalyticsKpi
 import type { AnalyticsColumn, AnalyticsResult, AnalyticsValue } from '@/features/analytics/types';
 import type { DatasetQueryFilter } from '@/features/analytics/datasetQuery';
 import type { PanelBindingFilterDefinition } from '@/features/analytics/panelBindingQuery';
-import { usePanelBindingQuery } from '@/features/analytics/usePanelBindingQuery';
+import { Dialog } from '@/components/ui/dialog';
 import { publishedBarChartProps, publishedDonutChartProps, publishedLineChartProps, publishedMetricField } from '@/features/analytics/publishedVisualProps';
 import type { PublishedPanelBinding, PublishedPanelDocument } from '@/lib/organizations';
 import { useCatalog } from '@/context/CatalogContext';
@@ -20,7 +20,7 @@ import { DocumentWorkspaceHost } from '@/features/documents/DocumentsWorkspace';
 import { useShowcaseSlug } from '@/features/showcase/ShowcaseContext';
 import { FilterBar, type FacetLoader, type FilterControl } from '@/features/filters/FilterBar';
 import { queryPanelFacet } from '@/features/filters/facetsApi';
-import { analyticsRows, bindingIdOf, BindingSourceProvider, useBindingResult, type BindingResponse, type BindingSource } from '@/features/analytics/pro/bindingSource';
+import { analyticsRows, bindingIdOf, BindingSourceProvider, useBindingResult, useBindingSource, type BindingResponse, type BindingSource, type BindingState } from '@/features/analytics/pro/bindingSource';
 import { asNumber } from '@/features/analytics/pro/format';
 import { PRO_TYPES, ProComponent } from '@/features/analytics/pro/ProComponent';
 import { queryPanelAnalyticsBinding } from '@/features/analytics/panelBindingQuery';
@@ -114,14 +114,26 @@ function gridStyle(position: GridPosition) {
 
 const SELF_SCROLLING = new Set(['kpi_card', 'data_grid', 'geo_map', 'insights', 'bar_chart', 'line_chart', 'donut_chart']);
 
-function PublishedGridItem({ component, breakpoint, matrix, children }: { component: PublishedPanelDocument['sections'][number]['components'][number]; breakpoint: Breakpoint; matrix: boolean; children: ReactNode }) {
+const EXPANDABLE = new Set(['bar_chart', 'line_chart', 'donut_chart', 'geo_map', 'data_grid', 'insights']);
+
+function PublishedGridItem({ component, breakpoint, matrix, title, children }: { component: PublishedPanelDocument['sections'][number]['components'][number]; breakpoint: Breakpoint; matrix: boolean; title: string; children: ReactNode }) {
+  const { t } = useI18n();
+  const [expanded, setExpanded] = useState(false);
   const tight = component.type === 'kpi_card';
   if (!matrix) return <div className={cn('min-w-0 rounded-xl border border-border bg-surface shadow-xs', tight ? 'p-3' : 'p-4')} style={gridStyle(component.layout[breakpoint])}>{children}</div>;
   // Fixed-matrix cell: the component fills the cell and scrolls or clips inside it; it never stretches the page.
   const bare = component.type === 'heading' || component.type === 'org_brand' || component.type === 'divider';
   return (
-    <div className={cn('flex min-h-0 min-w-0 flex-col rounded-lg', bare ? 'justify-center' : 'border border-border bg-surface p-2 shadow-xs', SELF_SCROLLING.has(component.type) ? 'overflow-hidden' : 'overflow-auto')} style={gridStyle(component.layout[breakpoint])}>
+    <div className={cn('group/cell relative flex min-h-0 min-w-0 flex-col rounded-lg', bare ? 'justify-center' : 'border border-border bg-surface p-2 shadow-xs', SELF_SCROLLING.has(component.type) ? 'overflow-hidden' : 'overflow-auto')} style={gridStyle(component.layout[breakpoint])}>
       <CellFillProvider value><div className="flex min-h-0 flex-1 flex-col [&>*]:min-h-0">{children}</div></CellFillProvider>
+      {EXPANDABLE.has(component.type) && !bare ? (
+        <>
+          <button type="button" onClick={() => setExpanded(true)} aria-label={`${t('panel.expand')}: ${title}`} title={t('panel.expand')} className="absolute right-1 top-1 z-10 inline-flex size-6 items-center justify-center rounded-md border border-border bg-surface/90 text-text-muted opacity-0 shadow-xs transition-opacity hover:text-text focus-visible:opacity-100 group-hover/cell:opacity-100">
+            <ArrowsOutSimple className="size-3.5" aria-hidden="true" />
+          </button>
+          {expanded ? <Dialog open onOpenChange={setExpanded} title={title || t('panel.expand')} size="xl"><div className="h-[68dvh] min-h-80"><CellFillProvider value><div className="flex h-full min-h-0 flex-col [&>*]:min-h-0">{children}</div></CellFillProvider></div></Dialog> : null}
+        </>
+      ) : null}
     </div>
   );
 }
@@ -177,63 +189,99 @@ function metricPresentation(props: Record<string, unknown>, locales: string[]) {
   return { variant, format };
 }
 
+/** A binding's live state as the chart primitives expect it. The last valid response stays on screen while a newer one loads. */
+function resultOf(state: BindingState): AnalyticsResult {
+  if (state.response) {
+    const columns = state.response.columns.map((column) => ({ key: column.key, label: column.key, align: ['INTEGER', 'DECIMAL', 'NUMBER'].includes(column.type.toUpperCase()) ? 'right' as const : 'left' as const }));
+    const rows = analyticsRows(state.response);
+    return rows.length ? { state: 'ready', data: { columns, rows } } : { state: 'empty' };
+  }
+  if (state.status === 'error') return { state: 'error', message: state.error?.message };
+  return { state: 'loading' };
+}
+
 /**
- * The panel document carries a canonical binding reference, never raw data or
- * a query. CORECROW owns the query and filter authorization for this request.
+ * The panel document carries a canonical binding reference, never raw data or a query. CORECROW owns the query and filter
+ * authorization; every request goes through the page's shared binding source (cancellation, last-valid-result, one cache).
+ * Bar charts may declare a `drill` binding: clicking a bar narrows the dashboard to that category and the chart swaps to the
+ * drill binding (e.g. countries -> ports) until the reader goes back.
  */
-function PublishedAnalyticsContent({
-  component,
-  organizationId,
-  panelId,
-  locales,
-  filters,
-  onFilterDefinitions,
-  onExecuted,
-}: {
-  component: PublishedPanelDocument['sections'][number]['components'][number];
-  organizationId: string | null | undefined;
-  panelId: string;
-  locales: string[];
-  filters: DatasetQueryFilter[];
-  onFilterDefinitions: (bindingId: string, definitions: PanelBindingFilterDefinition[]) => void;
-  onExecuted: (bindingId: string, executedAt: string) => void;
-}) {
+function PublishedAnalyticsContent({ component, locales }: { component: PublishedPanelDocument['sections'][number]['components'][number]; locales: string[] }) {
+  const { t } = useI18n();
+  const source = useBindingSource();
   const binding = datasetBinding(component.bindings);
-  const { result, response } = usePanelBindingQuery(organizationId, panelId, binding?.sourceId, filters);
+  const state = useBindingResult(binding?.sourceId ?? null);
   // A donut may bind a second result named `total` (the page's unique count) to state exact shares and the centre figure.
   const totalBinding = component.type === 'donut_chart' ? bindingIdOf(component.bindings, 'total') : null;
   const totalResult = useBindingResult(totalBinding);
-  useEffect(() => {
-    if (binding && response) {
-      onFilterDefinitions(binding.sourceId, response.filterDefinitions);
-      onExecuted(binding.sourceId, response.executedAt);
-    }
-  }, [binding, onExecuted, onFilterDefinitions, response]);
+  const drillBinding = component.type === 'bar_chart' ? bindingIdOf(component.bindings, 'drill') : null;
+  const drill = component.props.drill && typeof component.props.drill === 'object' ? component.props.drill as { categoryKey?: unknown; title?: unknown } : null;
+  const [drilled, setDrilled] = useState<string | null>(null);
+  // Until the drill binding has registered its own filter definitions it borrows the chart binding's (same allowlist by contract),
+  // so the first drilled request is already narrowed to the clicked category instead of flashing every port.
+  const dataFiltersJson = JSON.stringify(source && binding ? source.filtersFor(binding.sourceId) : []);
+  const drillOwnJson = JSON.stringify(source && drillBinding ? source.filtersFor(drillBinding) : []);
+  const drillRequest = useMemo(() => (drillOwnJson === '[]' ? { filters: JSON.parse(dataFiltersJson) as DatasetQueryFilter[] } : {}), [dataFiltersJson, drillOwnJson]);
+  const drillState = useBindingResult(drilled ? drillBinding : null, drillRequest);
+  const categoryKey = typeof component.props.categoryKey === 'string' ? component.props.categoryKey : '';
+  const selected = source?.selectedValues?.(categoryKey) ?? [];
+  // The filter chip was removed elsewhere: the chart returns to its first level.
+  useEffect(() => { if (drilled !== null && !selected.some((value) => String(value) === drilled)) setDrilled(null); }, [drilled, selected]);
 
   // A malformed or future binding type does not fall back to a client query.
   if (!binding) return null;
-  // A published document may choose fields only from the response supplied by
-  // its server-owned binding. Invalid/missing visual props deliberately fall
-  // back to the safe data grid; NORTH never guesses fields or runs a query.
-  const availableKeys = new Set(response?.columns.map((column) => column.key) ?? []);
+  // A published document may choose fields only from the response supplied by its server-owned binding. Invalid/missing visual
+  // props deliberately fall back to the safe data grid; NORTH never guesses fields or runs a query.
+  const availableKeys = new Set(state.response?.columns.map((column) => column.key) ?? []);
+  const result = resultOf(state);
+  const interactive = Boolean(source?.applyFilter && categoryKey && source.canFilter?.(categoryKey));
+  const select = interactive ? (value: string) => source!.applyFilter!(categoryKey, value) : undefined;
+  const dim = state.refreshing ? 'h-full opacity-60 transition-opacity' : 'h-full';
   if (component.type === 'metric') {
     const field = publishedMetricField(component.props, availableKeys);
     if (field) return <AnalyticsKpi result={result} field={field} label={localizedLabel(component.props, locales, field)} {...metricPresentation(component.props, locales)} />;
   }
   if (component.type === 'bar_chart') {
     const config = publishedBarChartProps(component.props, availableKeys, locales);
-    if (config) return withChartTitle(component.props, locales, <AnalyticsBarChart result={result} {...config} />);
+    if (config) {
+      const title = localized(component.props.title, locales);
+      const categoryFormat = component.props.categoryFormat === 'year' || component.props.categoryFormat === 'month' ? component.props.categoryFormat : undefined;
+      if (drilled !== null && drillBinding && typeof drill?.categoryKey === 'string') {
+        const drillKeys = new Set(drillState.response?.columns.map((column) => column.key) ?? []);
+        const drillConfig = publishedBarChartProps({ ...component.props, categoryKey: drill.categoryKey }, new Set([...drillKeys, ...config.series.map((item) => item.key)]), locales);
+        const drillTitle = localized(drill.title, locales);
+        return (
+          <div className="flex h-full min-h-0 flex-col gap-1.5">
+            <div className="flex shrink-0 items-center gap-2">
+              <button type="button" onClick={() => { source?.clearFilter?.(categoryKey, selected.find((value) => String(value) === drilled) ?? drilled); setDrilled(null); }} className="inline-flex h-6 shrink-0 items-center gap-1 rounded-md border border-border px-1.5 text-[11px] font-medium text-text-secondary hover:bg-surface-hover hover:text-text">
+                <CaretLeft className="size-3" aria-hidden="true" />{t('panel.drillBack')}
+              </button>
+              <h3 className="min-w-0 truncate text-sm font-medium text-text" title={`${title} · ${drilled}`}>{drillTitle || title} · {drilled}</h3>
+            </div>
+            <div className={cn('min-h-0 flex-1', drillState.refreshing && 'opacity-60 transition-opacity')}>{drillConfig ? <AnalyticsBarChart result={resultOf(drillState)} {...drillConfig} categoryFormat={categoryFormat} /> : <AnalyticsBarChart result={resultOf(drillState)} {...config} categoryKey={drill.categoryKey} />}</div>
+          </div>
+        );
+      }
+      const canDrill = Boolean(drillBinding) && interactive;
+      return (
+        <div className="flex h-full min-h-0 flex-col gap-1.5">
+          {title ? <h3 className="shrink-0 truncate text-sm font-medium text-text" title={title}>{title}{canDrill ? <span className="ml-2 text-[11px] font-normal text-text-muted">{t('panel.drillHint')}</span> : null}</h3> : null}
+          <div className={cn('min-h-0 flex-1', dim)}><AnalyticsBarChart result={result} {...config} categoryFormat={categoryFormat} onSelect={select ? (value) => { select(value); if (canDrill) setDrilled(value); } : undefined} /></div>
+        </div>
+      );
+    }
   }
   if (component.type === 'line_chart') {
     const config = publishedLineChartProps(component.props, availableKeys, locales);
-    if (config) return withChartTitle(component.props, locales, <AnalyticsLineAreaChart result={result} {...config} />);
+    const categoryFormat = component.props.categoryFormat === 'year' || component.props.categoryFormat === 'month' ? component.props.categoryFormat : undefined;
+    if (config) return <div className={dim}>{withChartTitle(component.props, locales, <AnalyticsLineAreaChart result={result} {...config} categoryFormat={categoryFormat} />)}</div>;
   }
   if (component.type === 'donut_chart') {
     const config = publishedDonutChartProps(component.props, availableKeys, locales);
     if (config) {
       const totalRow = totalResult.response ? analyticsRows(totalResult.response)[0] : undefined;
       const total = config.totalKey && totalRow ? asNumber(totalRow[config.totalKey]) : null;
-      return withChartTitle(component.props, locales, <AnalyticsDonutChart result={result} {...config} total={total} />);
+      return <div className={dim}>{withChartTitle(component.props, locales, <AnalyticsDonutChart result={result} {...config} total={total} onSelect={select} />)}</div>;
     }
   }
 
@@ -314,15 +362,19 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
 
   // Distinct fields across bindings, in binding order. The control type comes from the definition CORECROW returned.
   const canFacet = !showcaseSlug && Boolean(organizationId);
+  // The author may rename filter controls by dataset field key (filter_bar `labels`); the dataset itself is untouched.
+  const filterLabels = document?.sections.flatMap((section) => section.components).find((component) => component.type === 'filter_bar')?.props.labels;
+  const labelOverrides = useMemo<Record<string, unknown>>(() => (filterLabels && typeof filterLabels === 'object' && !Array.isArray(filterLabels) ? filterLabels as Record<string, unknown> : {}), [filterLabels]);
   const controls = useMemo<FilterControl[]>(() => {
     const byField = new Map<string, FilterControl>();
-    for (const bindingId of Object.keys(definitionsByBinding).sort()) for (const definition of definitionsByBinding[bindingId]!) {
+    // Bindings with the fullest allowlist first so the controls keep the order the author declared.
+    for (const bindingId of Object.keys(definitionsByBinding).sort((a, b) => definitionsByBinding[b]!.length - definitionsByBinding[a]!.length || a.localeCompare(b))) for (const definition of definitionsByBinding[bindingId]!) {
       if (byField.has(definition.fieldId)) continue;
       const mode = filterModeOf(definition);
-      byField.set(definition.fieldId, { fieldId: definition.fieldId, label: localized(definition.displayName, locales) || definition.key, type: definition.type, operators: definition.operators, mode: !canFacet && (mode === 'multi' || mode === 'single') ? 'text' : mode });
+      byField.set(definition.fieldId, { fieldId: definition.fieldId, label: localized(labelOverrides[definition.key], locales) || localized(definition.displayName, locales) || definition.key, type: definition.type, operators: definition.operators, mode: !canFacet && (mode === 'multi' || mode === 'single') ? 'text' : mode });
     }
     return [...byField.values()];
-  }, [canFacet, definitionsByBinding, locales]);
+  }, [canFacet, definitionsByBinding, labelOverrides, locales]);
   const filtersFor = useCallback((source: FilterSelections) => Object.fromEntries(Object.entries(definitionsByBinding).map(([bindingId, definitions]) => [bindingId, filtersForDefinitions(definitions, source)])) as Record<string, DatasetQueryFilter[]>, [definitionsByBinding]);
   const filtersByBinding = useMemo(() => filtersFor(presenting ?? selections), [filtersFor, presenting, selections]);
   const loadFacet = useCallback<FacetLoader>(async (fieldId, search, offset, signal, granularity) => {
@@ -353,6 +405,14 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
       registerExecuted(bindingId, response.executedAt);
     },
     canFilter: (fieldId) => live.current.canFacet && live.current.controls.some((control) => control.fieldId === fieldId && (control.mode === 'multi' || control.mode === 'single')),
+    selectedValues: (fieldId) => live.current.selections[fieldId]?.values ?? [],
+    clearFilter: (fieldId, value) => {
+      const { selections: current } = live.current;
+      const remaining = (current[fieldId]?.values ?? []).filter((item) => item !== value);
+      const rest = { ...current };
+      delete rest[fieldId];
+      updateSelections(remaining.length || current[fieldId]?.text || current[fieldId]?.from || current[fieldId]?.to ? { ...rest, [fieldId]: { ...current[fieldId], values: remaining } } : rest);
+    },
     applyFilter: (fieldId, value) => {
       const { selections: current } = live.current;
       const values = current[fieldId]?.values ?? [];
@@ -366,10 +426,10 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
   // scroll inside them. With `fit` (desktop) the rows stretch to the viewport but never shrink below `rowHeight`.
   const GAP_PX = { none: 0, sm: 8, md: 16, lg: 24 } as const;
   const matrixOf = (section: (typeof sections)[number]) => {
-    const rowHeight = breakpoint === 'mobile' ? undefined : section.layout.rowHeight;
+    const rowHeight = breakpoint === 'desktop' ? section.layout.rowHeight : undefined;
     if (!rowHeight) return null;
     const rows = Math.max(1, ...section.components.map((component) => { const position = component.layout[breakpoint]; return position.y + position.h; }));
-    return { rowHeight, rows, fit: breakpoint === 'desktop' && section.layout.fit === true };
+    return { rowHeight, rows, fit: section.layout.fit === true };
   };
   const filterTitle = localized(sections.flatMap((section) => section.components).find((component) => component.type === 'filter_bar')?.props.title, locales) || undefined;
   const hasFilterSlot = sections.some((section) => section.components.some((component) => component.type === 'filter_bar'));
@@ -384,15 +444,15 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
     return <section key={section.id} style={style} className={cn('grid grid-cols-12', !matrix && 'auto-rows-[minmax(2rem,auto)]', GAP[section.layout.gap], matrix?.fit && 'min-h-0 flex-1')}>{section.components.slice().sort((a, b) => a.order - b.order).map((component) => {
       const binding = datasetBinding(component.bindings);
       // The filter bar placed by the author is live on the page and absent from presentation scenes (those use a frozen snapshot).
-      if (component.type === 'filter_bar') return presenting ? null : <div key={component.id} className="min-w-0" style={gridStyle(component.layout[breakpoint])}>{filterBar}</div>;
+      if (component.type === 'filter_bar') return presenting ? null : <div key={component.id} className={cn('min-w-0', matrix && 'min-h-0')} style={gridStyle(component.layout[breakpoint])}>{filterBar}</div>;
       const content = PRO_TYPES.has(component.type)
         ? <ProComponent component={component} panelKey={panelId} locales={locales} />
         : binding
-        ? <PublishedAnalyticsContent component={component} organizationId={organizationId} panelId={panelId} locales={locales} filters={filtersByBinding[binding.sourceId] ?? []} onFilterDefinitions={registerFilterDefinitions} onExecuted={registerExecuted} />
+        ? <PublishedAnalyticsContent component={component} locales={locales} />
         : component.type === 'document_workspace'
           ? <DocumentWorkspaceHost organizationId={organizationId} props={component.props} />
           : SafeComponent({ type: component.type, props: component.props, locales });
-      return content === null ? null : <PublishedGridItem key={component.id} component={component} breakpoint={breakpoint} matrix={matrix !== null}>{content}</PublishedGridItem>;
+      return content === null ? null : <PublishedGridItem key={component.id} component={component} breakpoint={breakpoint} matrix={matrix !== null} title={localized(component.props.title, locales)}>{content}</PublishedGridItem>;
     })}</section>;
   };
   const updatedAt = Object.values(executedByBinding).sort().at(-1) ?? null;
@@ -402,7 +462,7 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
   };
   const toolbarButton = 'inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs font-medium text-text-secondary transition-colors duration-(--duration-fast) hover:bg-surface-hover hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 pointer-coarse:h-(--touch-min)';
 
-  return <BindingSourceProvider source={bindingSource}><article ref={articleRef} className={cn('north-enter mx-auto w-full max-w-[1680px]', fitted ? 'flex min-h-full flex-col gap-2 p-2 lg:p-3' : 'space-y-5 p-4 lg:p-5', fullscreen && 'max-w-none overflow-auto bg-background')}>
+  return <BindingSourceProvider source={bindingSource}><article ref={articleRef} className={cn('north-enter mx-auto w-full max-w-[1680px]', fitted ? 'flex h-full flex-col gap-2 p-2 lg:p-3' : 'space-y-5 p-4 lg:p-5', fullscreen && 'max-w-none overflow-auto bg-background')}>
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h1 className={cn('font-display font-semibold', fitted ? 'text-lg' : 'text-2xl')}>{title}</h1>
       <div className="flex items-center gap-2">
@@ -453,7 +513,7 @@ export function ViewRenderer({ user, tab }: { user: SessionUser; tab: Tab | null
       </Suspense>
     );
   }
-  if (tab.publishedPanel) return <PanelNavigationBridge><PublishedPanel title={tab.publishedPanel.title} document={tab.publishedPanel.document} locales={tab.publishedPanel.localeOrder} organizationId={activeOrganization?.id} panelId={tab.publishedPanel.id} /></PanelNavigationBridge>;
+  if (tab.publishedPanel) return <PanelNavigationBridge><PublishedPanel key={tab.publishedPanel.id} title={tab.publishedPanel.title} document={tab.publishedPanel.document} locales={tab.publishedPanel.localeOrder} organizationId={activeOrganization?.id} panelId={tab.publishedPanel.id} /></PanelNavigationBridge>;
   if (PERSONAL_CATEGORIES.has(tab.route.categoryId)) return <PersonalView route={tab.route} user={user} />;
   return <div className="p-6"><EmptyState icon={Barricade} title="Vista en construcción" body={`La categoría "${tab.route.categoryId}" está siendo preparada.`} className="max-w-md" /></div>;
 }
