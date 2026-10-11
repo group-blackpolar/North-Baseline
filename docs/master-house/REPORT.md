@@ -49,6 +49,11 @@ expand-to-dialog, in-app navigation links, organization brand component, grid ra
 See `CoreCrow-BP/docs/master-house.md`: cold dashboard load of the same bindings **35.9 s → 10.6 s (3.4×)** across the eight panels (real API, local PostgreSQL, 193 k rows); production SQL probes 4.3 s → 1.1 s, 8.1 s → 2.0 s, 10.1 s → 2.3 s.
 Layout (real Chrome pane, real data): at 1366×768, 1440×900 and 1920×1080 filters + table + charts fit without outer scroll (scroll height = client height), no cell overflows; at 768×1024 the stacked flow has no horizontal overflow.
 
+## 5b. Release (2026-10-11)
+
+CORECROW PR #16 → `9061bac` (automatic deploy, health `operational`, no migration); NORTH PR #19 → `9ce84d9` (manual deploy workflow, release `north-9ce84d9…` active, previous `north-66cc0e6…` kept for rollback).
+Production content: pre-run dump, then the eight panels provisioned and published at revision 3 (see `CoreCrow-BP/docs/master-house.md`, "Provisioning runbook"). Production cold latencies are listed there.
+
 ## 6. Verified / pending
 
 Verified: NORTH `pnpm lint` (0 errors), `pnpm test` (104/104), `pnpm build`; CORECROW `pnpm lint`, `pnpm build`, `pnpm test:unit` (88), the full integration suite against an isolated PostgreSQL 16 (analytics contracts incl. distinctBy vs ground truth, assistant tools/permissions/tenant isolation/confirmed actions, SSE stream regression);
