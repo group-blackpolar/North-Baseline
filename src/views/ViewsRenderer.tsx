@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ArrowsClockwise, ArrowsIn, ArrowsOut, Barricade, Presentation } from '@phosphor-icons/react';
 import type { SessionUser } from '@/lib/auth';
 import type { Tab } from '@/context/TabsContext';
@@ -28,6 +28,10 @@ import { queryShowcaseBinding } from '@/lib/showcase';
 import { chipsOf, filterModeOf, filtersForDefinitions, loadSelections, saveSelections, type FilterSelections } from '@/features/filters/filterModel';
 import { PresentationMode } from '@/features/presentation/PresentationMode';
 import { cn } from '@/lib/utils';
+import { CellFillProvider } from '@/features/analytics/cellFill';
+import { OrganizationAvatar } from '@/components/organization/OrganizationAvatar';
+import { navigateToPublishedTarget } from '@/lib/publishedNavigation';
+import { useTabs } from '@/context/TabsContext';
 
 // Administration is the largest authenticated surface and most sessions never open it: load it on demand.
 const AdminCenter = lazy(() => import('@/features/admin-center/AdminCenter').then((module) => ({ default: module.AdminCenter })));
@@ -45,6 +49,29 @@ const safeHref = (value: unknown) => {
   if (typeof value !== 'string') return null;
   try { return ['http:', 'https:', 'mailto:'].includes(new URL(value).protocol) ? value : null; } catch { return null; }
 };
+
+/** Opens another published panel of the same organization. Absent in the public showcase, where internal links render as text. */
+const PanelNavigationContext = createContext<((panelSlug: string) => void) | null>(null);
+
+function PanelLink({ slug, children, className }: { slug: string; children: ReactNode; className?: string }) {
+  const open = useContext(PanelNavigationContext);
+  return open
+    ? <button type="button" onClick={() => open(slug)} className={cn('text-left text-accent underline-offset-2 hover:underline focus-visible:outline-none focus-visible:underline', className)}>{children}</button>
+    : <span className={className}>{children}</span>;
+}
+
+function OrgBrand({ props }: { props: Record<string, unknown> }) {
+  const { activeOrganization } = useOrganization();
+  if (!activeOrganization) return null;
+  const identity = activeOrganization as { name: string; id: string; iconData?: string | null; iconAssetId?: string | null };
+  const align = props.align === 'center' ? 'justify-center' : props.align === 'right' ? 'justify-end' : 'justify-start';
+  return (
+    <div className={cn('flex h-full min-h-0 items-center gap-3', align)}>
+      <OrganizationAvatar name={identity.name} organizationId={identity.id} iconAssetId={identity.iconAssetId} iconData={identity.iconData} className="size-full max-h-16 w-auto max-w-40 aspect-square rounded-lg bg-transparent" />
+      {props.showName === false ? null : <span className="truncate font-display text-lg font-semibold tracking-wide text-text">{identity.name}</span>}
+    </div>
+  );
+}
 
 function RichNode({ node }: { node: unknown }) {
   if (!node || typeof node !== 'object' || Array.isArray(node)) return null;
@@ -85,9 +112,18 @@ function gridStyle(position: GridPosition) {
   return { gridColumn: `${x + 1} / span ${width}`, gridRow: `${Math.max(0, position.y) + 1} / span ${Math.max(1, position.h)}` };
 }
 
-function PublishedGridItem({ component, breakpoint, children }: { component: PublishedPanelDocument['sections'][number]['components'][number]; breakpoint: Breakpoint; children: ReactNode }) {
+const SELF_SCROLLING = new Set(['kpi_card', 'data_grid', 'geo_map', 'insights', 'bar_chart', 'line_chart', 'donut_chart']);
+
+function PublishedGridItem({ component, breakpoint, matrix, children }: { component: PublishedPanelDocument['sections'][number]['components'][number]; breakpoint: Breakpoint; matrix: boolean; children: ReactNode }) {
   const tight = component.type === 'kpi_card';
-  return <div className={cn('min-w-0 rounded-xl border border-border bg-surface shadow-xs', tight ? 'p-3' : 'p-4')} style={gridStyle(component.layout[breakpoint])}>{children}</div>;
+  if (!matrix) return <div className={cn('min-w-0 rounded-xl border border-border bg-surface shadow-xs', tight ? 'p-3' : 'p-4')} style={gridStyle(component.layout[breakpoint])}>{children}</div>;
+  // Fixed-matrix cell: the component fills the cell and scrolls or clips inside it; it never stretches the page.
+  const bare = component.type === 'heading' || component.type === 'org_brand' || component.type === 'divider';
+  return (
+    <div className={cn('flex min-h-0 min-w-0 flex-col rounded-lg', bare ? 'justify-center' : 'border border-border bg-surface p-2 shadow-xs', SELF_SCROLLING.has(component.type) ? 'overflow-hidden' : 'overflow-auto')} style={gridStyle(component.layout[breakpoint])}>
+      <CellFillProvider value><div className="flex min-h-0 flex-1 flex-col [&>*]:min-h-0">{children}</div></CellFillProvider>
+    </div>
+  );
 }
 
 function storedTableResult(props: Record<string, unknown>, locales: string[]): { result: AnalyticsResult; columns: AnalyticsColumn[] } | null {
@@ -124,7 +160,7 @@ function localizedLabel(props: Record<string, unknown>, locales: string[], fallb
 
 function withChartTitle(props: Record<string, unknown>, locales: string[], chart: ReactNode): ReactNode {
   const title = localized(props.title, locales);
-  return <div className="space-y-2">{title ? <h3 className="text-sm font-medium text-text">{title}</h3> : null}{chart}</div>;
+  return <div className="flex h-full min-h-0 flex-col gap-1.5">{title ? <h3 className="shrink-0 truncate text-sm font-medium text-text" title={title}>{title}</h3> : null}<div className="min-h-0 flex-1">{chart}</div></div>;
 }
 
 const KPI_VARIANTS = new Set(['default', 'primary', 'secondary', 'muted', 'success', 'warning', 'danger']);
@@ -211,7 +247,11 @@ export function SafeComponent({ type, props, locales }: { type: string; props: R
     const document = locales.map((locale) => documents?.[locale]).find(Boolean) ?? Object.values(documents ?? {})[0];
     return <RichNode node={document} />;
   }
-  if (type === 'link') { const href = safeHref(props.href); return href ? <a className="text-accent underline" href={href} target="_blank" rel="noreferrer">{localized(props.label, locales)}</a> : <span>{localized(props.label, locales)}</span>; }
+  if (type === 'org_brand') return <OrgBrand props={props} />;
+  if (type === 'link') {
+    if (typeof props.panelSlug === 'string') return <PanelLink slug={props.panelSlug}>{localized(props.label, locales)}</PanelLink>;
+    const href = safeHref(props.href); return href ? <a className="text-accent underline" href={href} target="_blank" rel="noreferrer">{localized(props.label, locales)}</a> : <span>{localized(props.label, locales)}</span>;
+  }
   if (type === 'metric') return <div><p className="text-sm text-text-secondary">{localized(props.label, locales)}</p><p className="text-2xl font-semibold">{String(props.value ?? '—')}</p></div>;
   if (type === 'divider') return <hr className="border-border" />;
   if (type === 'table') { const table = storedTableResult(props, locales); return table ? <AnalyticsDataGrid result={table.result} columns={table.columns} /> : null; }
@@ -220,7 +260,7 @@ export function SafeComponent({ type, props, locales }: { type: string; props: R
     const List = props.ordered === true ? 'ol' : 'ul';
     return <List className={props.ordered === true ? 'list-decimal pl-6' : 'list-disc pl-6'}>{items.map((item, index) => {
       const value = item as Record<string, unknown>; const href = safeHref(value.href); const label = localized(value.text, locales);
-      return <li key={typeof value.id === 'string' ? value.id : index}>{href ? <a className="text-accent underline" href={href} target="_blank" rel="noreferrer">{label}</a> : label}</li>;
+      return <li key={typeof value.id === 'string' ? value.id : index}>{typeof value.panelSlug === 'string' ? <PanelLink slug={value.panelSlug}>{label}</PanelLink> : href ? <a className="text-accent underline" href={href} target="_blank" rel="noreferrer">{label}</a> : label}</li>;
     })}</List>;
   }
   if (type === 'card') {
@@ -322,22 +362,39 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
 
   if (!document) return <div className="p-6 text-sm text-text-muted">Este panel publicado no tiene contenido disponible.</div>;
   const sections = document.sections.slice().sort((a, b) => a.order - b.order);
+  // A section with `rowHeight` is a fixed matrix on desktop/tablet: every row is that tall, components fill their cells and
+  // scroll inside them. With `fit` (desktop) the rows stretch to the viewport but never shrink below `rowHeight`.
+  const GAP_PX = { none: 0, sm: 8, md: 16, lg: 24 } as const;
+  const matrixOf = (section: (typeof sections)[number]) => {
+    const rowHeight = breakpoint === 'mobile' ? undefined : section.layout.rowHeight;
+    if (!rowHeight) return null;
+    const rows = Math.max(1, ...section.components.map((component) => { const position = component.layout[breakpoint]; return position.y + position.h; }));
+    return { rowHeight, rows, fit: breakpoint === 'desktop' && section.layout.fit === true };
+  };
   const filterTitle = localized(sections.flatMap((section) => section.components).find((component) => component.type === 'filter_bar')?.props.title, locales) || undefined;
   const hasFilterSlot = sections.some((section) => section.components.some((component) => component.type === 'filter_bar'));
-  const filterBar = <FilterBar controls={controls} selections={selections} onChange={updateSelections} loadFacet={canFacet ? loadFacet : undefined} title={filterTitle} />;
-  const renderSection = (section: (typeof sections)[number]) => <section key={section.id} className={`grid grid-cols-12 auto-rows-[minmax(2rem,auto)] ${GAP[section.layout.gap]}`}>{section.components.slice().sort((a, b) => a.order - b.order).map((component) => {
-    const binding = datasetBinding(component.bindings);
-    // The filter bar placed by the author is live on the page and absent from presentation scenes (those use a frozen snapshot).
-    if (component.type === 'filter_bar') return presenting ? null : <div key={component.id} className="min-w-0" style={gridStyle(component.layout[breakpoint])}>{filterBar}</div>;
-    const content = PRO_TYPES.has(component.type)
-      ? <ProComponent component={component} panelKey={panelId} locales={locales} />
-      : binding
-      ? <PublishedAnalyticsContent component={component} organizationId={organizationId} panelId={panelId} locales={locales} filters={filtersByBinding[binding.sourceId] ?? []} onFilterDefinitions={registerFilterDefinitions} onExecuted={registerExecuted} />
-      : component.type === 'document_workspace'
-        ? <DocumentWorkspaceHost organizationId={organizationId} props={component.props} />
-        : SafeComponent({ type: component.type, props: component.props, locales });
-    return content === null ? null : <PublishedGridItem key={component.id} component={component} breakpoint={breakpoint}>{content}</PublishedGridItem>;
-  })}</section>;
+  const filterBar = <FilterBar controls={controls} selections={selections} onChange={updateSelections} loadFacet={canFacet ? loadFacet : undefined} title={filterTitle} compact={sections.some((section) => matrixOf(section) !== null)} />;
+  const fitted = sections.some((section) => matrixOf(section)?.fit);
+  const renderSection = (section: (typeof sections)[number]) => {
+    const matrix = matrixOf(section);
+    const style = matrix ? {
+      gridTemplateRows: `repeat(${matrix.rows}, ${matrix.fit ? `minmax(${matrix.rowHeight}px, 1fr)` : `${matrix.rowHeight}px`})`,
+      ...(matrix.fit ? { minHeight: matrix.rows * matrix.rowHeight + (matrix.rows - 1) * GAP_PX[section.layout.gap] } : {}),
+    } : undefined;
+    return <section key={section.id} style={style} className={cn('grid grid-cols-12', !matrix && 'auto-rows-[minmax(2rem,auto)]', GAP[section.layout.gap], matrix?.fit && 'min-h-0 flex-1')}>{section.components.slice().sort((a, b) => a.order - b.order).map((component) => {
+      const binding = datasetBinding(component.bindings);
+      // The filter bar placed by the author is live on the page and absent from presentation scenes (those use a frozen snapshot).
+      if (component.type === 'filter_bar') return presenting ? null : <div key={component.id} className="min-w-0" style={gridStyle(component.layout[breakpoint])}>{filterBar}</div>;
+      const content = PRO_TYPES.has(component.type)
+        ? <ProComponent component={component} panelKey={panelId} locales={locales} />
+        : binding
+        ? <PublishedAnalyticsContent component={component} organizationId={organizationId} panelId={panelId} locales={locales} filters={filtersByBinding[binding.sourceId] ?? []} onFilterDefinitions={registerFilterDefinitions} onExecuted={registerExecuted} />
+        : component.type === 'document_workspace'
+          ? <DocumentWorkspaceHost organizationId={organizationId} props={component.props} />
+          : SafeComponent({ type: component.type, props: component.props, locales });
+      return content === null ? null : <PublishedGridItem key={component.id} component={component} breakpoint={breakpoint} matrix={matrix !== null}>{content}</PublishedGridItem>;
+    })}</section>;
+  };
   const updatedAt = Object.values(executedByBinding).sort().at(-1) ?? null;
   const toggleFullscreen = () => {
     if (window.document.fullscreenElement) void window.document.exitFullscreen().catch(() => {});
@@ -345,9 +402,9 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
   };
   const toolbarButton = 'inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs font-medium text-text-secondary transition-colors duration-(--duration-fast) hover:bg-surface-hover hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 pointer-coarse:h-(--touch-min)';
 
-  return <BindingSourceProvider source={bindingSource}><article ref={articleRef} className={cn('north-enter mx-auto w-full max-w-[1680px] space-y-5 p-4 lg:p-5', fullscreen && 'max-w-none overflow-auto bg-background')}>
+  return <BindingSourceProvider source={bindingSource}><article ref={articleRef} className={cn('north-enter mx-auto w-full max-w-[1680px]', fitted ? 'flex min-h-full flex-col gap-2 p-2 lg:p-3' : 'space-y-5 p-4 lg:p-5', fullscreen && 'max-w-none overflow-auto bg-background')}>
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <h1 className="font-display text-2xl font-semibold">{title}</h1>
+      <h1 className={cn('font-display font-semibold', fitted ? 'text-lg' : 'text-2xl')}>{title}</h1>
       <div className="flex items-center gap-2">
         {updatedAt ? <span className="mr-1 hidden text-right text-[11px] leading-tight text-text-muted sm:block"><span className="block">{t('pres.updated')}</span><span className="block tabular-nums text-text-secondary">{new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(updatedAt))}</span></span> : null}
         <button type="button" className={toolbarButton} onClick={() => setVersion((value) => value + 1)}><ArrowsClockwise className="size-3.5" aria-hidden="true" />{t('panel.refresh')}</button>
@@ -367,6 +424,20 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
   </article></BindingSourceProvider>;
 }
 
+/** Gives internal links (`panelSlug`) the shell's navigation: resolves the target in the catalog and opens it like the sidebar would. */
+function PanelNavigationBridge({ children }: { children: ReactNode }) {
+  const { categories } = useCatalog();
+  const { activeOrganization } = useOrganization();
+  const { navigate } = useTabs();
+  const open = useCallback((panelSlug: string) => {
+    for (const category of categories) {
+      const subcategory = category.subcategories.find((item) => item.publishedPanels?.some((panel) => panel.slug === panelSlug));
+      if (subcategory) { void navigateToPublishedTarget({ organizationSlug: activeOrganization?.slug, category, subcategory, navigate, history: 'push' }).catch(() => undefined); return; }
+    }
+  }, [activeOrganization?.slug, categories, navigate]);
+  return <PanelNavigationContext.Provider value={open}>{children}</PanelNavigationContext.Provider>;
+}
+
 export function ViewRenderer({ user, tab }: { user: SessionUser; tab: Tab | null }) {
   const { getCategory, getSubcategory, isLoading: catalogLoading } = useCatalog();
   const { activeOrganization } = useOrganization();
@@ -382,7 +453,7 @@ export function ViewRenderer({ user, tab }: { user: SessionUser; tab: Tab | null
       </Suspense>
     );
   }
-  if (tab.publishedPanel) return <PublishedPanel title={tab.publishedPanel.title} document={tab.publishedPanel.document} locales={tab.publishedPanel.localeOrder} organizationId={activeOrganization?.id} panelId={tab.publishedPanel.id} />;
+  if (tab.publishedPanel) return <PanelNavigationBridge><PublishedPanel title={tab.publishedPanel.title} document={tab.publishedPanel.document} locales={tab.publishedPanel.localeOrder} organizationId={activeOrganization?.id} panelId={tab.publishedPanel.id} /></PanelNavigationBridge>;
   if (PERSONAL_CATEGORIES.has(tab.route.categoryId)) return <PersonalView route={tab.route} user={user} />;
   return <div className="p-6"><EmptyState icon={Barricade} title="Vista en construcción" body={`La categoría "${tab.route.categoryId}" está siendo preparada.`} className="max-w-md" /></div>;
 }

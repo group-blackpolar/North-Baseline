@@ -8,12 +8,13 @@ import type { PanelDocument } from '@/lib/northAdmin';
 import { cn } from '@/lib/utils';
 import { useViewsEditor } from '../ViewsEditorContext';
 import { ComponentPreview } from './ComponentPreview';
-import { addComponent, addSection, duplicateComponent, duplicateSection, findComponent, moveSection, removeComponent, removeSection, setComponentCell, setSectionLayout, setSectionName, type Component, type Section } from './documentOps';
+import { addComponent, addSection, duplicateComponent, duplicateSection, findComponent, moveSection, placementStatus, removeComponent, removeSection, setComponentCell, setSectionLayout, setSectionName, type Component, type Section } from './documentOps';
 import { cellRect, clampCell, columnAt, growBy, nudge, resizeCell, rowAt, type Cell, type GridMetrics, type ResizeHandle } from './grid';
 import { readMetrics } from './geometry';
 import { DEVICE_WIDTH, definitionOf, defaultSizes, type Device } from './registry';
 import type { PanelBinding } from './studioApi';
 import { componentLabelKey } from './labels';
+import { CellFillProvider } from '@/features/analytics/cellFill';
 
 export const LIBRARY_MIME = 'application/x-north-component';
 const GAP_CLASS = { none: 'gap-0', sm: 'gap-2', md: 'gap-4', lg: 'gap-6' } as const;
@@ -26,7 +27,7 @@ const HANDLES: Array<{ handle: ResizeHandle; className: string; cursor: string }
 ];
 
 // ── Ghost: the only thing that re-renders while a gesture is in progress ───────────────────────────────────────────
-interface GhostState { sectionId: string; cell: Cell; kind: 'move' | 'resize' | 'drop' }
+interface GhostState { sectionId: string; cell: Cell; kind: 'move' | 'resize' | 'drop'; /** false when dropping here would be rejected (the layout stays as it is). */ valid?: boolean; swap?: boolean }
 function createGhostStore() {
   let value: GhostState | null = null;
   const listeners = new Set<() => void>();
@@ -34,7 +35,7 @@ function createGhostStore() {
     get: () => value,
     set(next: GhostState | null) {
       if (next === value) return;
-      if (next && value && next.sectionId === value.sectionId && next.kind === value.kind && next.cell.x === value.cell.x && next.cell.y === value.cell.y && next.cell.w === value.cell.w && next.cell.h === value.cell.h) return;
+      if (next && value && next.sectionId === value.sectionId && next.kind === value.kind && next.valid === value.valid && next.swap === value.swap && next.cell.x === value.cell.x && next.cell.y === value.cell.y && next.cell.w === value.cell.w && next.cell.h === value.cell.h) return;
       value = next; listeners.forEach((listener) => listener());
     },
     subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
@@ -46,7 +47,7 @@ function GhostLayer({ store, sectionId, gridRef }: { store: GhostStore; sectionI
   const ghost = useSyncExternalStore(store.subscribe, store.get, store.get);
   if (!ghost || ghost.sectionId !== sectionId || !gridRef.current) return null;
   const rect = cellRect(ghost.cell, readMetrics(gridRef.current));
-  return <div aria-hidden="true" className="pointer-events-none absolute z-20 rounded-xl border-2 border-dashed border-accent bg-accent/10" style={{ left: rect.left, top: rect.top, width: rect.width, height: rect.height }} />;
+  return <div aria-hidden="true" data-valid={ghost.valid !== false} className={cn('pointer-events-none absolute z-20 rounded-xl border-2 border-dashed', ghost.valid === false ? 'border-error bg-error/10' : ghost.swap ? 'border-warning bg-warning/10' : 'border-accent bg-accent/10')} style={{ left: rect.left, top: rect.top, width: rect.width, height: rect.height }} />;
 }
 
 // ── Item ───────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -69,12 +70,14 @@ interface ItemProps {
   grabbed: boolean;
   tabbable: boolean;
   readOnly: boolean;
+  /** The section is a fixed-height matrix: the component fills its cell like it will on the published page. */
+  matrix: boolean;
   locales: string[];
   bindings: ReadonlyArray<PanelBinding>;
   actions: ItemActions;
 }
 
-const CanvasItem = memo(function CanvasItem({ organizationId, sectionId, component, device, selected, grabbed, tabbable, readOnly, locales, bindings, actions }: ItemProps) {
+const CanvasItem = memo(function CanvasItem({ organizationId, sectionId, component, device, selected, grabbed, tabbable, readOnly, matrix, locales, bindings, actions }: ItemProps) {
   const { t } = useI18n();
   const cell = component.layout[device];
   const label = t(componentLabelKey(component.type));
@@ -94,14 +97,15 @@ const CanvasItem = memo(function CanvasItem({ organizationId, sectionId, compone
       onClick={readOnly ? undefined : (event) => { event.stopPropagation(); actions.select(sectionId, component.id); }}
       onKeyDown={readOnly ? undefined : (event) => actions.keyDown(event, sectionId, component.id)}
       className={cn(
-        'group/item relative min-w-0 rounded-xl border bg-surface p-4 outline-none transition-[border-color,box-shadow] duration-(--duration-fast)',
+        matrix ? 'group/item relative flex min-h-0 min-w-0 flex-col rounded-lg border bg-surface p-2 outline-none' : 'group/item relative min-w-0 rounded-xl border bg-surface p-4 outline-none transition-[border-color,box-shadow] duration-(--duration-fast)',
+        matrix && 'overflow-hidden',
         readOnly ? 'border-border' : 'cursor-default border-border hover:border-border-hover focus-visible:ring-2 focus-visible:ring-accent/40',
         selected && !readOnly && 'z-10 border-accent ring-2 ring-accent/50',
         grabbed && 'ring-4 ring-accent/60',
       )}
     >
-      <div className={cn(!readOnly && 'pointer-events-none select-none')}>
-        <ComponentPreview organizationId={organizationId} component={component} locales={locales} bindings={bindings} live />
+      <div className={cn(!readOnly && 'pointer-events-none select-none', matrix && 'flex min-h-0 flex-1 flex-col [&>*]:min-h-0')}>
+        <CellFillProvider value={matrix}><ComponentPreview organizationId={organizationId} component={component} locales={locales} bindings={bindings} live /></CellFillProvider>
       </div>
       {selected && !readOnly ? (
         <>
@@ -220,6 +224,7 @@ export function StudioCanvas({ readOnly = false, bindings, locales, onOpenLibrar
       const current = gesture.current;
       gesture.current = null;
       ghost.set(null);
+      document.body.style.userSelect = '';
       if (event && current) { try { (event.currentTarget as HTMLElement).releasePointerCapture(current.pointerId); } catch { /* already released */ } }
       return current;
     };
@@ -237,6 +242,7 @@ export function StudioCanvas({ readOnly = false, bindings, locales, onOpenLibrar
         const origin = pointToCell(grid, metrics, event.clientX, event.clientY);
         gesture.current = { kind: handle ? 'resize' : 'move', handle, componentId, sectionId, start, origin, pointer: { x: event.clientX, y: event.clientY }, grid, metrics, latest: start, moved: false, pointerId: event.pointerId };
         (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+        document.body.style.userSelect = 'none'; // dragging must never select page text
       },
       pointerMove: (event) => {
         const g = gesture.current;
@@ -248,13 +254,18 @@ export function StudioCanvas({ readOnly = false, bindings, locales, onOpenLibrar
         const dRows = now.row - g.origin.row;
         const target = g.kind === 'move' ? clampCell({ ...g.start, x: g.start.x + dCols, y: g.start.y + dRows }) : resizeCell(g.start, g.handle!, dCols, dRows);
         g.latest = target;
-        ghost.set({ sectionId: g.sectionId, cell: target, kind: g.kind });
+        const { getDocument, device: dev } = ctxRef.current;
+        const doc = getDocument();
+        const status = doc ? placementStatus(doc, g.componentId, dev, target) : 'free';
+        ghost.set({ sectionId: g.sectionId, cell: target, kind: g.kind, valid: status !== 'rejected', swap: status === 'swap' });
       },
       pointerUp: (event) => {
         const g = endGesture(event);
         if (!g || !g.moved) return;
-        const { edit, device: dev } = ctxRef.current;
-        edit((doc) => setComponentCell(doc, g.componentId, dev, g.latest));
+        const { edit, device: dev, getDocument } = ctxRef.current;
+        const doc = getDocument();
+        if (doc && placementStatus(doc, g.componentId, dev, g.latest) === 'rejected') { setAnnouncement(tRef.current('st.canvas.rejected')); return; }
+        edit((current) => setComponentCell(current, g.componentId, dev, g.latest));
       },
       keyDown: (event, sectionId, componentId) => {
         if (event.target !== event.currentTarget) return; // typing inside a child control is never a canvas command
@@ -270,6 +281,7 @@ export function StudioCanvas({ readOnly = false, bindings, locales, onOpenLibrar
             event.preventDefault();
             const cell = found.component.layout[dev];
             const next = event.shiftKey ? growBy(cell, arrow[0]!, arrow[1]!) : nudge(cell, arrow[0]!, arrow[1]!);
+            if (placementStatus(doc, componentId, dev, next) === 'rejected') { setAnnouncement(tRef.current('st.canvas.rejected')); return; }
             edit((current) => setComponentCell(current, componentId, dev, next), { key: `kbd:${componentId}` });
             setAnnouncement(tRef.current('st.canvas.positionAnnounce', { x: next.x + 1, y: next.y + 1, w: next.w, h: next.h }));
           } else if (event.key === 'Enter' || event.key === ' ' || event.key === 'Escape') {
@@ -308,7 +320,7 @@ export function StudioCanvas({ readOnly = false, bindings, locales, onOpenLibrar
 
   // Escape cancels a pointer gesture without committing it.
   useEffect(() => {
-    const cancel = (event: KeyboardEvent) => { if (event.key === 'Escape' && gesture.current) { gesture.current = null; ghost.set(null); } };
+    const cancel = (event: KeyboardEvent) => { if (event.key === 'Escape' && gesture.current) { gesture.current = null; ghost.set(null); document.body.style.userSelect = ''; } };
     window.addEventListener('keydown', cancel);
     return () => window.removeEventListener('keydown', cancel);
   }, [ghost]);
@@ -423,6 +435,7 @@ function SectionBlock({ section, index, count, readOnly, device, selected, local
 }) {
   const { t } = useI18n();
   const gridRef = useRef<HTMLDivElement | null>(null);
+  const matrix = Boolean(section.layout.rowHeight) && device !== 'mobile';
   const setRef = useCallback((element: HTMLDivElement | null) => { gridRef.current = element; registerGrid(element); }, [registerGrid]);
   return (
     <section
@@ -435,7 +448,7 @@ function SectionBlock({ section, index, count, readOnly, device, selected, local
     >
       {!readOnly ? <SectionHeader section={section} index={index} count={count} selected={selected} locale={locale} onOpenLibrary={onOpenLibrary} /> : null}
       <div className={cn('relative', !readOnly && 'pt-6')}>
-        <div ref={setRef} className={cn('grid grid-cols-12 auto-rows-[minmax(2rem,auto)]', GAP_CLASS[section.layout.gap], !readOnly && section.components.length === 0 && 'min-h-24')}>
+        <div ref={setRef} style={matrix ? { gridAutoRows: `${section.layout.rowHeight}px` } : undefined} className={cn('grid grid-cols-12', !matrix && 'auto-rows-[minmax(2rem,auto)]', GAP_CLASS[section.layout.gap], !readOnly && section.components.length === 0 && 'min-h-24')}>
           {section.components.map((component) => (
             <CanvasItem
               key={component.id}
@@ -447,6 +460,7 @@ function SectionBlock({ section, index, count, readOnly, device, selected, local
               grabbed={grabbedId === component.id}
               tabbable={selectedId === component.id || firstId === component.id}
               readOnly={readOnly}
+              matrix={matrix}
               locales={locales}
               bindings={bindings}
               actions={actions}

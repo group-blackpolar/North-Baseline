@@ -39,7 +39,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
  * loading), dates a period selector over the months and years that hold data, numbers a range and free text a contains
  * box. Active selections show as removable chips and apply live.
  */
-export function FilterBar({ controls, selections, onChange, loadFacet, title }: {
+export function FilterBar({ controls, selections, onChange, loadFacet, title, compact = false }: {
+  /** Dense single-band variant for fixed-matrix dashboards: no header, inline labels, chips on the same band. */
+  compact?: boolean;
   controls: FilterControl[];
   selections: FilterSelections;
   onChange: (selections: FilterSelections) => void;
@@ -63,6 +65,7 @@ export function FilterBar({ controls, selections, onChange, loadFacet, title }: 
         <FacetSelect
           key={control.fieldId}
           label={control.label}
+          compact={compact}
           multi={control.mode === 'multi'}
           selected={selection?.values ?? []}
           onChange={(values: FilterScalar[]) => set(control.fieldId, { ...selection, values })}
@@ -74,6 +77,7 @@ export function FilterBar({ controls, selections, onChange, loadFacet, title }: 
       return (
         <PeriodSelect
           key={control.fieldId}
+          compact={compact}
           label={control.label}
           from={selection?.from}
           to={selection?.to}
@@ -102,6 +106,25 @@ export function FilterBar({ controls, selections, onChange, loadFacet, title }: 
       </Field>
     );
   });
+
+  if (compact) {
+    return (
+      <section className="np-card flex h-full min-h-0 flex-col justify-center gap-1 overflow-visible px-2 py-1" role="group" aria-label={title || t('analytics.filters')}>
+        <div className="flex items-center gap-2">
+          <Funnel className="size-4 shrink-0 text-accent" weight="fill" aria-hidden="true" />
+          <div className="grid min-w-0 flex-1 grid-cols-[repeat(auto-fit,minmax(10.5rem,1fr))] gap-1.5"><ResponsiveFilters activeCount={count} onClear={() => onChange({})}>{controlsView}</ResponsiveFilters></div>
+          {count > 0 ? <button type="button" className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent-soft" onClick={() => onChange({})}>{t('flt.clearAll')} ({count})</button> : null}
+        </div>
+        {chips.length ? (
+          <ul className="flex min-w-0 flex-wrap gap-1 overflow-y-auto" aria-label={t('flt.active')}>
+            {chips.map((chip) => (
+              <li key={chip.key}><button type="button" aria-label={t('flt.remove', { name: chip.text })} onClick={() => onChange(removeChip(selections, chip))} className="inline-flex max-w-72 items-center gap-1 rounded-md border border-accent/30 bg-accent-soft px-1.5 py-0.5 text-[0.68rem] text-text hover:border-accent/60"><span className="truncate" title={chip.text}><span className="text-text-secondary">{chip.label}: </span><span className="font-semibold">{chip.display}</span></span><X className="size-3 shrink-0 text-text-muted" aria-hidden="true" /></button></li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
+    );
+  }
 
   return (
     <section className="np-card overflow-visible" role="group" aria-label={title || t('analytics.filters')}>

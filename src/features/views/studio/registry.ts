@@ -30,6 +30,7 @@ const DEFINITIONS: ComponentDefinition[] = [
   { type: 'card', category: 'content', iconKey: 'card', size: { w: 4, h: 2 }, binding: 'none', addable: true, appearance: ['variant'] },
   { type: 'link', category: 'content', iconKey: 'link', size: { w: 4, h: 1 }, binding: 'none', addable: true, appearance: ['variant', 'size', 'newTab'] },
   { type: 'list', category: 'content', iconKey: 'list', size: { w: 6, h: 3 }, binding: 'none', addable: true, appearance: ['ordered'] },
+  { type: 'org_brand', category: 'content', iconKey: 'image', size: { w: 3, h: 3 }, binding: 'none', addable: true, appearance: ['align'] },
   { type: 'divider', category: 'layout', iconKey: 'divider', size: { w: 12, h: 1 }, binding: 'none', addable: true, appearance: ['variant', 'spacing'] },
   { type: 'metric', category: 'metrics', iconKey: 'metric', size: { w: 3, h: 2 }, binding: 'optional', addable: true, appearance: ['variant'] },
   { type: 'bar_chart', category: 'charts', iconKey: 'barChart', size: { w: 6, h: 6 }, binding: 'required', addable: true, appearance: ['height', 'orientation', 'stacking', 'color'] },

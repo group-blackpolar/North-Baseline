@@ -5,17 +5,19 @@ import type { AnalyticsRow, AnalyticsValue } from '../types';
 export type GridColumn = {
   key: string;
   label: string;
-  kind: 'text' | 'number' | 'decimal' | 'date' | 'month' | 'bar' | 'badge' | 'sparkline' | 'actions';
+  kind: 'text' | 'number' | 'decimal' | 'date' | 'month' | 'year' | 'rank' | 'bar' | 'badge' | 'sparkline' | 'actions';
   align?: 'left' | 'center' | 'right';
   width?: number;
   sortable?: boolean;
   hidden?: boolean;
   barTone?: string;
+  /** Discrete intensity background proportional to the column maximum on the current page. */
+  heat?: boolean;
 };
 
 export type GridView = { order: string[]; hidden: string[]; widths: Record<string, number> };
 
-const KINDS = new Set(['text', 'number', 'decimal', 'date', 'month', 'bar', 'badge', 'sparkline', 'actions']);
+const KINDS = new Set(['text', 'number', 'decimal', 'date', 'month', 'year', 'rank', 'bar', 'badge', 'sparkline', 'actions']);
 
 /** Defensive parse of the component props: unknown column shapes are dropped, never guessed. */
 export function parseColumns(value: unknown, label: (raw: unknown) => string): GridColumn[] {
@@ -32,6 +34,7 @@ export function parseColumns(value: unknown, label: (raw: unknown) => string): G
       ...(typeof column.sortable === 'boolean' ? { sortable: column.sortable } : {}),
       ...(column.hidden === true ? { hidden: true } : {}),
       ...(typeof column.barTone === 'string' ? { barTone: column.barTone } : {}),
+      ...(column.heat === true ? { heat: true } : {}),
     }];
   });
 }

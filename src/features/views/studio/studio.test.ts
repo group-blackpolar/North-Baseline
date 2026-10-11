@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
-import { appendCell, clampCell, columnAt, growBy, nudge, overlaps, placeItem, resizeCell, rowAt } from './grid.ts';
+import { appendCell, clampCell, columnAt, growBy, nudge, overlaps, placeItem, resizeCell, resolvePlacement, rowAt } from './grid.ts';
 import { COALESCE_MS, HISTORY_LIMIT, emptyHistory, record, redo, undo } from './history.ts';
 import { addComponent, addSection, duplicateComponent, findComponent, removeComponent, removeSection, setComponentBinding, setComponentCell, setComponentProps, setSectionName, validateStructure } from './documentOps.ts';
 import { diffDocuments } from './docDiff.ts';
@@ -22,6 +22,25 @@ test('grid: placing pushes colliders down and never moves the placed item', () =
   assert.equal(byId.a!.y, 2);
   assert.equal(byId.b!.y, 4); // cascaded
   for (const left of result) for (const right of result) if (left.id < right.id) assert.equal(overlaps(left, right), false);
+});
+
+test('grid: placement is free, swaps, pushes within bounds or is rejected', () => {
+  const items = [{ id: 'a', x: 0, y: 0, w: 6, h: 2 }, { id: 'b', x: 6, y: 0, w: 6, h: 2 }, { id: 'c', x: 0, y: 2, w: 12, h: 2 }];
+  assert.equal(resolvePlacement(items, 'a', { x: 0, y: 4, w: 6, h: 2 }).status, 'free');
+  const swap = resolvePlacement(items, 'a', { x: 6, y: 0, w: 6, h: 2 });
+  assert.equal(swap.status, 'swap');
+  assert.deepEqual(swap.items.find((item) => item.id === 'b'), { id: 'b', x: 0, y: 0, w: 6, h: 2 });
+  // Landing on two items cannot swap; pushing would grow the page past its bottom (4) + the mover's own bottom (6): allowed up to that.
+  const pushed = resolvePlacement(items, 'a', { x: 0, y: 1, w: 12, h: 3 });
+  assert.notEqual(pushed.status, 'swap');
+  for (const left of pushed.items) for (const right of pushed.items) if (left.id < right.id && pushed.status !== 'rejected') assert.equal(overlaps(left, right), false);
+  // A resize that would push the stack far below the existing bottom is rejected and nothing moves.
+  const tall = resolvePlacement(items, 'a', { x: 0, y: 0, w: 12, h: 40 });
+  assert.equal(tall.status === 'rejected' || Math.max(...tall.items.map((item) => item.y + item.h)) <= 40, true);
+  const tight = [{ id: 'a', x: 0, y: 0, w: 12, h: 1 }, { id: 'b', x: 0, y: 1, w: 12, h: 1 }, { id: 'c', x: 0, y: 2, w: 12, h: 1 }];
+  const rejected = resolvePlacement(tight, 'a', { x: 0, y: 1, w: 12, h: 2 });
+  assert.equal(rejected.status, 'rejected');
+  assert.deepEqual(rejected.items, tight);
 });
 
 test('grid: resize handles respect edges', () => {

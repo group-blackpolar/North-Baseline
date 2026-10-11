@@ -52,6 +52,36 @@ export function placeItem(items: ReadonlyArray<GridItem>, id: string, target: Ce
   return result;
 }
 
+export type PlacementStatus = 'free' | 'swap' | 'push' | 'rejected';
+export interface Placement { status: PlacementStatus; items: GridItem[] }
+
+/**
+ * Predictable collision policy for the matrix editor (`placeItem` pushes without limit and is kept for copies):
+ *  - free     the target cell is empty: the item just moves;
+ *  - swap     the target overlaps exactly one item and that item fits in the mover's previous cell: they trade places;
+ *  - push     the others are pushed down, but only while the layout does not grow beyond the lowest bottom it already had
+ *             (or the mover's own bottom). A move can therefore never make the page extend indefinitely downwards;
+ *  - rejected anything else: the layout is returned unchanged and the UI shows the target as invalid.
+ */
+export function resolvePlacement(items: ReadonlyArray<GridItem>, id: string, target: Cell): Placement {
+  const placed = clampCell(target);
+  const current = items.find((item) => item.id === id);
+  const unchanged = () => items.map((item) => ({ ...item }));
+  if (!current) return { status: 'rejected', items: unchanged() };
+  const others = items.filter((item) => item.id !== id);
+  const hits = others.filter((other) => overlaps(placed, other));
+  if (hits.length === 0) return { status: 'free', items: items.map((item) => (item.id === id ? { ...item, ...placed } : { ...item })) };
+  if (hits.length === 1) {
+    const other = hits[0]!;
+    const home = clampCell({ x: current.x, y: current.y, w: other.w, h: other.h });
+    if (!overlaps(home, placed) && !others.some((item) => item.id !== other.id && overlaps(home, item)))
+      return { status: 'swap', items: items.map((item) => (item.id === id ? { ...item, ...placed } : item.id === other.id ? { ...item, ...home } : { ...item })) };
+  }
+  const pushed = placeItem(items, id, placed);
+  if (bottomOf(pushed) <= Math.max(bottomOf(items), placed.y + placed.h)) return { status: 'push', items: pushed };
+  return { status: 'rejected', items: unchanged() };
+}
+
 /**
  * Cell for a new item of size w×h. It goes beside what is already on the last row band when there is room (so a KPI row
  * fills left to right), otherwise at the left of the first free row below everything.

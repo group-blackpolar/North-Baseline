@@ -20,7 +20,7 @@ const dayOf = (value: FacetValue['value']) => (typeof value === 'string' && /^\d
  * Period filter for a date field: presets anchored on the latest month that holds data, whole years and months that
  * actually exist (with record counts, from CORECROW), and a custom range. It always produces a closed [from, to] day range.
  */
-export function PeriodSelect({ label, from, to, onChange, loadPeriods }: { label: string; from?: string; to?: string; onChange: (range: { from?: string; to?: string }) => void; loadPeriods?: PeriodLoader }) {
+export function PeriodSelect({ label, from, to, onChange, loadPeriods, compact = false }: { compact?: boolean; label: string; from?: string; to?: string; onChange: (range: { from?: string; to?: string }) => void; loadPeriods?: PeriodLoader }) {
   const { t, locale } = useI18n();
   const anchorRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -47,11 +47,12 @@ export function PeriodSelect({ label, from, to, onChange, loadPeriods }: { label
 
   return (
     <div className="min-w-0">
-      <span className="mb-1 block truncate text-[0.7rem] font-semibold text-text-secondary">{label}</span>
+      {compact ? null : <span className="mb-1 block truncate text-[0.7rem] font-semibold text-text-secondary">{label}</span>}
       <button ref={anchorRef} type="button" aria-haspopup="dialog" aria-expanded={open} aria-label={`${label}: ${summary}`} onClick={() => setOpen((current) => !current)}
-        className={cn('flex h-9 w-full items-center gap-2 rounded-lg border bg-surface px-3 text-left text-xs text-text transition-[border-color,box-shadow] hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 pointer-coarse:h-(--touch-min)', from || to ? 'border-accent shadow-[0_0_0_1px_var(--color-accent)]' : 'border-border', open && 'border-accent')}>
+        className={cn(compact ? 'h-8' : 'h-9', 'flex w-full items-center gap-2 rounded-lg border bg-surface px-3 text-left text-xs text-text transition-[border-color,box-shadow] hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 pointer-coarse:h-(--touch-min)', from || to ? 'border-accent shadow-[0_0_0_1px_var(--color-accent)]' : 'border-border', open && 'border-accent')}>
         <CalendarBlank className="size-3.5 shrink-0 text-text-muted" aria-hidden="true" />
-        <span className={cn('min-w-0 flex-1 truncate', !from && !to && 'text-text-secondary')} title={summary}>{summary}</span>
+        {compact ? <span className="max-w-[45%] shrink-0 truncate text-[0.68rem] font-semibold text-text-secondary">{label}</span> : null}
+        <span className={cn('min-w-0 flex-1 truncate', !from && !to && 'text-text-secondary', compact && 'text-right')} title={summary}>{summary}</span>
         <CaretDown className={cn('size-3.5 shrink-0 text-text-muted transition-transform', open && 'rotate-180')} aria-hidden="true" />
       </button>
       <Popover open={open} onOpenChange={setOpen} anchorRef={anchorRef} label={label} minWidth={340}>
