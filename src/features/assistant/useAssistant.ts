@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { ApiError } from '@/lib/api';
 import { uuid } from '@/lib/utils';
-import { cancelRun, createConversation, createRun, listConversations, readConversation, streamRun } from './api.ts';
+import { cancelRun, createConversation, createRun, listConversations, readConversation, readRun, streamRun } from './api.ts';
 import { chatReducer, initialChatState } from './protocol.ts';
 
 const codeOf = (error: unknown) => {
@@ -66,6 +66,22 @@ export function useAssistant(organizationId: string) {
       dispatch({ type: 'run.created', runId: created });
       await streamRun({ organizationId, runId: created, signal: mine.signal, onEvent: (event) => { if (!mine.signal.aborted) dispatch({ type: 'event', event }); } });
     } catch (error) {
+      if (mine.signal.aborted) return;
+      // A lost stream is a presentation problem, not a failed run: ask CORECROW for the real outcome before reporting anything.
+      const lost = codeOf(error) === 'AI_STREAM_LOST' || !(error instanceof ApiError);
+      const id = runId.current;
+      if (lost && id && conversationRef.current) {
+        try {
+          const run = await readRun(organizationId, id);
+          if (mine.signal.aborted) return;
+          if (run.status === 'COMPLETED' || run.status === 'CANCELLED') {
+            const stored = await readConversation(organizationId, conversationRef.current);
+            if (!mine.signal.aborted) dispatch({ type: 'loaded', conversationId: stored.id, messages: stored.messages });
+            return;
+          }
+          if (run.status === 'FAILED') { dispatch({ type: 'failed', code: run.failureCode ?? 'AI_RUN_FAILED' }); return; }
+        } catch { /* fall through to the generic failure */ }
+      }
       if (!mine.signal.aborted) dispatch({ type: 'failed', code: codeOf(error) });
     }
   }, [organizationId]);

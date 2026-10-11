@@ -23,6 +23,9 @@ export const createRun = (organizationId: string, conversationId: string, messag
 export const cancelRun = (organizationId: string, runId: string) =>
   post<unknown>(`/v1/ai/runs/${encodeURIComponent(runId)}/cancel`, { organizationId });
 
+export const readRun = (organizationId: string, runId: string) =>
+  apiRequest<{ status: string; failureCode: string | null }>(`/v1/ai/runs/${encodeURIComponent(runId)}?organizationId=${encodeURIComponent(organizationId)}`);
+
 const sleep = (ms: number, signal: AbortSignal) => new Promise<void>((resolve) => {
   const timer = setTimeout(resolve, ms);
   signal.addEventListener('abort', () => { clearTimeout(timer); resolve(); }, { once: true });
@@ -36,6 +39,7 @@ const sleep = (ms: number, signal: AbortSignal) => new Promise<void>((resolve) =
 export async function streamRun(options: { organizationId: string; runId: string; signal: AbortSignal; onEvent: (event: SseEvent) => void }): Promise<void> {
   const { organizationId, runId, signal, onEvent } = options;
   let after = 0;
+  // Attempts count consecutive failures only: progress (any event applied) resets the backoff.
   for (let attempt = 0; ; attempt++) {
     if (signal.aborted) return;
     try {
@@ -58,6 +62,7 @@ export async function streamRun(options: { organizationId: string; runId: string
         if (done) break;
         for (const event of parser.push(decoder.decode(value, { stream: true }))) {
           if (event.id !== null) after = Math.max(after, event.id);
+          attempt = 0;
           onEvent(event);
           if (isTerminal(event)) { void reader.cancel().catch(() => undefined); return; }
         }
