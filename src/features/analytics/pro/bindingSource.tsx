@@ -40,6 +40,9 @@ export type BindingSource = {
   applyFilter?: (fieldId: string, value: string | number | boolean) => void;
   /** Field ids the reader can currently filter on (from the binding definitions). */
   canFilter?: (fieldId: string) => boolean;
+  /** Values currently selected for a field, and the way to drop one (drill-down "back"). */
+  selectedValues?: (fieldId: string) => Array<string | number | boolean>;
+  clearFilter?: (fieldId: string, value: string | number | boolean) => void;
 };
 
 const SourceContext = createContext<BindingSource | null>(null);

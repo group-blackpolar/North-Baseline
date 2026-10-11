@@ -32,5 +32,6 @@ export function defaultProps(type: ComponentType): Record<string, unknown> {
     case 'geo_map': return { title: localized('Distribución por país'), regionKey: 'region', valueKey: 'value' };
     case 'insights': return { title: localized('Insights'), items: [{ id: makeId(), rule: 'leader_share', binding: 'data', labelKey: 'label', valueKey: 'value', title: localized('Líder del ranking') }] };
     case 'filter_bar': return { title: localized('Filtros') };
+    case 'org_brand': return { showName: true };
   }
 }

@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Sparkline } from '@/components/charts/Sparkline';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { useCellFill } from '../cellFill';
 import type { DatasetQueryFilter } from '../datasetQuery';
 import type { AnalyticsRow } from '../types';
 import { analyticsRows, bindingIdOf, useBindingResult, useBindingSource } from './bindingSource';
@@ -46,6 +47,7 @@ function useGridView(storageKey: string, columns: GridColumn[]) {
  */
 export function DataGridPro({ componentId, panelKey, props, bindings, locales }: { componentId: string; panelKey: string; props: Props; bindings: Record<string, unknown>; locales: string[] }) {
   const { t, locale } = useI18n();
+  const dense = useCellFill();
   const source = useBindingSource();
   const dataId = bindingIdOf(bindings, 'data');
   const columns = useMemo(() => parseColumns(props.columns, (raw) => localizedText(raw, locales)), [locales, props.columns]);
@@ -98,12 +100,14 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
   const series = useMemo(() => (trend && trendData.response ? sparklineSeries(analyticsRows(trendData.response), trend.rowKeys, trend.categoryKey, trend.valueKey) : new Map<string, number[]>()), [trend, trendData.response]);
 
   const shown = visibleColumns(columns, view);
-  const maxima = useMemo(() => Object.fromEntries(columns.filter((column) => column.kind === 'bar').map((column) => [column.key, Math.max(0, ...rows.map((row) => asNumber(row[column.key]) ?? 0))])), [columns, rows]);
-  const rowId = (row: AnalyticsRow, index: number) => (trend ? rowKeyOf(row, trend.rowKeys) : `${page}:${index}`);
+  const maxima = useMemo(() => Object.fromEntries(columns.filter((column) => column.kind === 'bar' || column.heat).map((column) => [column.key, Math.max(0, ...rows.map((row) => asNumber(row[column.key]) ?? 0))])), [columns, rows]);
+  // Several rows may share one trend series (a consignee over many months): the row id is positional, the series key is not.
+  const rowId = (_row: AnalyticsRow, index: number) => `${page}:${index}`;
+  const seriesOf = (row: AnalyticsRow) => (trend ? series.get(rowKeyOf(row, trend.rowKeys)) : undefined);
   const numberFormat = new Intl.NumberFormat(locale);
 
   const toggleSort = (column: GridColumn) => {
-    if (column.sortable === false || column.kind === 'sparkline' || column.kind === 'actions') return;
+    if (column.sortable === false || column.kind === 'sparkline' || column.kind === 'actions' || column.kind === 'rank') return;
     setSort((current) => (current?.key !== column.key ? { key: column.key, direction: 'DESC' } : current.direction === 'DESC' ? { key: column.key, direction: 'ASC' } : defaultSort && defaultSort.key !== column.key ? defaultSort : undefined));
   };
 
@@ -126,7 +130,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
         setExporting({ done: Math.min(all.length, EXPORT_CAP), total: Math.min(grand, EXPORT_CAP) });
       }
       const exportable = all.slice(0, EXPORT_CAP);
-      const exportColumns = shown.filter((column) => column.kind !== 'sparkline' && column.kind !== 'actions');
+      const exportColumns = shown.filter((column) => column.kind !== 'sparkline' && column.kind !== 'actions' && column.kind !== 'rank');
       const blob = new Blob([`﻿${toCsv(exportColumns, exportable)}`], { type: 'text/csv;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const link = Object.assign(document.createElement('a'), { href: url, download: `${(title || 'export').replace(/[^\w.-]+/g, '_')}.csv` });
@@ -140,10 +144,11 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
     }
   };
 
-  const cell = (column: GridColumn, row: AnalyticsRow, id: string) => {
+  const cell = (column: GridColumn, row: AnalyticsRow, _id: string, index: number) => {
     const raw = row[column.key] ?? null;
+    if (column.kind === 'rank') return <span className="tabular-nums text-text-secondary">{numberFormat.format((page - 1) * pageSize + index + 1)}</span>;
     if (column.kind === 'sparkline') {
-      const values = series.get(id);
+      const values = seriesOf(row);
       if (!values || values.length < 2) return <span className="text-text-muted">{trendData.status === 'loading' ? '' : '—'}</span>;
       const direction = trendDirection(values);
       const color = direction === 'up' ? '#1F9D63' : direction === 'down' ? '#E0475B' : 'var(--color-text-muted)';
@@ -160,17 +165,22 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
       );
     }
     if (column.kind === 'badge') return raw === null ? <span className="text-text-muted">—</span> : <span className="inline-flex max-w-full items-center rounded-md bg-surface-hover px-1.5 py-0.5 text-[0.72rem] font-medium text-text-secondary"><span className="truncate" title={String(raw)}>{String(raw)}</span></span>;
-    const format: ValueFormat = column.kind === 'number' ? 'number' : column.kind === 'decimal' ? 'decimal' : column.kind === 'date' ? 'date' : column.kind === 'month' ? 'month' : 'text';
+    const format: ValueFormat = column.kind === 'number' ? 'number' : column.kind === 'decimal' ? 'decimal' : column.kind === 'date' ? 'date' : column.kind === 'month' ? 'month' : column.kind === 'year' ? 'year' : 'text';
     const text = formatValue(raw, format, locale);
+    const value = asNumber(raw);
+    const max = maxima[column.key] ?? 0;
+    // Discrete heat: five steps of the accent colour so neighbouring values stay comparable without a gradient.
+    const step = column.heat && value !== null && max > 0 ? Math.max(1, Math.ceil((value / max) * 5)) : 0;
+    if (step) return <span className="block truncate rounded px-1.5 py-0.5" style={{ background: `color-mix(in srgb, var(--color-accent) ${step * 9}%, transparent)` }} title={text}>{text}</span>;
     return <span className="block truncate" title={text}>{text}</span>;
   };
 
-  const align = (column: GridColumn) => column.align ?? (['number', 'decimal', 'bar'].includes(column.kind) ? 'right' : 'left');
+  const align = (column: GridColumn) => column.align ?? (['number', 'decimal', 'bar'].includes(column.kind) ? 'right' : column.kind === 'rank' ? 'center' : 'left');
   const filterable = (key: string) => Boolean(source?.applyFilter && source.canFilter?.(key));
 
   return (
     <div className="flex h-full min-h-0 flex-col" data-grid>
-      <div className="mb-2 flex flex-wrap items-center gap-2">
+      <div className={cn('flex flex-wrap items-center gap-2', dense ? 'mb-1' : 'mb-2')}>
         <h3 className="mr-auto min-w-0 truncate font-display text-[0.95rem] font-semibold text-text">
           {title}{data.response && total > 0 ? <span className="ml-1.5 text-xs font-normal text-text-muted">({numberFormat.format(Math.min(total, (page - 1) * pageSize + 1))} - {numberFormat.format(Math.min(total, page * pageSize))})</span> : null}
         </h3>
@@ -209,7 +219,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
                   const width = view.widths[column.key] ?? column.width;
                   return (
                     <th key={column.key} scope="col" style={width ? { width } : undefined} aria-sort={active ? (sort.direction === 'ASC' ? 'ascending' : 'descending') : 'none'} className="group/th relative border-b border-border p-0 text-[0.68rem] font-semibold uppercase tracking-wide text-text-muted">
-                      <button type="button" disabled={!sortableColumn} onClick={() => toggleSort(column)} className={cn('flex h-9 w-full items-center gap-1 px-3 transition-colors', align(column) === 'right' && 'justify-end', align(column) === 'center' && 'justify-center', sortableColumn && 'hover:bg-surface-hover hover:text-text')}>
+                      <button type="button" disabled={!sortableColumn} onClick={() => toggleSort(column)} className={cn('flex w-full items-center gap-1 transition-colors', dense ? 'h-8 px-2' : 'h-9 px-3', align(column) === 'right' && 'justify-end', align(column) === 'center' && 'justify-center', sortableColumn && 'hover:bg-surface-hover hover:text-text')}>
                         <span className="truncate">{column.label}</span>
                         {sortableColumn ? <Icon className={cn('size-3 shrink-0', active ? 'text-accent' : 'text-text-muted/70')} aria-hidden="true" /> : null}
                       </button>
@@ -227,12 +237,12 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
                   <tr key={id} className={cn('group/row transition-colors duration-100 hover:bg-accent-soft/50', checked && 'bg-accent-soft/60')}>
                     {selectable ? <td className="border-b border-border/60 px-2"><input type="checkbox" aria-label={t('grid.select')} checked={checked} onChange={() => setSelected((current) => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; })} className="size-3.5 accent-(--color-accent)" /></td> : null}
                     {shown.map((column) => (
-                      <td key={column.key} className={cn('h-9 max-w-[22rem] border-b border-border/60 px-3 text-text', align(column) === 'right' && 'text-right tabular-nums', align(column) === 'center' && 'text-center')}>
+                      <td key={column.key} className={cn('max-w-[22rem] border-b border-border/60 text-text', dense ? 'h-7 px-2' : 'h-9 px-3', align(column) === 'right' && 'text-right tabular-nums', align(column) === 'center' && 'text-center')}>
                         {column.kind === 'actions'
                           ? <RowMenu row={row} columns={columns} onInspect={() => setInspected(row)} filterable={filterable} onFilter={(key, value) => source?.applyFilter?.(key, value)} />
                           : column.key === shown[0]?.key && !selectable && column.kind === 'text'
                             ? <button type="button" onClick={() => setInspected(row)} className="block w-full truncate text-left font-medium hover:text-accent focus-visible:outline-none focus-visible:underline" title={String(row[column.key] ?? '')}>{String(row[column.key] ?? '—')}</button>
-                            : cell(column, row, id)}
+                            : cell(column, row, id, index)}
                       </td>
                     ))}
                   </tr>
@@ -243,7 +253,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
         )}
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-text-secondary">
+      <div className={cn('flex flex-wrap items-center justify-between gap-2 text-xs text-text-secondary', dense ? 'mt-1' : 'mt-2')}>
         <div className="flex items-center gap-2">
           <label className="flex items-center gap-1.5">
             <span>{t('grid.rowsPerPage')}</span>
@@ -266,7 +276,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
       </div>
 
       <Sheet open={inspected !== null} onOpenChange={(open) => { if (!open) setInspected(null); }} side="right" title={inspected ? String(inspected[shown[0]?.key ?? columns[0]?.key ?? ''] ?? t('grid.details')) : t('grid.details')} description={t('grid.details')}>
-        {inspected ? <Inspector row={inspected} columns={(inspectorKeys ? inspectorKeys.map((key) => columns.find((column) => column.key === key)).filter((column): column is GridColumn => Boolean(column)) : columns).filter((column) => column.kind !== 'actions' && column.kind !== 'sparkline')} series={series.get(rowId(inspected, rows.indexOf(inspected)))} filterable={filterable} onFilter={(key, value) => { source?.applyFilter?.(key, value); setInspected(null); }} /> : null}
+        {inspected ? <Inspector row={inspected} columns={(inspectorKeys ? inspectorKeys.map((key) => columns.find((column) => column.key === key)).filter((column): column is GridColumn => Boolean(column)) : columns).filter((column) => column.kind !== 'actions' && column.kind !== 'sparkline' && column.kind !== 'rank')} series={seriesOf(inspected)} filterable={filterable} onFilter={(key, value) => { source?.applyFilter?.(key, value); setInspected(null); }} /> : null}
       </Sheet>
     </div>
   );
@@ -343,7 +353,7 @@ function Inspector({ row, columns, series, filterable, onFilter }: { row: Analyt
       {series && series.length > 1 ? <section aria-label={t('grid.trend')} className="rounded-lg border border-border p-3"><p className="mb-1 text-[0.68rem] font-semibold uppercase tracking-wide text-text-muted">{t('grid.trend')}</p><Sparkline values={series} color={trendDirection(series) === 'down' ? '#E0475B' : '#1F9D63'} className="h-14 w-full" label={t('grid.trend')} /></section> : null}
       <dl className="divide-y divide-border/60">
         {columns.map((column) => {
-          const format: ValueFormat = column.kind === 'number' || column.kind === 'bar' ? 'number' : column.kind === 'decimal' ? 'decimal' : column.kind === 'date' ? 'date' : column.kind === 'month' ? 'month' : 'text';
+          const format: ValueFormat = column.kind === 'number' || column.kind === 'bar' ? 'number' : column.kind === 'decimal' ? 'decimal' : column.kind === 'date' ? 'date' : column.kind === 'month' ? 'month' : column.kind === 'year' ? 'year' : 'text';
           const raw = row[column.key] ?? null;
           return (
             <div key={column.key} className="flex items-start justify-between gap-3 py-2">

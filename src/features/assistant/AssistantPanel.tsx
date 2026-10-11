@@ -5,17 +5,27 @@ import { IconButton } from '@/components/ui/icon-button';
 import { useI18n, type Dictionary } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { RavenIcon } from './RavenIcon';
-import { errorKind, type ChatMessage, type ToolStep } from './protocol.ts';
+import { errorKind, type ActionCard, type ChatMessage, type ToolStep } from './protocol.ts';
+import { useDirectiveRunner } from './useDirectiveRunner';
 import { parseBlocks, type Inline } from './richText.ts';
 import { useAssistant } from './useAssistant';
 
 const MAX_CHARS = 8_000;
-const SUGGESTIONS = ['assistant.suggest.permissions', 'assistant.suggest.photo', 'assistant.suggest.split'] as const;
+const SUGGESTIONS = ['assistant.suggest.search', 'assistant.suggest.permissions', 'assistant.suggest.split'] as const;
 const TOOL_TOPIC: Record<string, keyof Dictionary> = {
   'user.permissions': 'assistant.what.permissions',
   'organization.current': 'assistant.what.organization',
   'organization.members.list': 'assistant.what.members',
   'user.me': 'assistant.what.profile',
+  'views.navigation.list': 'assistant.what.dashboards',
+  'views.panel.describe': 'assistant.what.fields',
+  'views.values.search': 'assistant.what.values',
+  'views.panel.query': 'assistant.what.data',
+  'views.apply_filters': 'assistant.what.filters',
+  'views.clear_filters': 'assistant.what.filters',
+  'views.open_panel': 'assistant.what.dashboards',
+  'views.category.create': 'assistant.what.structure',
+  'views.subcategory.create': 'assistant.what.structure',
 };
 
 function Inlines({ items }: { items: Inline[] }) {
@@ -47,6 +57,31 @@ function ToolLine({ step }: { step: ToolStep }) {
   );
 }
 
+/** A change the assistant proposed. It happens only when the user presses Confirm; CORECROW re-checks permissions at that moment. */
+function ActionCardView({ card, onDecide }: { card: ActionCard; onDecide: (id: string, accept: boolean) => void }) {
+  const { t } = useI18n();
+  const settled = card.status !== 'pending';
+  return (
+    <div role="group" aria-label={t('assistant.action.title')} className="rounded-xl border border-border bg-surface p-3 text-[13px]">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">{t('assistant.action.title')}</p>
+      <p className="mt-1 text-text">{TOOL_ACTION[card.toolName] ? t(TOOL_ACTION[card.toolName]!, { name: card.input.name ?? '', parent: card.input.categorySlug ?? '' }) : card.summary}</p>
+      {settled ? (
+        <p role="status" className={cn('mt-2 text-[12px]', card.status === 'confirmed' ? 'text-success' : card.status === 'confirming' ? 'text-text-muted' : 'text-text-secondary')}>{t(`assistant.action.${card.status}` as keyof Dictionary)}</p>
+      ) : (
+        <div className="mt-2 flex gap-2">
+          <Button size="sm" variant="primary" onClick={() => onDecide(card.id, true)}>{t('assistant.action.confirm')}</Button>
+          <Button size="sm" variant="ghost" onClick={() => onDecide(card.id, false)}>{t('assistant.action.cancel')}</Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const TOOL_ACTION: Record<string, keyof Dictionary> = {
+  'views.category.create': 'assistant.action.what.category',
+  'views.subcategory.create': 'assistant.action.what.subcategory',
+};
+
 function Bubble({ message, tools, thinking }: { message: ChatMessage; tools: ToolStep[]; thinking: boolean }) {
   const { t } = useI18n();
   const mine = message.role === 'user';
@@ -67,7 +102,8 @@ function Bubble({ message, tools, thinking }: { message: ChatMessage; tools: Too
 /** The Cuervo chat. It is mounted inside the keyed organization subtree, so a tenant switch discards everything. */
 export function AssistantPanel({ organizationId, onClose, autoFocus = true }: { organizationId: string; onClose?: () => void; autoFocus?: boolean }) {
   const { t } = useI18n();
-  const { state, loading, loadError, load, send, cancel, startOver } = useAssistant(organizationId);
+  const { state, loading, loadError, load, send, cancel, startOver, decide } = useAssistant(organizationId);
+  useDirectiveRunner(state.directives);
   const [draft, setDraft] = useState('');
   const log = useRef<HTMLDivElement>(null);
   const field = useRef<HTMLTextAreaElement>(null);
@@ -81,7 +117,7 @@ export function AssistantPanel({ organizationId, onClose, autoFocus = true }: { 
     if (!element) return;
     const nearBottom = element.scrollHeight - element.scrollTop - element.clientHeight < 120;
     if (nearBottom || state.phase === 'sending') element.scrollTo({ top: element.scrollHeight, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-  }, [state.messages, state.tools, state.phase]);
+  }, [state.messages, state.tools, state.actions, state.phase]);
   useEffect(() => { // grow with the text, up to five lines
     const element = field.current;
     if (!element) return;
@@ -135,6 +171,7 @@ export function AssistantPanel({ organizationId, onClose, autoFocus = true }: { 
         {state.messages.map((message, index) => (
           <Bubble key={message.id} message={message} tools={state.tools} thinking={state.phase !== 'idle' && index === state.messages.length - 1} />
         ))}
+        {state.actions.map((card) => <ActionCardView key={card.id} card={card} onDecide={(id, accept) => void decide(id, accept)} />)}
         {failure && (
           <div role="alert" className="flex items-start gap-2 rounded-xl border border-border bg-surface p-3 text-[13px] text-text-secondary">
             <WarningCircle className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />

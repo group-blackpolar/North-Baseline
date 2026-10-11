@@ -4,7 +4,7 @@
 // Framework-free and unit-tested with `node --test`.
 
 import type { PanelDocument, ResponsiveLayout } from '@/lib/northAdmin';
-import { appendCell, placeItem, readingOrder, type Cell, type GridItem } from './grid.ts';
+import { appendCell, placeItem, readingOrder, resolvePlacement, type Cell, type GridItem } from './grid.ts';
 import { DEVICES, defaultSizes, type Device } from './registry.ts';
 
 export type Section = PanelDocument['sections'][number];
@@ -156,11 +156,21 @@ export function removeComponent(doc: PanelDocument, componentId: string): PanelD
   return mapSection(doc, found.section.id, (section) => normalizeOrder({ ...section, components: section.components.filter((component) => component.id !== componentId) }));
 }
 
-/** Set one component's cell on one breakpoint, pushing colliding siblings down on that breakpoint only. */
+/**
+ * Set one component's cell on one breakpoint with the bounded collision policy of `resolvePlacement` (free / swap / limited
+ * push). An invalid target returns the document untouched, so a move can never stretch the layout downwards.
+ */
+/** Outcome of dropping a component on `cell` (for the drag ghost): same rules `setComponentCell` applies. */
+export function placementStatus(doc: PanelDocument, componentId: string, device: Device, cell: Cell) {
+  const found = findComponent(doc, componentId);
+  return found ? resolvePlacement(positions(found.section, device), componentId, cell).status : 'rejected' as const;
+}
+
 export function setComponentCell(doc: PanelDocument, componentId: string, device: Device, cell: Cell): PanelDocument {
   const found = findComponent(doc, componentId);
   if (!found) return doc;
-  const placed = placeItem(positions(found.section, device), componentId, cell);
+  const { status, items: placed } = resolvePlacement(positions(found.section, device), componentId, cell);
+  if (status === 'rejected') return doc;
   return mapSection(doc, found.section.id, (section) => normalizeOrder({
     ...section,
     components: section.components.map((component) => {

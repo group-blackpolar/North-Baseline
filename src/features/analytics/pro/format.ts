@@ -2,7 +2,7 @@
 // invented here, only formatted; every number shown comes from a CORECROW result.
 import type { AnalyticsValue } from '../types';
 
-export type ValueFormat = 'number' | 'decimal' | 'percent' | 'text' | 'date' | 'month';
+export type ValueFormat = 'number' | 'decimal' | 'percent' | 'text' | 'date' | 'month' | 'year';
 export type Tone = 'blue' | 'violet' | 'green' | 'amber' | 'rose' | 'cyan' | 'slate';
 
 /** Tone -> CSS custom properties. `blue` follows the organization accent so brand colors reach every card. */
@@ -37,6 +37,10 @@ export const numberLocale = (locale: string) => (locale === 'es' ? 'es-419' : lo
 export function formatValue(value: AnalyticsValue | undefined, format: ValueFormat, rawLocale: string, decimals?: number): string {
   const locale = numberLocale(rawLocale);
   if (value === null || value === undefined) return '—';
+  if (format === 'year') {
+    const date = parseDay(value);
+    return date ? String(date.getUTCFullYear()) : String(value);
+  }
   if (format === 'date' || format === 'month') {
     const date = parseDay(value);
     if (!date) return String(value);

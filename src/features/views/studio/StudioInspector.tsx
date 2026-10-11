@@ -107,6 +107,8 @@ function SectionPanel({ sectionId, onOpenLibrary }: { sectionId: string; onOpenL
       <h2 className="font-display text-sm font-semibold text-text">{t('st.section.title')}</h2>
       <TextField label={t('st.section.name')} value={section.name?.[locale] ?? ''} onChange={(value) => edit((doc) => setSectionName(doc, sectionId, locale, value), { key: `section-name:${sectionId}` })} maxLength={120} />
       <SegmentedField label={t('st.section.spacing')} value={section.layout.gap} options={(['none', 'sm', 'md', 'lg'] as const).map((gap) => ({ value: gap, label: gap === 'none' ? '0' : gap.toUpperCase() }))} onChange={(gap) => edit((doc) => setSectionLayout(doc, sectionId, { gap }))} />
+      <SegmentedField label={t('st.section.rowHeight')} value={String(section.layout.rowHeight ?? 'auto')} options={['auto', '20', '24', '32', '40'].map((value) => ({ value, label: value === 'auto' ? t('st.section.rowAuto') : `${value}px` }))} onChange={(value) => edit((doc) => setSectionLayout(doc, sectionId, value === 'auto' ? { rowHeight: undefined, fit: undefined } : { rowHeight: Number(value) }))} />
+      {section.layout.rowHeight ? <SegmentedField label={t('st.section.fit')} value={section.layout.fit ? 'on' : 'off'} options={[{ value: 'off', label: t('st.section.fitOff') }, { value: 'on', label: t('st.section.fitOn') }]} onChange={(value) => edit((doc) => setSectionLayout(doc, sectionId, { fit: value === 'on' ? true : undefined }))} /> : null}
       <p className="text-[11px] leading-4 text-text-muted">{t('st.section.count', { n: section.components.length })}</p>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="outline" onClick={() => onOpenLibrary(sectionId)}><Plus aria-hidden="true" />{t('st.section.addComponent')}</Button>
