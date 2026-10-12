@@ -39,7 +39,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
  * loading), dates a period selector over the months and years that hold data, numbers a range and free text a contains
  * box. Active selections show as removable chips and apply live.
  */
-export function FilterBar({ controls, selections, onChange, loadFacet, title, compact = false }: {
+export function FilterBar({ controls, selections, onChange, loadFacet, title, compact = false, hiddenKeys = [] }: {
+  /** Dataset field keys that stay filterable (chart clicks, chips) but get no control in the bar. */
+  hiddenKeys?: string[];
   /** Dense single-band variant for fixed-matrix dashboards: no header, inline labels, chips on the same band. */
   compact?: boolean;
   controls: FilterControl[];
@@ -57,7 +59,7 @@ export function FilterBar({ controls, selections, onChange, loadFacet, title, co
   const chips = chipsOf(controls, selections, String, (from, to) => describePeriod(from, to, tag));
   const count = activeCount(selections);
 
-  const controlsView = controls.map((control) => {
+  const controlsView = controls.filter((control) => !hiddenKeys.includes(control.key)).map((control) => {
     const selection = selections[control.fieldId];
     const faceted = (control.mode === 'multi' || control.mode === 'single') && loadFacet;
     if (faceted) {
