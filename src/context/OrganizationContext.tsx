@@ -140,6 +140,9 @@ export function OrganizationProvider({
   );
 }
 
+/** For components that also render outside an organization shell (the public showcase): null instead of throwing. */
+export function useOptionalOrganization() { return useContext(OrganizationContext); }
+
 export function useOrganization() {
   const context = useContext(OrganizationContext);
   if (!context) {

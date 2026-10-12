@@ -119,8 +119,8 @@ export function FacetSelect({ label, multi, selected, onChange, load, compact = 
           open && 'border-accent',
         )}
       >
-        {compact ? <span className="max-w-[45%] shrink-0 truncate text-[0.68rem] font-semibold text-text-secondary">{label}</span> : null}
-        <span className={cn('min-w-0 flex-1 truncate', selected.length === 0 && 'text-text-secondary', compact && 'text-right')} title={summary}>{summary}</span>
+        {compact ? <span className={cn('truncate text-[0.7rem] font-semibold text-text-secondary', selected.length ? 'max-w-[45%] shrink-0' : 'min-w-0 flex-1')} title={label}>{label}</span> : null}
+        {compact && selected.length === 0 ? null : <span className={cn('min-w-0 flex-1 truncate', selected.length === 0 && 'text-text-secondary', compact && 'text-right')} title={summary}>{summary}</span>}
         <CaretDown className={cn('size-3.5 shrink-0 text-text-muted transition-transform duration-150', open && 'rotate-180')} aria-hidden="true" />
       </button>
       <Popover open={open} onOpenChange={setOpen} anchorRef={anchorRef} label={label} minWidth={300}>
