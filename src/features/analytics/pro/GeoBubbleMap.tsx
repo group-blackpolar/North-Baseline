@@ -1,36 +1,14 @@
 import { WarningCircle } from '@phosphor-icons/react';
-import { useMemo, useState } from 'react';
-import { feature } from 'topojson-client';
-import type { Topology } from 'topojson-specification';
-import land110 from 'world-atlas/land-110m.json';
+import { useMemo, useRef, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { analyticsRows, bindingIdOf, useBindingResult, useBindingSource } from './bindingSource';
-import { CONTINENT_COLOR, CONTINENT_ORDER, LAT_BOTTOM, locateCountry, MAP_HEIGHT, MAP_WIDTH, normalizeCountry, project, type Continent } from './countryGeo';
+import { CONTINENT_COLOR, CONTINENT_ORDER, locateCountry, normalizeCountry, type Continent } from './countryGeo';
+import { COUNTRY_SHAPES, MAP_H as MAP_HEIGHT, MAP_W as MAP_WIDTH, polygonKey, projectPoint as project } from './worldMap';
 import { asNumber, formatValue, localizedText } from './format';
 
 type Props = Record<string, unknown>;
-type Ring = number[][];
-
-// The land outline is built once per page load from the bundled 1:110m Natural Earth topology.
-let landPathCache: string | null = null;
-function landPath(): string {
-  if (landPathCache) return landPathCache;
-  const topology = land110 as unknown as Topology;
-  const collection = feature(topology, topology.objects.land as never) as unknown as { features?: Array<{ geometry: { type: string; coordinates: number[][][][] | number[][][] } }>; geometry?: { type: string; coordinates: number[][][][] | number[][][] } };
-  const geometries = collection.features?.map((item) => item.geometry) ?? (collection.geometry ? [collection.geometry] : []);
-  const rings: Ring[] = [];
-  for (const geometry of geometries) {
-    const polygons = geometry.type === 'Polygon' ? [geometry.coordinates as number[][][]] : (geometry.coordinates as number[][][][]);
-    for (const polygon of polygons) for (const ring of polygon) rings.push(ring);
-  }
-  landPathCache = rings
-    .filter((ring) => ring.some(([, lat]) => lat! > LAT_BOTTOM))
-    .map((ring) => ring.map(([lon, lat], index) => { const [x, y] = project(lat!, lon!); return `${index ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`; }).join('') + 'Z')
-    .join('');
-  return landPathCache;
-}
 
 type Place = { name: string; value: number; secondary: number | null; x: number; y: number; continent: Continent };
 
@@ -42,14 +20,22 @@ type Place = { name: string; value: number; secondary: number | null; x: number;
 export default function GeoBubbleMap({ props, bindings, locales }: { props: Props; bindings: Record<string, unknown>; locales: string[] }) {
   const { t, locale } = useI18n();
   const source = useBindingSource();
-  const data = useBindingResult(bindingIdOf(bindings, 'data'));
   const regionKey = typeof props.regionKey === 'string' ? props.regionKey : '';
+  const interactive = Boolean(source?.toggleFilter && source.canFilter?.(regionKey));
+  // The map emits selections on its own region field: it keeps showing every country and highlights the selected ones.
+  const data = useBindingResult(bindingIdOf(bindings, 'data'), {}, interactive ? { exceptField: regionKey } : {});
+  const selected = new Set((source?.selectedValues?.(regionKey) ?? []).map(String));
   const valueKey = typeof props.valueKey === 'string' ? props.valueKey : '';
   const secondaryKey = typeof props.secondaryKey === 'string' ? props.secondaryKey : null;
   const valueLabel = localizedText(props.valueLabel, locales) || t('map.value');
   const secondaryLabel = localizedText(props.secondaryLabel, locales) || t('map.secondary');
   const title = localizedText(props.title, locales);
   const [hover, setHover] = useState<Place | null>(null);
+  // Zoom and pan are a different window onto the same projection: nothing is stretched, coordinates are never changed.
+  const [view, setView] = useState({ k: 1, cx: MAP_WIDTH / 2, cy: MAP_HEIGHT / 2 });
+  const drag = useRef<{ x: number; y: number; cx: number; cy: number } | null>(null);
+  const frame = (() => { const w = MAP_WIDTH / view.k; const h = MAP_HEIGHT / view.k; return { x: Math.max(0, Math.min(MAP_WIDTH - w, view.cx - w / 2)), y: Math.max(0, Math.min(MAP_HEIGHT - h, view.cy - h / 2)), w, h }; })();
+  const zoom = (factor: number) => setView((current) => { const k = Math.max(1, Math.min(6, current.k * factor)); return k === 1 ? { k, cx: MAP_WIDTH / 2, cy: MAP_HEIGHT / 2 } : { ...current, k }; });
 
   const model = useMemo(() => {
     if (!data.response) return null;
@@ -79,9 +65,10 @@ export default function GeoBubbleMap({ props, bindings, locales }: { props: Prop
     return { list, max, grand, unlocated, unlocatedNames, byContinent };
   }, [data.response, regionKey, secondaryKey, valueKey]);
 
+  const byShape = useMemo(() => new Map((model?.list ?? []).map((place) => [polygonKey(place.name), place])), [model]);
   const percent = (value: number) => formatValue(model && model.grand ? (value / model.grand) * 100 : 0, 'percent', locale, 1);
-  const select = (place: Place) => { if (source?.applyFilter && source.canFilter?.(regionKey)) source.applyFilter(regionKey, place.name); };
-  const interactive = Boolean(source?.applyFilter && source.canFilter?.(regionKey));
+  const select = (place: Place) => { if (interactive) source!.toggleFilter!(regionKey, place.name); };
+  const isSelected = (place: Place) => selected.has(place.name);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -91,24 +78,45 @@ export default function GeoBubbleMap({ props, bindings, locales }: { props: Prop
       ) : !model ? <Skeleton className="min-h-40 flex-1" /> : model.list.length === 0 ? (
         <p role="status" className="flex min-h-32 flex-1 items-center justify-center text-xs text-text-muted">{t('analytics.empty')}</p>
       ) : (
-        <div className={cn('@container flex min-h-0 flex-1 flex-col gap-3', data.refreshing && 'opacity-70 transition-opacity')}>
+        <div className={cn('@container flex min-h-0 flex-1 flex-col', data.refreshing && 'opacity-70 transition-opacity')}>
           <div className="relative min-h-0 min-w-0 flex-1">
-            <svg viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`} role="img" aria-label={title || t('map.aria')} className="h-full max-h-full w-full" preserveAspectRatio="xMidYMid meet">
-              <path d={landPath()} fill="color-mix(in srgb, var(--color-text-muted) 20%, var(--color-surface))" stroke="color-mix(in srgb, var(--color-text-muted) 35%, var(--color-surface))" strokeWidth="0.6" vectorEffect="non-scaling-stroke" />
+            <svg viewBox={`${frame.x} ${frame.y} ${frame.w} ${frame.h}`} role="img" aria-label={title || t('map.aria')} className={cn('h-full max-h-full w-full touch-none', view.k > 1 && 'cursor-grab active:cursor-grabbing')} preserveAspectRatio="xMidYMid meet"
+              onPointerDown={(event) => { if (view.k > 1) { drag.current = { x: event.clientX, y: event.clientY, cx: frame.x + frame.w / 2, cy: frame.y + frame.h / 2 }; } }}
+              onPointerMove={(event) => { const start = drag.current; if (!start) return; const rect = event.currentTarget.getBoundingClientRect(); const unit = frame.w / Math.max(1, rect.width); setView((current) => ({ ...current, cx: start.cx - (event.clientX - start.x) * unit, cy: start.cy - (event.clientY - start.y) * unit })); }}
+              onPointerUp={() => { drag.current = null; }} onPointerLeave={() => { drag.current = null; }}>
+              {COUNTRY_SHAPES.map((shape) => {
+                const place = byShape.get(shape.key);
+                const chosen = Boolean(place && isSelected(place));
+                return (
+                  <path key={shape.name} d={shape.d} vectorEffect="non-scaling-stroke" strokeWidth={chosen ? 1.2 : 0.5}
+                    fill={chosen ? 'color-mix(in srgb, var(--color-accent) 28%, var(--color-surface))' : place ? 'color-mix(in srgb, var(--color-text-muted) 30%, var(--color-surface))' : 'color-mix(in srgb, var(--color-text-muted) 16%, var(--color-surface))'}
+                    stroke={chosen ? 'var(--color-accent)' : 'color-mix(in srgb, var(--color-text-muted) 40%, var(--color-surface))'}
+                    className={cn(place && interactive && 'cursor-pointer transition-[fill] duration-150 hover:[fill:color-mix(in_srgb,var(--color-accent)_18%,var(--color-surface))]')}
+                    onMouseEnter={place ? () => setHover(place) : undefined} onMouseLeave={place ? () => setHover(null) : undefined} onClick={place ? () => select(place) : undefined}>
+                    <title>{shape.name}</title>
+                  </path>
+                );
+              })}
               {[...model.list].reverse().map((place) => {
                 const radius = 4 + Math.sqrt(place.value / model.max) * 22;
                 const active = hover?.name === place.name;
+                const chosen = isSelected(place);
+                const dimmed = selected.size > 0 && !chosen;
                 return (
-                  <circle key={place.name} cx={place.x} cy={place.y} r={radius} fill={CONTINENT_COLOR[place.continent]} fillOpacity={active ? 0.85 : 0.55} stroke={CONTINENT_COLOR[place.continent]} strokeWidth={active ? 2 : 1} vectorEffect="non-scaling-stroke"
-                    className={cn('transition-[fill-opacity] duration-150', interactive && 'cursor-pointer')} tabIndex={0} role={interactive ? 'button' : 'img'}
+                  <circle key={place.name} cx={place.x} cy={place.y} r={radius} fill={CONTINENT_COLOR[place.continent]} fillOpacity={chosen ? 0.9 : dimmed ? 0.18 : active ? 0.85 : 0.55} stroke={chosen ? 'var(--color-text)' : CONTINENT_COLOR[place.continent]} strokeWidth={chosen ? 2.5 : active ? 2 : 1} vectorEffect="non-scaling-stroke"
+                    className={cn('transition-[fill-opacity] duration-150', interactive && 'cursor-pointer')} tabIndex={0} role={interactive ? 'button' : 'img'} aria-pressed={interactive ? chosen : undefined}
                     aria-label={`${place.name}: ${formatValue(place.value, 'number', locale)} ${valueLabel}`}
                     onMouseEnter={() => setHover(place)} onMouseLeave={() => setHover(null)} onFocus={() => setHover(place)} onBlur={() => setHover(null)}
                     onClick={() => select(place)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); select(place); } }} />
                 );
               })}
             </svg>
+            <div className="absolute right-1 top-1 flex flex-col overflow-hidden rounded-md border border-border bg-surface shadow-xs">
+              <button type="button" aria-label={t('map.zoomIn')} onClick={() => zoom(1.6)} disabled={view.k >= 6} className="grid size-6 place-items-center text-sm text-text-secondary hover:bg-surface-hover disabled:opacity-40">+</button>
+              <button type="button" aria-label={t('map.zoomOut')} onClick={() => zoom(1 / 1.6)} disabled={view.k <= 1} className="grid size-6 place-items-center border-t border-border text-sm text-text-secondary hover:bg-surface-hover disabled:opacity-40">−</button>
+            </div>
             {hover ? (
-              <div className="pointer-events-none absolute z-10 min-w-36 rounded-lg border border-border bg-surface px-2.5 py-2 text-xs shadow-pop" style={{ left: `${Math.min(78, (hover.x / MAP_WIDTH) * 100)}%`, top: `${Math.max(2, (hover.y / MAP_HEIGHT) * 100 - 6)}%` }}>
+              <div className="pointer-events-none absolute z-10 min-w-36 rounded-lg border border-border bg-surface px-2.5 py-2 text-xs shadow-pop" style={{ left: `${Math.max(0, Math.min(78, ((hover.x - frame.x) / frame.w) * 100))}%`, top: `${Math.max(2, Math.min(80, ((hover.y - frame.y) / frame.h) * 100 - 6))}%` }}>
                 <p className="mb-1 font-medium text-text">{hover.name}</p>
                 <p className="flex justify-between gap-3 text-text-secondary"><span>{valueLabel}</span><span className="tabular-nums text-text">{formatValue(hover.value, 'number', locale)}</span></p>
                 {hover.secondary !== null ? <p className="flex justify-between gap-3 text-text-secondary"><span>{secondaryLabel}</span><span className="tabular-nums text-text">{formatValue(hover.secondary, 'decimal', locale)}</span></p> : null}
@@ -116,11 +124,11 @@ export default function GeoBubbleMap({ props, bindings, locales }: { props: Prop
               </div>
             ) : null}
           </div>
-          <ul className="grid shrink-0 grid-cols-3 gap-x-3 gap-y-0.5 text-[0.7rem] leading-tight" aria-label={t('map.legend')}>
+          <ul className="flex shrink-0 flex-wrap gap-x-3 gap-y-0.5 pt-1 text-[0.66rem] leading-tight" aria-label={t('map.legend')}>
             {CONTINENT_ORDER.filter((continent) => model.byContinent.has(continent)).sort((a, b) => (model.byContinent.get(b) ?? 0) - (model.byContinent.get(a) ?? 0)).map((continent) => (
-              <li key={continent} className="flex items-center gap-2">
+              <li key={continent} className="flex items-center gap-1.5">
                 <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full" style={{ background: CONTINENT_COLOR[continent] }} />
-                <span className="min-w-0 flex-1 truncate text-text-secondary">{t(`map.continent.${continent}` as 'map.continent.asia')}</span>
+                <span className="truncate text-text-secondary">{t(`map.continent.${continent}` as 'map.continent.asia')}</span>
                 <span className="tabular-nums font-medium text-text">{percent(model.byContinent.get(continent) ?? 0)}</span>
               </li>
             ))}

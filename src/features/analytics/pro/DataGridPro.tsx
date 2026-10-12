@@ -82,8 +82,8 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
   // In a fixed cell the page holds exactly the rows that fit (header 33 px, row 29 px): no inner scroll, the pager reaches the rest.
   const [scroller, box] = useElementSize<HTMLDivElement>();
   // Row and header heights are MEASURED from the rendered table (fonts, zoom and borders change them); 30/34 px until the first rows exist.
-  const [metrics, setMetrics] = useState({ row: 30, head: 34 });
-  const fitRows = dense && box.height > 0 ? Math.max(3, Math.floor((box.height - metrics.head - 1) / metrics.row)) : 0;
+  const [metrics, setMetrics] = useState({ row: 30, head: 34, bar: 0 });
+  const fitRows = dense && box.height > 0 ? Math.max(3, Math.floor((box.height - metrics.head - metrics.bar - 2) / metrics.row)) : 0;
   const pageSize = fitRows || sizeState;
   const request = useMemo(() => ({ ...(sort ? { sort } : {}), offset: (page - 1) * pageSize, limit: pageSize, ...(search ? { search } : {}) }), [page, pageSize, search, sort]);
   const data = useBindingResult(dataId, request);
@@ -107,19 +107,24 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
 
   // In a fixed cell the table must FIT it: sparklines go first when the cell is narrow, the remaining columns share the width
   // proportionally (text truncates, nothing is cut off at the edge); outside a cell the declared widths apply and the table scrolls.
-  const available = box.width - (selectable ? 32 : 0);
   const base = visibleColumns(columns, view);
   useLayoutEffect(() => {
     const root = scroller.current;
     const row = root?.querySelector('tbody tr')?.getBoundingClientRect().height;
     const head = root?.querySelector('thead')?.getBoundingClientRect().height;
-    if (row && head && (Math.abs(row - metrics.row) > 0.5 || Math.abs(head - metrics.head) > 0.5)) setMetrics({ row, head });
+    // A horizontal scrollbar takes height away from the rows: it is measured, not assumed (overlay scrollbars report 0).
+    const bar = root ? Math.max(0, root.offsetHeight - root.clientHeight - 2) : 0;
+    if (row && head && (Math.abs(row - metrics.row) > 0.5 || Math.abs(head - metrics.head) > 0.5 || Math.abs(bar - metrics.bar) > 0.5)) setMetrics({ row, head, bar });
   });
-  const shown = dense && box.width > 0 && box.width < 620 && base.length > 3 ? base.filter((column) => column.kind !== 'sparkline') : base;
+  // Every column stays (trend included): when they do not fit side by side the table scrolls horizontally, so columns can keep being added.
+  const shown = base;
   const declared = (column: GridColumn) => view.widths[column.key] ?? column.width ?? 140;
+  const available = box.width - (selectable ? 32 : 0);
   const declaredTotal = shown.reduce((sum, column) => sum + declared(column), 0);
-  const fitScale = dense && available > 0 && declaredTotal > available ? available / declaredTotal : 1;
-  const widthOf = (column: GridColumn) => (dense && fitScale < 1 ? Math.max(48, Math.floor(declared(column) * fitScale)) : view.widths[column.key] ?? column.width);
+  // Columns give up to 40 % of their declared width so as many as possible stay visible; what still does not fit scrolls sideways.
+  const fitScale = dense && available > 0 && declaredTotal > available ? Math.max(0.6, available / declaredTotal) : 1;
+  const widthOf = (column: GridColumn) => (dense && fitScale < 1 ? Math.max(44, Math.floor(declared(column) * fitScale)) : view.widths[column.key] ?? column.width);
+  const tableWidth = dense ? shown.reduce((sum, column) => sum + (widthOf(column) ?? 140), selectable ? 32 : 0) : undefined;
   const maxima = useMemo(() => Object.fromEntries(columns.filter((column) => column.kind === 'bar' || column.heat).map((column) => [column.key, Math.max(0, ...rows.map((row) => asNumber(row[column.key]) ?? 0))])), [columns, rows]);
   // Several rows may share one trend series (a consignee over many months): the row id is positional, the series key is not.
   const rowId = (_row: AnalyticsRow, index: number) => `${page}:${index}`;
@@ -220,7 +225,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
       </div>
       {exportNote ? <p role="status" className="mb-2 text-xs text-text-muted">{exportNote}</p> : null}
 
-      <div ref={scroller} className={cn('relative min-h-0 flex-1 rounded-lg border border-border', dense ? 'overflow-hidden' : 'overflow-auto', data.refreshing && 'opacity-70 transition-opacity')} aria-busy={data.status === 'loading' || data.refreshing}>
+      <div ref={scroller} className={cn('relative min-h-0 flex-1 rounded-lg border border-border', dense ? 'overflow-x-auto overflow-y-hidden' : 'overflow-auto', data.refreshing && 'opacity-70 transition-opacity')} aria-busy={data.status === 'loading' || data.refreshing}>
         {data.status === 'error' ? (
           <div role="alert" className="flex min-h-40 flex-col items-center justify-center gap-2 text-xs text-error"><WarningCircle className="size-5" aria-hidden="true" />{data.error?.message || t('analytics.error')}<button type="button" className="rounded-md border border-border px-2.5 py-1 font-medium text-text hover:bg-surface-hover" onClick={data.reload}>{t('flt.retry')}</button></div>
         ) : data.status !== 'ready' && !data.response ? (
@@ -228,7 +233,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
         ) : rows.length === 0 ? (
           <p role="status" className="flex min-h-40 items-center justify-center px-4 text-center text-xs text-text-muted">{t('grid.empty')}</p>
         ) : (
-          <table className={cn('w-full border-separate border-spacing-0 text-left text-xs', dense && fitScale < 1 && 'table-fixed')}>
+          <table style={tableWidth ? { minWidth: tableWidth } : undefined} className={cn('w-full border-separate border-spacing-0 text-left', dense ? 'table-fixed text-[0.7rem]' : 'text-xs')}>
             <thead className="sticky top-0 z-10">
               <tr className="bg-[color-mix(in_srgb,var(--color-surface-hover)_70%,var(--color-surface))]">
                 {selectable ? <th scope="col" className="w-8 border-b border-border px-2"><span className="sr-only">{t('grid.select')}</span></th> : null}
@@ -239,7 +244,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
                   const width = widthOf(column);
                   return (
                     <th key={column.key} scope="col" style={width ? { width } : undefined} aria-sort={active ? (sort.direction === 'ASC' ? 'ascending' : 'descending') : 'none'} className="group/th relative border-b border-border p-0 text-[0.68rem] font-semibold uppercase tracking-wide text-text-muted">
-                      <button type="button" disabled={!sortableColumn} onClick={() => toggleSort(column)} className={cn('flex w-full items-center gap-1 transition-colors', dense ? 'h-8 px-2' : 'h-9 px-3', align(column) === 'right' && 'justify-end', align(column) === 'center' && 'justify-center', sortableColumn && 'hover:bg-surface-hover hover:text-text')}>
+                      <button type="button" disabled={!sortableColumn} onClick={() => toggleSort(column)} className={cn('flex w-full items-center gap-1 transition-colors', dense ? 'h-7 px-1.5' : 'h-9 px-3', align(column) === 'right' && 'justify-end', align(column) === 'center' && 'justify-center', sortableColumn && 'hover:bg-surface-hover hover:text-text')}>
                         <span className="truncate">{column.label}</span>
                         {sortableColumn ? <Icon className={cn('size-3 shrink-0', active ? 'text-accent' : 'text-text-muted/70')} aria-hidden="true" /> : null}
                       </button>
@@ -257,7 +262,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
                   <tr key={id} className={cn('group/row transition-colors duration-100 hover:bg-accent-soft/50', checked && 'bg-accent-soft/60')}>
                     {selectable ? <td className="border-b border-border/60 px-2"><input type="checkbox" aria-label={t('grid.select')} checked={checked} onChange={() => setSelected((current) => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; })} className="size-3.5 accent-(--color-accent)" /></td> : null}
                     {shown.map((column) => (
-                      <td key={column.key} className={cn('max-w-[22rem] border-b border-border/60 text-text', dense && 'overflow-hidden', dense ? 'h-7 px-2' : 'h-9 px-3', align(column) === 'right' && 'text-right tabular-nums', align(column) === 'center' && 'text-center')}>
+                      <td key={column.key} className={cn('max-w-[22rem] border-b border-border/60 text-text', dense && 'overflow-hidden', dense ? 'h-6 px-1.5' : 'h-9 px-3', align(column) === 'right' && 'text-right tabular-nums', align(column) === 'center' && 'text-center')}>
                         {column.kind === 'actions'
                           ? <RowMenu row={row} columns={columns} onInspect={() => setInspected(row)} filterable={filterable} onFilter={(key, value) => source?.applyFilter?.(key, value)} />
                           : column.key === shown[0]?.key && !selectable && column.kind === 'text'

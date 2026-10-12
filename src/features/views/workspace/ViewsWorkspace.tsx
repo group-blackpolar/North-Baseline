@@ -164,7 +164,7 @@ export function ViewsWorkspace({ loadError, onRetry, onOpenEditor }: { loadError
       <div className="@container flex min-w-0 flex-1 flex-col">
         <header className="flex flex-wrap items-center gap-2 border-b border-border bg-surface px-3 py-2 lg:px-4">
           {!dockExplorer ? <Button size="icon" variant="ghost" aria-label={t('adm2.views.structure')} onClick={() => setExplorerOpen(true)}><Tree /></Button> : null}
-          <nav aria-label="breadcrumb" className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-xs text-text-secondary">
+          <nav aria-label={t('nav.breadcrumb')} className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-xs text-text-secondary">
             <button type="button" onClick={() => goAdmin('overview')} className="hidden shrink-0 hover:text-text @lg:inline">{t('personal.administration')}</button>
             <CaretRight className="hidden size-3 shrink-0 text-text-muted @lg:block" />
             <button type="button" onClick={() => { setSelectedId(null); clear(); }} className={cn('shrink-0', pathParts.length ? 'hover:text-text' : 'font-medium text-text')}>{t('adm.nav.views')}</button>

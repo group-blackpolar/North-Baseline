@@ -15,6 +15,7 @@ import type { PublishedPanelBinding, PublishedPanelDocument } from '@/lib/organi
 import { useCatalog } from '@/context/CatalogContext';
 import { useOrganization } from '@/context/OrganizationContext';
 import { useI18n } from '@/lib/i18n';
+import { intlTag } from '@/lib/intlTag';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DocumentWorkspaceHost } from '@/features/documents/DocumentsWorkspace';
 import { useShowcaseSlug } from '@/features/showcase/ShowcaseContext';
@@ -199,10 +200,13 @@ function PublishedAnalyticsContent({ component, locales }: { component: Publishe
   const { t } = useI18n();
   const source = useBindingSource();
   const binding = datasetBinding(component.bindings);
-  const state = useBindingResult(binding?.sourceId ?? null);
+  const categoryField = typeof component.props.categoryKey === 'string' ? component.props.categoryKey : '';
+  // A chart that emits selections on its own category keeps listing every category; the selected ones are highlighted instead of the others vanishing.
+  const emits = (component.type === 'bar_chart' || component.type === 'donut_chart') && Boolean(source?.toggleFilter && categoryField && source.canFilter?.(categoryField));
+  const state = useBindingResult(binding?.sourceId ?? null, {}, emits ? { exceptField: categoryField } : {});
   // A donut may bind a second result named `total` (the page's unique count) to state exact shares and the centre figure.
   const totalBinding = component.type === 'donut_chart' ? bindingIdOf(component.bindings, 'total') : null;
-  const totalResult = useBindingResult(totalBinding);
+  const totalResult = useBindingResult(totalBinding, {}, emits ? { exceptField: categoryField } : {});
   const drillBinding = component.type === 'bar_chart' ? bindingIdOf(component.bindings, 'drill') : null;
   const drill = component.props.drill && typeof component.props.drill === 'object' ? component.props.drill as { categoryKey?: unknown; title?: unknown } : null;
   const [drilled, setDrilled] = useState<string | null>(null);
@@ -224,7 +228,7 @@ function PublishedAnalyticsContent({ component, locales }: { component: Publishe
   const availableKeys = new Set(state.response?.columns.map((column) => column.key) ?? []);
   const result = resultOf(state);
   const interactive = Boolean(source?.applyFilter && categoryKey && source.canFilter?.(categoryKey));
-  const select = interactive ? (value: string) => source!.applyFilter!(categoryKey, value) : undefined;
+  const select = interactive ? (value: string) => (source!.toggleFilter ?? source!.applyFilter!)(categoryKey, value) : undefined;
   const dim = state.refreshing ? 'h-full opacity-60 transition-opacity' : 'h-full';
   if (component.type === 'metric') {
     const field = publishedMetricField(component.props, availableKeys);
@@ -255,7 +259,7 @@ function PublishedAnalyticsContent({ component, locales }: { component: Publishe
       return (
         <div className="flex h-full min-h-0 flex-col gap-1.5">
           {title ? <h3 className="shrink-0 truncate text-sm font-medium text-text" title={title}>{title}{canDrill ? <span className="ml-2 text-[11px] font-normal text-text-muted">{t('panel.drillHint')}</span> : null}</h3> : null}
-          <div className={cn('min-h-0 flex-1', dim)}><AnalyticsBarChart result={result} {...config} categoryFormat={categoryFormat} onSelect={select ? (value) => { select(value); if (canDrill) setDrilled(value); } : undefined} /></div>
+          <div className={cn('min-h-0 flex-1', dim)}><AnalyticsBarChart result={result} {...config} categoryFormat={categoryFormat} onSelect={select ? (value) => { const isSelected = selected.some((item) => String(item) === value); select(value); if (canDrill && !isSelected) setDrilled(value); } : undefined} selected={selected.map(String)} /></div>
         </div>
       );
     }
@@ -270,7 +274,7 @@ function PublishedAnalyticsContent({ component, locales }: { component: Publishe
     if (config) {
       const totalRow = totalResult.response ? analyticsRows(totalResult.response)[0] : undefined;
       const total = config.totalKey && totalRow ? asNumber(totalRow[config.totalKey]) : null;
-      return <div className={dim}>{withChartTitle(component.props, locales, <AnalyticsDonutChart result={result} {...config} total={total} onSelect={select} />)}</div>;
+      return <div className={dim}>{withChartTitle(component.props, locales, <AnalyticsDonutChart result={result} {...config} total={total} onSelect={select} selected={selected.map(String)} />)}</div>;
     }
   }
 
@@ -323,7 +327,7 @@ function sceneTitle(section: PublishedPanelDocument['sections'][number], locales
 
 export function PublishedPanel({ title, document, locales, organizationId, panelId }: { title: string; document: PublishedPanelDocument | null; locales: string[]; organizationId: string | null | undefined; panelId: string }) {
   const breakpoint = usePublishedBreakpoint();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const showcaseSlug = useShowcaseSlug();
   const articleRef = useRef<HTMLElement>(null);
   const [definitionsByBinding, setDefinitionsByBinding] = useState<Record<string, PanelBindingFilterDefinition[]>>({});
@@ -394,11 +398,11 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
   // One source for every analytics component on the page: same filters, same refresh, same CORECROW contract.
   // The object is stable (identity never changes while the panel is open) and reads the live state through a ref, so
   // a filter change refetches only the bindings whose own filters changed instead of the whole page.
-  const live = useRef({ filtersByBinding, version, selections, controls, canFacet });
-  live.current = { filtersByBinding, version, selections, controls, canFacet };
+  const live = useRef({ filtersByBinding, version, selections, controls, canFacet, definitions: definitionsByBinding, effective: presenting ?? selections });
+  live.current = { filtersByBinding, version, selections, controls, canFacet, definitions: definitionsByBinding, effective: presenting ?? selections };
   const bindingSource = useMemo<BindingSource>(() => ({
     get version() { return live.current.version; },
-    filtersFor: (bindingId) => live.current.filtersByBinding[bindingId] ?? [],
+    filtersFor: (bindingId, exceptFieldId) => (exceptFieldId ? filtersForDefinitions(live.current.definitions[bindingId] ?? [], live.current.effective, exceptFieldId) : live.current.filtersByBinding[bindingId] ?? []),
     fetch: async (bindingId, request, signal) => {
       if (!organizationId) throw new Error('No organization');
       const { filters = [], ...options } = request;
@@ -420,6 +424,16 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
       delete rest[fieldId];
       updateSelections(remaining.length || current[fieldId]?.text || current[fieldId]?.from || current[fieldId]?.to ? { ...rest, [fieldId]: { ...current[fieldId], values: remaining } } : rest);
     },
+    toggleFilter: (fieldId, value) => {
+      const { selections: current } = live.current;
+      const values = current[fieldId]?.values ?? [];
+      if (!values.includes(value)) { updateSelections({ ...current, [fieldId]: { ...current[fieldId], values: [...values, value] } }); return; }
+      const remaining = values.filter((item) => item !== value);
+      const rest = { ...current };
+      delete rest[fieldId];
+      const kept = current[fieldId]!;
+      updateSelections(remaining.length || kept.text || kept.from || kept.to ? { ...rest, [fieldId]: { ...kept, values: remaining } } : rest);
+    },
     applyFilter: (fieldId, value) => {
       const { selections: current } = live.current;
       const values = current[fieldId]?.values ?? [];
@@ -427,7 +441,7 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
     },
   }), [organizationId, panelId, registerExecuted, registerFilterDefinitions, showcaseSlug, updateSelections]);
 
-  if (!document) return <div className="p-6 text-sm text-text-muted">Este panel publicado no tiene contenido disponible.</div>;
+  if (!document) return <div className="p-6 text-sm text-text-muted">{t('panel.noContent')}</div>;
   const sections = document.sections.slice().sort((a, b) => a.order - b.order);
   // A section with `rowHeight` is a fixed matrix on desktop/tablet: every row is that tall, components fill their cells and
   // scroll inside them. With `fit` (desktop) the rows stretch to the viewport but never shrink below `rowHeight`.
@@ -490,7 +504,7 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h1 className={cn('font-display font-semibold', fitted ? 'text-lg' : 'text-2xl')}>{title}</h1>
       <div className="flex items-center gap-2">
-        {updatedAt ? <span className="mr-1 hidden text-right text-[11px] leading-tight text-text-muted sm:block"><span className="block">{t('pres.updated')}</span><span className="block tabular-nums text-text-secondary">{new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(updatedAt))}</span></span> : null}
+        {updatedAt ? <span className="mr-1 hidden text-right text-[11px] leading-tight text-text-muted sm:block"><span className="block">{t('pres.updated')}</span><span className="block tabular-nums text-text-secondary">{new Intl.DateTimeFormat(intlTag(locale), { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(updatedAt))}</span></span> : null}
         <button type="button" className={toolbarButton} onClick={() => setVersion((value) => value + 1)}><ArrowsClockwise className="size-3.5" aria-hidden="true" />{t('panel.refresh')}</button>
         {sections.length > 0 ? <button type="button" className={toolbarButton} onClick={() => setPresenting(selections)}><Presentation className="size-3.5" aria-hidden="true" />{t('pres.start')}</button> : null}
         {window.document.fullscreenEnabled ? <button type="button" className={toolbarButton} onClick={toggleFullscreen} aria-pressed={fullscreen}>{fullscreen ? <ArrowsIn className="size-3.5" aria-hidden="true" /> : <ArrowsOut className="size-3.5" aria-hidden="true" />}{fullscreen ? t('pres.exitFullscreen') : t('pres.fullscreen')}</button> : null}
@@ -523,11 +537,12 @@ function PanelNavigationBridge({ children }: { children: ReactNode }) {
 }
 
 export function ViewRenderer({ user, tab }: { user: SessionUser; tab: Tab | null }) {
+  const { t } = useI18n();
   const { getCategory, getSubcategory, isLoading: catalogLoading } = useCatalog();
   const { activeOrganization } = useOrganization();
   // Keep the shell stable while the catalog resolves: only this region shows a quiet skeleton.
   if (!tab && catalogLoading) return <div className="w-full space-y-3 p-4 lg:p-5" aria-busy="true"><Skeleton className="h-6 w-48" /><Skeleton className="h-40 w-full rounded-xl" /></div>;
-  if (!tab) return <div className="flex flex-1 items-center justify-center text-sm text-text-muted">Selecciona una categoría para comenzar</div>;
+  if (!tab) return <div className="flex flex-1 items-center justify-center text-sm text-text-muted">{t('panel.selectCategory')}</div>;
   const category = getCategory(tab.route.categoryId);
   const subcategory = getSubcategory(tab.route.categoryId, tab.route.subcategoryId);
   if (activeOrganization && category?.slug === 'admin') {
@@ -539,5 +554,5 @@ export function ViewRenderer({ user, tab }: { user: SessionUser; tab: Tab | null
   }
   if (tab.publishedPanel) return <PanelNavigationBridge><PublishedPanel key={tab.publishedPanel.id} title={tab.publishedPanel.title} document={tab.publishedPanel.document} locales={tab.publishedPanel.localeOrder} organizationId={activeOrganization?.id} panelId={tab.publishedPanel.id} /></PanelNavigationBridge>;
   if (PERSONAL_CATEGORIES.has(tab.route.categoryId)) return <PersonalView route={tab.route} user={user} />;
-  return <div className="p-6"><EmptyState icon={Barricade} title="Vista en construcción" body={`La categoría "${tab.route.categoryId}" está siendo preparada.`} className="max-w-md" /></div>;
+  return <div className="p-6"><EmptyState icon={Barricade} title={t('panel.underConstruction')} body={t('panel.underConstructionBody', { name: tab.route.categoryId })} className="max-w-md" /></div>;
 }

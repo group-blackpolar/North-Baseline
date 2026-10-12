@@ -115,6 +115,18 @@ export function FilterBar({ controls, selections, onChange, loadFacet, title, co
           <div className="grid min-w-0 flex-1 grid-cols-[repeat(auto-fit,minmax(7.5rem,1fr))] gap-1.5"><ResponsiveFilters activeCount={count} onClear={() => onChange({})}>{controlsView}</ResponsiveFilters></div>
           {count > 0 ? <button type="button" className="shrink-0 rounded-md px-1.5 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent-soft" onClick={() => onChange({})}>{t('flt.clearAll')} ({count})</button> : null}
         </div>
+        {chips.length ? (
+          <ul className="mt-1 flex flex-wrap items-center gap-1" aria-label={t('flt.active')}>
+            {chips.map((chip) => (
+              <li key={chip.key}>
+                <button type="button" aria-label={t('flt.remove', { name: chip.text })} onClick={() => onChange(removeChip(selections, chip))} className="inline-flex max-w-56 items-center gap-1 rounded-full border border-accent/30 bg-accent-soft px-2 py-0.5 text-[0.68rem] text-text transition-colors hover:border-accent/60">
+                  <span className="truncate" title={chip.text}><span className="text-text-secondary">{chip.label}: </span><span className="font-semibold">{chip.display}</span></span>
+                  <X className="size-3 shrink-0 text-text-muted" aria-hidden="true" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </section>
     );
   }

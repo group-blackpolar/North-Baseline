@@ -32,7 +32,7 @@ export type BindingSource = {
   /** Increments on refresh so every component refetches. */
   version: number;
   /** The filters the reader selected, already translated through this binding's own allowlist. */
-  filtersFor: (bindingId: string) => DatasetQueryFilter[];
+  filtersFor: (bindingId: string, exceptFieldId?: string) => DatasetQueryFilter[];
   fetch: (bindingId: string, request: BindingRequest, signal: AbortSignal) => Promise<BindingResponse>;
   /** Published pages register filter definitions and the freshest execution time; previews ignore both. */
   report?: (bindingId: string, response: BindingResponse) => void;
@@ -43,6 +43,8 @@ export type BindingSource = {
   /** Values currently selected for a field, and the way to drop one (drill-down "back"). */
   selectedValues?: (fieldId: string) => Array<string | number | boolean>;
   clearFilter?: (fieldId: string, value: string | number | boolean) => void;
+  /** Cross-filter origin: clicking a selected value again removes it. */
+  toggleFilter?: (fieldId: string, value: string | number | boolean) => void;
 };
 
 const SourceContext = createContext<BindingSource | null>(null);
@@ -93,13 +95,13 @@ const asApiError = (reason: unknown) => reason instanceof ApiError ? reason : ne
  * Fetches one named binding. The previous result stays on screen (dimmed through `refreshing`) while a filter, sort or
  * page change loads; failures drop the data (fail closed).
  */
-export function useBindingResult(bindingId: string | null, request: BindingRequest = {}): BindingState & { reload: () => void } {
+export function useBindingResult(bindingId: string | null, request: BindingRequest = {}, options: { /** The component that emits a selection on this field keeps showing all its values (the selection is highlighted, not applied to itself). */ exceptField?: string } = {}): BindingState & { reload: () => void } {
   const source = useBindingSource();
   const [state, dispatch] = useReducer(reduce, { status: 'idle', response: null, refreshing: false, error: null } as BindingState);
   const [reloads, bump] = useReducer((value: number) => value + 1, 0);
   const requestJson = JSON.stringify(request);
   // Read live on every render: the source is stable, so its own filters are the dependency, not its identity.
-  const filtersJson = JSON.stringify(source && bindingId ? source.filtersFor(bindingId) : []);
+  const filtersJson = JSON.stringify(source && bindingId ? source.filtersFor(bindingId, options.exceptField) : []);
   const version = source?.version ?? 0;
   const latest = useRef(0);
 
