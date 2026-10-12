@@ -49,6 +49,8 @@ import { InspectionBanner } from '@/components/organization/InspectionBanner';
 import { ConnectionProblem } from '@/components/errors/ConnectionProblem';
 import { useInspection } from '@/lib/inspection';
 import { PlatformAdminView } from '@/features/platform-admin/PlatformAdminView';
+import { InvitationLanding } from '@/features/invitations/InvitationLanding';
+import { isInvitationCredential, normalizeInvitationCredential } from '@/lib/invitationKey';
 import { ShowcaseView } from '@/features/showcase/ShowcaseView';
 import { navigateToPublishedTarget, publishedTabFromResolved } from '@/lib/publishedNavigation';
 import { navKey } from '@/lib/navState';
@@ -318,6 +320,9 @@ function AppInner() {
   // Kept only in memory while the visitor completes authentication; never in
   // localStorage or the URL. It is discarded after acceptance/final failure.
   const [pendingRouteInvitation, setPendingRouteInvitation] = useState<PendingRouteInvitation | null>(loadPendingRouteInvitation);
+  // The emailed link (`/?invitation=<token>`): read once; the landing screen decides what the person can do with it.
+  const [invitationToken] = useState(() => { const raw = new URLSearchParams(window.location.search).get('invitation'); return raw && isInvitationCredential(raw) ? normalizeInvitationCredential(raw) : null; });
+  const [invitationSignIn, setInvitationSignIn] = useState(false);
   const [checkingSession, setCheckingSession] = useState(!isTauri());
   const [bootUnreachable, setBootUnreachable] = useState(false);
   const [onboardingIssue, setOnboardingIssue] = useState('');
@@ -430,6 +435,10 @@ function AppInner() {
   }
 
   if (!user && bootUnreachable) return <ConnectionProblem onRetry={bootSession} className="fixed inset-0" />;
+
+  if (invitationToken && !(invitationSignIn && !user) && !(user && (user.passwordChangeRequired || (!user.termsAcceptedAt && user.role !== 'SUPERADMIN')))) {
+    return <InvitationLanding token={invitationToken} user={user} onSignIn={() => setInvitationSignIn(true)} onLogout={handleLogout} />;
+  }
 
   if (!user) {
     if ((route.kind === 'organization' || route.kind === 'panel') && !accessAuthMode) {

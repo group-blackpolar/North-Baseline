@@ -17,6 +17,9 @@ export interface InvitationPreview {
   organization: { name: string; slug: string; iconData: string | null };
   kind: 'EMAIL' | 'CODE';
   expiresAt: string;
+  /** EMAIL invitations only: the recipient, and whether that address already has an account. */
+  email?: string | null;
+  accountExists?: boolean | null;
 }
 
 export const validateInvitation = (token: string) =>

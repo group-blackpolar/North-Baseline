@@ -34,6 +34,10 @@ export const createInvitation = (o: string, input: { email: string; role: (typeo
 export const createInvitationKey = (o: string, input: { role: (typeof INVITABLE_ROLES)[number]; expiresInHours: number; maxUses: number; groupIds: string[] }) =>
   apiRequest<IssuedInvitation>(`${org(o)}/invitations`, { method: 'POST', body: json({ kind: 'CODE', ...input }) });
 export type UserLookup = { exists: boolean; user: { id: string; email: string; name: string | null; emailVerified: boolean } | null; alreadyMember: boolean };
+export type CreatedMember = { membership: { id: string }; user: { id: string; email: string; name: string }; password: string | null };
+/** The server assigns `name@<org>.bp` and hashes the password; nothing is emailed. */
+export const createMemberAccount = (o: string, input: { name: string; password?: string; role: (typeof INVITABLE_ROLES)[number]; groupIds: string[]; localPart?: string }) =>
+  apiRequest<CreatedMember>(`${org(o)}/members/new`, { method: 'POST', body: JSON.stringify(input) });
 export const lookupUser = (o: string, email: string) => apiRequest<UserLookup>(`${org(o)}/user-lookup?email=${encodeURIComponent(email)}`);
 export const addMember = (o: string, input: { email: string; role: (typeof INVITABLE_ROLES)[number]; groupIds: string[] }) =>
   apiRequest<Member>(`${org(o)}/members`, { method: 'POST', body: json(input) });
