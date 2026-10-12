@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Sparkline } from '@/components/charts/Sparkline';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-import { useCellFill, useCellGrowth, useElementSize } from '../cellFill';
+import { useCellFill, useElementSize } from '../cellFill';
 import type { DatasetQueryFilter } from '../datasetQuery';
 import type { AnalyticsRow } from '../types';
 import { analyticsRows, bindingIdOf, useBindingResult, useBindingSource } from './bindingSource';
@@ -66,7 +66,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
   const [view, setView] = useGridView(`north-grid-v1:${panelKey}:${componentId}`, columns);
   const [sort, setSort] = useState<Sort | undefined>(defaultSort);
   const [sizeState, setSizeState] = useState(defaultSize);
-  // In a dashboard cell the page size is `auto` (exactly the rows that fit) or a fixed 20/50/100 that makes the page grow and scroll.
+  // In a dashboard cell the page size is `auto` (exactly the rows that fit) or a fixed 20/50/100: the table scrolls INSIDE its cell, the page never does.
   const [choice, setChoice] = useState<'auto' | number>('auto');
   const [page, setPage] = useState(1);
   const [searchDraft, setSearchDraft] = useState('');
@@ -88,8 +88,6 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
   const fitRows = dense && box.height > 0 ? Math.max(3, Math.floor((box.height - metrics.head - metrics.bar - 2) / metrics.row)) : 0;
   const auto = dense && choice === 'auto';
   const pageSize = dense ? (auto ? fitRows || sizeState : (choice as number)) : sizeState;
-  // A fixed page larger than the cell asks the page for the height it needs (toolbar + header + rows + pager); the main area scrolls.
-  useCellGrowth(componentId, dense && !auto ? Math.ceil(46 + metrics.head + metrics.bar + (choice as number) * metrics.row + 44 + 14) : null);
   const request = useMemo(() => ({ ...(sort ? { sort } : {}), offset: (page - 1) * pageSize, limit: pageSize, ...(search ? { search } : {}) }), [page, pageSize, search, sort]);
   const data = useBindingResult(dataId, request);
   const rows = useMemo(() => (data.response ? analyticsRows(data.response) : []), [data.response]);
@@ -230,7 +228,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
       </div>
       {exportNote ? <p role="status" className="mb-2 text-xs text-text-muted">{exportNote}</p> : null}
 
-      <div ref={scroller} className={cn('relative min-h-0 flex-1 rounded-lg border border-border', dense ? 'overflow-x-auto overflow-y-hidden' : 'overflow-auto', data.refreshing && 'opacity-70 transition-opacity')} aria-busy={data.status === 'loading' || data.refreshing}>
+      <div ref={scroller} className={cn('relative min-h-0 flex-1 rounded-lg border border-border', 'overflow-auto', data.refreshing && 'opacity-70 transition-opacity')} aria-busy={data.status === 'loading' || data.refreshing}>
         {data.status === 'error' ? (
           <div role="alert" className="flex min-h-40 flex-col items-center justify-center gap-2 text-xs text-error"><WarningCircle className="size-5" aria-hidden="true" />{data.error?.message || t('analytics.error')}<button type="button" className="rounded-md border border-border px-2.5 py-1 font-medium text-text hover:bg-surface-hover" onClick={data.reload}>{t('flt.retry')}</button></div>
         ) : data.status !== 'ready' && !data.response ? (
