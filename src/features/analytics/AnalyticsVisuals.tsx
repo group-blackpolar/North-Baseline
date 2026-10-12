@@ -221,8 +221,14 @@ export function AnalyticsDonutChart({ result, categoryKey, valueKey, variant = '
           })() : null}
         </div>
         {legend !== 'none' ? (
-          <ul className={`flex min-w-0 gap-1.5 text-xs ${legend === 'right' ? 'max-h-full w-[46%] max-w-52 shrink-0 flex-col overflow-y-auto' : 'flex-wrap'}`} aria-label={t('analytics.legend')}>
-            {rows.map((row, index) => <li key={`${String(row[categoryKey])}-${index}`} className="flex min-w-0 items-center gap-2"><span aria-hidden="true" className="size-2.5 shrink-0 rounded-full" style={{ background: sliceFill(index) }} /><span className="min-w-0 flex-1 truncate text-text-secondary" title={String(row[categoryKey])}>{String(row[categoryKey])}</span><span className="shrink-0 tabular-nums font-medium text-text">{percent(number(row[valueKey]) ?? 0)}</span></li>)}
+          <ul className={`flex min-w-0 gap-1.5 text-xs ${legend === 'right' ? 'min-h-0 w-[46%] max-w-52 shrink-0 flex-col overflow-hidden' : 'flex-wrap'}`} aria-label={t('analytics.legend')}>
+            {(() => {
+              // A legend never scrolls: it lists as many entries as the ring's height allows (18 px each) and sums the remainder.
+              const capacity = fill && legend === 'right' && ring.height > 0 ? Math.max(2, Math.floor(ring.height / 20)) : rows.length;
+              if (rows.length <= capacity) return rows;
+              const rest = rows.slice(capacity - 1);
+              return [...rows.slice(0, capacity - 1), { [categoryKey]: `+${rest.length}`, [valueKey]: rest.reduce((sum, row) => sum + (number(row[valueKey]) ?? 0), 0) }];
+            })().map((row, index) => <li key={`${String(row[categoryKey])}-${index}`} className="flex min-w-0 items-center gap-2"><span aria-hidden="true" className="size-2.5 shrink-0 rounded-full" style={{ background: sliceFill(index) }} /><span className="min-w-0 flex-1 truncate text-text-secondary" title={String(row[categoryKey])}>{String(row[categoryKey])}</span><span className="shrink-0 tabular-nums font-medium text-text">{percent(number(row[valueKey]) ?? 0)}</span></li>)}
           </ul>
         ) : null}
       </div>

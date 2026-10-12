@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp, CaretDown, CaretLeft, CaretRight, CaretUpDown, Columns, DotsThreeVertical, DownloadSimple, Eye, EyeSlash, FunnelSimple, MagnifyingGlass, WarningCircle } from '@phosphor-icons/react';
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { Popover } from '@/components/ui/popover';
 import { Sheet } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -65,7 +65,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
 
   const [view, setView] = useGridView(`north-grid-v1:${panelKey}:${componentId}`, columns);
   const [sort, setSort] = useState<Sort | undefined>(defaultSort);
-  const [pageSize, setPageSize] = useState(defaultSize);
+  const [sizeState, setSizeState] = useState(defaultSize);
   const [page, setPage] = useState(1);
   const [searchDraft, setSearchDraft] = useState('');
   const [search, setSearch] = useState('');
@@ -79,6 +79,12 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
     return () => window.clearTimeout(timer);
   }, [searchDraft]);
 
+  // In a fixed cell the page holds exactly the rows that fit (header 33 px, row 29 px): no inner scroll, the pager reaches the rest.
+  const [scroller, box] = useElementSize<HTMLDivElement>();
+  // Row and header heights are MEASURED from the rendered table (fonts, zoom and borders change them); 30/34 px until the first rows exist.
+  const [metrics, setMetrics] = useState({ row: 30, head: 34 });
+  const fitRows = dense && box.height > 0 ? Math.max(3, Math.floor((box.height - metrics.head - 1) / metrics.row)) : 0;
+  const pageSize = fitRows || sizeState;
   const request = useMemo(() => ({ ...(sort ? { sort } : {}), offset: (page - 1) * pageSize, limit: pageSize, ...(search ? { search } : {}) }), [page, pageSize, search, sort]);
   const data = useBindingResult(dataId, request);
   const rows = useMemo(() => (data.response ? analyticsRows(data.response) : []), [data.response]);
@@ -101,9 +107,14 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
 
   // In a fixed cell the table must FIT it: sparklines go first when the cell is narrow, the remaining columns share the width
   // proportionally (text truncates, nothing is cut off at the edge); outside a cell the declared widths apply and the table scrolls.
-  const [scroller, box] = useElementSize<HTMLDivElement>();
   const available = box.width - (selectable ? 32 : 0);
   const base = visibleColumns(columns, view);
+  useLayoutEffect(() => {
+    const root = scroller.current;
+    const row = root?.querySelector('tbody tr')?.getBoundingClientRect().height;
+    const head = root?.querySelector('thead')?.getBoundingClientRect().height;
+    if (row && head && (Math.abs(row - metrics.row) > 0.5 || Math.abs(head - metrics.head) > 0.5)) setMetrics({ row, head });
+  });
   const shown = dense && box.width > 0 && box.width < 620 && base.length > 3 ? base.filter((column) => column.kind !== 'sparkline') : base;
   const declared = (column: GridColumn) => view.widths[column.key] ?? column.width ?? 140;
   const declaredTotal = shown.reduce((sum, column) => sum + declared(column), 0);
@@ -209,7 +220,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
       </div>
       {exportNote ? <p role="status" className="mb-2 text-xs text-text-muted">{exportNote}</p> : null}
 
-      <div ref={scroller} className={cn('relative min-h-0 flex-1 overflow-auto rounded-lg border border-border', data.refreshing && 'opacity-70 transition-opacity')} aria-busy={data.status === 'loading' || data.refreshing}>
+      <div ref={scroller} className={cn('relative min-h-0 flex-1 rounded-lg border border-border', dense ? 'overflow-hidden' : 'overflow-auto', data.refreshing && 'opacity-70 transition-opacity')} aria-busy={data.status === 'loading' || data.refreshing}>
         {data.status === 'error' ? (
           <div role="alert" className="flex min-h-40 flex-col items-center justify-center gap-2 text-xs text-error"><WarningCircle className="size-5" aria-hidden="true" />{data.error?.message || t('analytics.error')}<button type="button" className="rounded-md border border-border px-2.5 py-1 font-medium text-text hover:bg-surface-hover" onClick={data.reload}>{t('flt.retry')}</button></div>
         ) : data.status !== 'ready' && !data.response ? (
@@ -246,7 +257,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
                   <tr key={id} className={cn('group/row transition-colors duration-100 hover:bg-accent-soft/50', checked && 'bg-accent-soft/60')}>
                     {selectable ? <td className="border-b border-border/60 px-2"><input type="checkbox" aria-label={t('grid.select')} checked={checked} onChange={() => setSelected((current) => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; })} className="size-3.5 accent-(--color-accent)" /></td> : null}
                     {shown.map((column) => (
-                      <td key={column.key} className={cn('max-w-[22rem] border-b border-border/60 text-text', dense ? 'h-7 px-2' : 'h-9 px-3', align(column) === 'right' && 'text-right tabular-nums', align(column) === 'center' && 'text-center')}>
+                      <td key={column.key} className={cn('max-w-[22rem] border-b border-border/60 text-text', dense && 'overflow-hidden', dense ? 'h-7 px-2' : 'h-9 px-3', align(column) === 'right' && 'text-right tabular-nums', align(column) === 'center' && 'text-center')}>
                         {column.kind === 'actions'
                           ? <RowMenu row={row} columns={columns} onInspect={() => setInspected(row)} filterable={filterable} onFilter={(key, value) => source?.applyFilter?.(key, value)} />
                           : column.key === shown[0]?.key && !selectable && column.kind === 'text'
@@ -264,15 +275,15 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
 
       <div className={cn('flex flex-wrap items-center justify-between gap-2 text-xs text-text-secondary', dense ? 'mt-1' : 'mt-2')}>
         <div className="flex items-center gap-2">
-          <label className="flex items-center gap-1.5">
+          {dense ? null : <label className="flex items-center gap-1.5">
             <span>{t('grid.rowsPerPage')}</span>
             <span className="relative inline-flex">
-              <select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))} className="h-7 appearance-none rounded-md border border-border bg-surface pl-2 pr-6 text-xs text-text outline-none focus-visible:ring-2 focus-visible:ring-accent/25">
+              <select value={pageSize} onChange={(event) => setSizeState(Number(event.target.value))} className="h-7 appearance-none rounded-md border border-border bg-surface pl-2 pr-6 text-xs text-text outline-none focus-visible:ring-2 focus-visible:ring-accent/25">
                 {sizes.map((size) => <option key={size} value={size}>{size}</option>)}
               </select>
               <CaretDown className="pointer-events-none absolute right-1.5 top-1/2 size-3 -translate-y-1/2 text-text-muted" aria-hidden="true" />
             </span>
-          </label>
+          </label>}
           <span className="tabular-nums text-text-muted">{total ? t('grid.range', { from: numberFormat.format((page - 1) * pageSize + 1), to: numberFormat.format(Math.min(total, page * pageSize)), total: numberFormat.format(total) }) : null}{selectable && selected.size ? ` · ${t('grid.selected', { n: selected.size })}` : ''}</span>
         </div>
         <nav aria-label={t('grid.pagination')} className="flex items-center gap-0.5">

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Fragment, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ArrowsClockwise, ArrowsIn, ArrowsOut, ArrowsOutSimple, Barricade, CaretLeft, Presentation } from '@phosphor-icons/react';
 import type { SessionUser } from '@/lib/auth';
 import type { Tab } from '@/context/TabsContext';
@@ -31,6 +31,7 @@ import { chipsOf, filterModeOf, filtersForDefinitions, loadSelections, saveSelec
 import { PresentationMode } from '@/features/presentation/PresentationMode';
 import { cn } from '@/lib/utils';
 import { CellFillProvider } from '@/features/analytics/cellFill';
+import { PanelGroup } from '@/features/analytics/pro/PanelGroup';
 import { DefinitionListBlock, HeroBlock, LinkCardsBlock, OrgBrand, PanelNavigationContext, usePanelNavigation } from '@/features/analytics/pro/InfoBlocks';
 import { navigateToPublishedTarget } from '@/lib/publishedNavigation';
 import { useTabs } from '@/context/TabsContext';
@@ -92,17 +93,17 @@ function usePublishedBreakpoint() {
   return breakpoint;
 }
 
-function gridStyle(position: GridPosition) {
+function gridStyle(position: GridPosition, rowOffset = 0) {
   const x = Math.max(0, Math.min(11, position.x));
   const width = Math.max(1, Math.min(12 - x, position.w));
-  return { gridColumn: `${x + 1} / span ${width}`, gridRow: `${Math.max(0, position.y) + 1} / span ${Math.max(1, position.h)}` };
+  return { gridColumn: `${x + 1} / span ${width}`, gridRow: `${Math.max(0, position.y - rowOffset) + 1} / span ${Math.max(1, position.h)}` };
 }
 
 const SELF_SCROLLING = new Set(['kpi_card', 'data_grid', 'geo_map', 'insights', 'bar_chart', 'line_chart', 'donut_chart']);
 
 const EXPANDABLE = new Set(['bar_chart', 'line_chart', 'donut_chart', 'geo_map', 'data_grid', 'insights']);
 
-function PublishedGridItem({ component, breakpoint, matrix, title, children }: { component: PublishedPanelDocument['sections'][number]['components'][number]; breakpoint: Breakpoint; matrix: boolean; title: string; children: ReactNode }) {
+function PublishedGridItem({ component, breakpoint, matrix, title, rowOffset = 0, placed = true, children }: { component: PublishedPanelDocument['sections'][number]['components'][number]; breakpoint: Breakpoint; matrix: boolean; title: string; /** Rows taken by a band lifted above the matrix. */ rowOffset?: number; /** false: drawn inside a panel group, not at its own grid cell. */ placed?: boolean; children: ReactNode }) {
   const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const tight = component.type === 'kpi_card';
@@ -112,7 +113,7 @@ function PublishedGridItem({ component, breakpoint, matrix, title, children }: {
   // These blocks draw their own cards: the cell adds no frame or padding.
   const frameless = component.type === 'hero' || component.type === 'link_cards' || component.type === 'definition_list';
   return (
-    <div className={cn('group/cell relative flex min-h-0 min-w-0 flex-col rounded-lg', bare ? 'justify-center' : frameless ? 'overflow-hidden' : 'border border-border bg-surface p-2 shadow-xs', SELF_SCROLLING.has(component.type) || frameless ? 'overflow-hidden' : 'overflow-auto')} style={gridStyle(component.layout[breakpoint])}>
+    <div className={cn('group/cell relative flex min-h-0 min-w-0 flex-col rounded-lg', !placed && 'h-full', bare ? 'justify-center' : frameless ? 'overflow-hidden' : 'border border-border bg-surface p-2 shadow-xs', SELF_SCROLLING.has(component.type) || frameless ? 'overflow-hidden' : 'overflow-auto')} style={placed ? gridStyle(component.layout[breakpoint], rowOffset) : undefined}>
       <CellFillProvider value><div className="flex min-h-0 flex-1 flex-col [&>*]:min-h-0">{children}</div></CellFillProvider>
       {EXPANDABLE.has(component.type) && !bare ? (
         <>
@@ -431,11 +432,17 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
   // A section with `rowHeight` is a fixed matrix on desktop/tablet: every row is that tall, components fill their cells and
   // scroll inside them. With `fit` (desktop) the rows stretch to the viewport but never shrink below `rowHeight`.
   const GAP_PX = { none: 0, sm: 8, md: 16, lg: 24 } as const;
+  const groupedIds = (section: (typeof sections)[number]) => new Set(section.components.flatMap((component) => component.type === 'panel_group' && Array.isArray(component.props.items) ? (component.props.items as Array<{ componentId?: unknown }>).flatMap((item) => (typeof item.componentId === 'string' ? [item.componentId] : [])) : []));
   const matrixOf = (section: (typeof sections)[number]) => {
     const rowHeight = breakpoint === 'desktop' ? section.layout.rowHeight : undefined;
     if (!rowHeight) return null;
-    const rows = Math.max(1, ...section.components.map((component) => { const position = component.layout[breakpoint]; return position.y + position.h; }));
-    return { rowHeight, rows, fit: section.layout.fit === true };
+    const grouped = groupedIds(section);
+    const bottom = (component: (typeof section.components)[number]) => component.layout[breakpoint].y + component.layout[breakpoint].h;
+    const fit = section.layout.fit === true;
+    // With `fit`, the filter bar leaves the matrix and takes the height ITS CONTENT needs (one or two lines), so the body rows get the rest.
+    const band = fit ? Math.max(0, ...section.components.filter((component) => component.type === 'filter_bar').map(bottom)) : 0;
+    const rows = Math.max(1, Math.max(...section.components.filter((component) => !grouped.has(component.id) && component.type !== 'filter_bar').map(bottom), 0) - band);
+    return { rowHeight, rows, fit, band };
   };
   const filterTitle = localized(sections.flatMap((section) => section.components).find((component) => component.type === 'filter_bar')?.props.title, locales) || undefined;
   const hasFilterSlot = sections.some((section) => section.components.some((component) => component.type === 'filter_bar'));
@@ -443,23 +450,34 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
   const fitted = sections.some((section) => matrixOf(section)?.fit);
   const renderSection = (section: (typeof sections)[number]) => {
     const matrix = matrixOf(section);
-    const style = matrix ? {
-      gridTemplateRows: `repeat(${matrix.rows}, ${matrix.fit ? `minmax(${matrix.rowHeight}px, 1fr)` : `${matrix.rowHeight}px`})`,
-      ...(matrix.fit ? { minHeight: matrix.rows * matrix.rowHeight + (matrix.rows - 1) * GAP_PX[section.layout.gap] } : {}),
-    } : undefined;
-    return <section key={section.id} style={style} className={cn('grid grid-cols-12', !matrix && 'auto-rows-[minmax(2rem,auto)]', GAP[section.layout.gap], matrix?.fit && 'min-h-0 flex-1')}>{section.components.slice().sort((a, b) => a.order - b.order).map((component) => {
+    const ordered = section.components.slice().sort((a, b) => a.order - b.order);
+    const byId = new Map(ordered.map((component) => [component.id, component]));
+    const grouped = groupedIds(section);
+    const lifted = Boolean(matrix?.fit && matrix.band > 0);
+    const contentOf = (component: (typeof ordered)[number]): ReactNode => {
       const binding = datasetBinding(component.bindings);
-      // The filter bar placed by the author is live on the page and absent from presentation scenes (those use a frozen snapshot).
-      if (component.type === 'filter_bar') return presenting ? null : <div key={component.id} className={cn('min-w-0', matrix && 'min-h-0')} style={gridStyle(component.layout[breakpoint])}>{filterBar}</div>;
-      const content = PRO_TYPES.has(component.type)
+      if (component.type === 'panel_group') return <PanelGroup props={component.props} locales={locales} render={(id) => { const member = byId.get(id); const inner = member ? contentOf(member) : null; return member && inner !== null ? <PublishedGridItem component={member} breakpoint={breakpoint} matrix title={localized(member.props.title, locales)} placed={false}>{inner}</PublishedGridItem> : null; }} />;
+      return PRO_TYPES.has(component.type)
         ? <ProComponent component={component} panelKey={panelId} locales={locales} />
         : binding
         ? <PublishedAnalyticsContent component={component} locales={locales} />
         : component.type === 'document_workspace'
           ? <DocumentWorkspaceHost organizationId={organizationId} props={component.props} />
           : SafeComponent({ type: component.type, props: component.props, locales });
-      return content === null ? null : <PublishedGridItem key={component.id} component={component} breakpoint={breakpoint} matrix={matrix !== null} title={localized(component.props.title, locales)}>{content}</PublishedGridItem>;
-    })}</section>;
+    };
+    const style = matrix ? {
+      gridTemplateRows: `repeat(${matrix.rows}, ${matrix.fit ? `minmax(${matrix.rowHeight}px, 1fr)` : `${matrix.rowHeight}px`})`,
+      ...(matrix.fit ? { minHeight: matrix.rows * matrix.rowHeight + (matrix.rows - 1) * GAP_PX[section.layout.gap] } : {}),
+    } : undefined;
+    return <Fragment key={section.id}>
+      {lifted && !presenting ? <div className="shrink-0">{filterBar}</div> : null}
+      <section style={style} className={cn('grid grid-cols-12', !matrix && 'auto-rows-[minmax(2rem,auto)]', GAP[section.layout.gap], matrix?.fit && 'min-h-0 flex-1')}>{ordered.filter((component) => !grouped.has(component.id)).map((component) => {
+        // The filter bar placed by the author is live on the page and absent from presentation scenes (those use a frozen snapshot).
+        if (component.type === 'filter_bar') return lifted || presenting ? null : <div key={component.id} className={cn('min-w-0', matrix && 'min-h-0')} style={gridStyle(component.layout[breakpoint])}>{filterBar}</div>;
+        const content = contentOf(component);
+        return content === null ? null : <PublishedGridItem key={component.id} component={component} breakpoint={breakpoint} matrix={matrix !== null} rowOffset={matrix?.band ?? 0} title={localized(component.props.title, locales)}>{content}</PublishedGridItem>;
+      })}</section>
+    </Fragment>;
   };
   const updatedAt = Object.values(executedByBinding).sort().at(-1) ?? null;
   const toggleFullscreen = () => {
