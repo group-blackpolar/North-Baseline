@@ -94,7 +94,7 @@ export default function GeoBubbleMap({ props, bindings, locales }: { props: Prop
         <div className={cn('@container flex min-h-0 flex-1 flex-col gap-3', data.refreshing && 'opacity-70 transition-opacity')}>
           <div className="relative min-h-0 min-w-0 flex-1">
             <svg viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`} role="img" aria-label={title || t('map.aria')} className="h-full max-h-full w-full" preserveAspectRatio="xMidYMid meet">
-              <path d={landPath()} fill="var(--color-surface-hover)" stroke="var(--color-border)" strokeWidth="0.6" vectorEffect="non-scaling-stroke" />
+              <path d={landPath()} fill="color-mix(in srgb, var(--color-text-muted) 20%, var(--color-surface))" stroke="color-mix(in srgb, var(--color-text-muted) 35%, var(--color-surface))" strokeWidth="0.6" vectorEffect="non-scaling-stroke" />
               {[...model.list].reverse().map((place) => {
                 const radius = 4 + Math.sqrt(place.value / model.max) * 22;
                 const active = hover?.name === place.name;
@@ -116,7 +116,7 @@ export default function GeoBubbleMap({ props, bindings, locales }: { props: Prop
               </div>
             ) : null}
           </div>
-          <ul className="grid max-h-16 shrink-0 grid-cols-2 gap-x-4 gap-y-1 overflow-y-auto text-xs @[420px]:grid-cols-3" aria-label={t('map.legend')}>
+          <ul className="grid shrink-0 grid-cols-3 gap-x-3 gap-y-0.5 text-[0.7rem] leading-tight" aria-label={t('map.legend')}>
             {CONTINENT_ORDER.filter((continent) => model.byContinent.has(continent)).sort((a, b) => (model.byContinent.get(b) ?? 0) - (model.byContinent.get(a) ?? 0)).map((continent) => (
               <li key={continent} className="flex items-center gap-2">
                 <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full" style={{ background: CONTINENT_COLOR[continent] }} />
