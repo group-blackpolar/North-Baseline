@@ -69,7 +69,7 @@ export function HeroBlock({ props, locales }: { props: Props; locales: string[] 
           <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[linear-gradient(100deg,var(--color-surface)_0%,color-mix(in_srgb,var(--color-surface)_92%,transparent)_34%,transparent_70%)]" />
         </>
       ) : null}
-      {props.showBrand === false ? null : <div className="hidden shrink-0 @[560px]:block"><OrgBrand props={{ showName: false }} size="hero" /></div>}
+      {props.showBrand === false ? null : <div className="hidden shrink-0 @[560px]:block">{typeof props.logoImage === 'string' ? <img src={props.logoImage} alt="" className="h-full max-h-24 w-auto rounded-lg bg-white object-contain p-1 @[900px]:max-h-28" /> : <OrgBrand props={{ showName: false }} size="hero" />}</div>}
       <div className="min-w-0 flex-1">
         {eyebrow ? <p className="truncate text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-text-muted @[700px]:text-[0.7rem]">{eyebrow}</p> : null}
         <h2 className="font-display text-[clamp(1.1rem,3.6cqw,2.25rem)] font-extrabold uppercase leading-[1.05] tracking-tight text-text">{title}</h2>
