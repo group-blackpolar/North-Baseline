@@ -8,6 +8,21 @@ const CellFillContext = createContext(false);
 export const CellFillProvider = CellFillContext.Provider;
 export const useCellFill = () => useContext(CellFillContext);
 
+/**
+ * A component in a fixed-matrix cell may ask the page for MORE height than the cell has (a table showing 100 rows): the page grows
+ * (the main area scrolls) instead of the table being clipped or squeezed. `null` withdraws the request.
+ */
+export type CellGrowth = { report: (componentId: string, px: number | null) => void };
+const CellGrowthContext = createContext<CellGrowth | null>(null);
+export const CellGrowthProvider = CellGrowthContext.Provider;
+export function useCellGrowth(componentId: string, px: number | null) {
+  const growth = useContext(CellGrowthContext);
+  useEffect(() => {
+    growth?.report(componentId, px);
+    return () => growth?.report(componentId, null);
+  }, [growth, componentId, px]);
+}
+
 /** Live pixel size of an element, so a chart can decide what fits (how many bars, whether a centre label is legible). */
 export function useElementSize<T extends HTMLElement>() {
   const ref = useRef<T | null>(null);

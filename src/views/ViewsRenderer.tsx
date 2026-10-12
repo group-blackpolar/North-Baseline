@@ -31,7 +31,7 @@ import { selectionsFromFilters } from '@/features/assistant/directives';
 import { chipsOf, filterModeOf, filtersForDefinitions, loadSelections, saveSelections, type FilterSelections } from '@/features/filters/filterModel';
 import { PresentationMode } from '@/features/presentation/PresentationMode';
 import { cn } from '@/lib/utils';
-import { CellFillProvider } from '@/features/analytics/cellFill';
+import { CellFillProvider, CellGrowthProvider, type CellGrowth } from '@/features/analytics/cellFill';
 import { PanelGroup } from '@/features/analytics/pro/PanelGroup';
 import { DefinitionListBlock, HeroBlock, LinkCardsBlock, OrgBrand, PanelNavigationContext, usePanelNavigation } from '@/features/analytics/pro/InfoBlocks';
 import { navigateToPublishedTarget } from '@/lib/publishedNavigation';
@@ -330,6 +330,15 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
   const { t, locale } = useI18n();
   const showcaseSlug = useShowcaseSlug();
   const articleRef = useRef<HTMLElement>(null);
+  const [growth, setGrowth] = useState<Record<string, number>>({});
+  const growthApi = useMemo<CellGrowth>(() => ({
+    report: (id, px) => setGrowth((current) => {
+      if ((current[id] ?? null) === px) return current;
+      const next = { ...current };
+      if (px === null) delete next[id]; else next[id] = px;
+      return next;
+    }),
+  }), []);
   const [definitionsByBinding, setDefinitionsByBinding] = useState<Record<string, PanelBindingFilterDefinition[]>>({});
   const [selections, setSelections] = useState<FilterSelections>(() => loadSelections(panelId));
   const [executedByBinding, setExecutedByBinding] = useState<Record<string, string>>({});
@@ -481,7 +490,15 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
     };
     const style = matrix ? {
       gridTemplateRows: `repeat(${matrix.rows}, ${matrix.fit ? `minmax(${matrix.rowHeight}px, 1fr)` : `${matrix.rowHeight}px`})`,
-      ...(matrix.fit ? { minHeight: matrix.rows * matrix.rowHeight + (matrix.rows - 1) * GAP_PX[section.layout.gap] } : {}),
+      ...(matrix.fit ? { minHeight: Math.max(
+        matrix.rows * matrix.rowHeight + (matrix.rows - 1) * GAP_PX[section.layout.gap],
+        // A component that asked for more height than its cell has (a table with 100 rows): every row track grows so its cell reaches it.
+        ...ordered.flatMap((component) => {
+          const wanted = growth[component.id];
+          const span = component.layout[breakpoint].h;
+          return wanted ? [matrix.rows * ((wanted - (span - 1) * GAP_PX[section.layout.gap]) / span) + (matrix.rows - 1) * GAP_PX[section.layout.gap]] : [];
+        }),
+      ) } : {}),
     } : undefined;
     return <Fragment key={section.id}>
       {lifted && !presenting ? <div className="shrink-0">{filterBar}</div> : null}
@@ -500,7 +517,7 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
   };
   const toolbarButton = 'inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs font-medium text-text-secondary transition-colors duration-(--duration-fast) hover:bg-surface-hover hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 pointer-coarse:h-(--touch-min)';
 
-  return <BindingSourceProvider source={bindingSource}><article ref={articleRef} className={cn('north-enter mx-auto w-full max-w-[1680px]', fitted ? 'flex h-full flex-col gap-2 p-2 lg:p-3' : 'space-y-5 p-4 lg:p-5', fullscreen && 'max-w-none overflow-auto bg-background')}>
+  return <BindingSourceProvider source={bindingSource}><CellGrowthProvider value={growthApi}><article ref={articleRef} className={cn('north-enter mx-auto w-full max-w-[1680px]', fitted ? 'flex min-h-full flex-col gap-2 p-2 lg:p-3' : 'space-y-5 p-4 lg:p-5', fullscreen && 'max-w-none overflow-auto bg-background')}>
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h1 className={cn('font-display font-semibold', fitted ? 'text-lg' : 'text-2xl')}>{title}</h1>
       <div className="flex items-center gap-2">
@@ -519,7 +536,7 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
       updatedAt={updatedAt}
       onExit={() => setPresenting(null)}
     /> : null}
-  </article></BindingSourceProvider>;
+  </article></CellGrowthProvider></BindingSourceProvider>;
 }
 
 /** Gives internal links (`panelSlug`) the shell's navigation: resolves the target in the catalog and opens it like the sidebar would. */

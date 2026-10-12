@@ -10,6 +10,7 @@ import { useI18n } from '@/lib/i18n';
 import { PERM } from '@/lib/permission';
 import { formatMinor, getBilling, listEntitlements, listSubscriptions, updateBillingEmail } from './api';
 import { useResource } from './hooks';
+import { StorageCard } from './StorageCard';
 import { KeyValue, Loading, Notice, Shell, Unavailable, errorText, invalidateOrganization, td, th, toneForStatus } from './ui';
 
 /**
@@ -72,8 +73,8 @@ export function BillingScreen({ organizationId }: { organizationId: string }) {
               </form>
             </DashboardCard>
 
-            <DashboardCard title={t('adm2.billing.limits')} description={t('adm2.billing.limitsHint')} className="xl:col-span-1">
-              <Unavailable title={t('adm2.billing.quotas')} body={t('adm2.billing.quotasBody')} needs={t('adm2.billing.quotasNeeds')} />
+            <DashboardCard title={t('adm.storage.title')} description={t('adm.storage.hint')} className="xl:col-span-1">
+              <StorageCard organizationId={organizationId} />
             </DashboardCard>
           </div>
 

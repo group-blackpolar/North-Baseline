@@ -1,10 +1,10 @@
 import { useCallback, useState, type ReactNode } from 'react';
-import { ArrowDown, ArrowSquareOut, ArrowUp, Archive, ArrowsLeftRight, Copy, Eye, FolderPlus, PencilSimple, Plus, SidebarSimple } from '@phosphor-icons/react';
+import { ArrowDown, ArrowSquareOut, ArrowUp, Archive, ArrowsLeftRight, Copy, Eye, FolderPlus, PencilSimple, Plus, SidebarSimple, Trash } from '@phosphor-icons/react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useI18n } from '@/lib/i18n';
-import { archiveResource, cloneTaxonomyResource, reorderResources, updatePanel, updateSubcategory } from '@/lib/northAdmin';
+import { archiveResource, cloneTaxonomyResource, deleteResource, reorderResources, updatePanel, updateSubcategory } from '@/lib/northAdmin';
 import { errorText } from '@/features/access-admin/ui';
 import { selectClass } from '@/features/access-admin/ui';
 import { localName, type ViewResource } from './resources';
@@ -64,6 +64,15 @@ export function useViewActions(input: ViewActionsInput) {
 
   const requestArchive = (resource: ViewResource) => { setDialogError(null); setArchiving(resource); };
 
+  const [deleting, setDeleting] = useState<ViewResource | null>(null);
+  const requestDelete = (resource: ViewResource) => { setDialogError(null); setDeleting(resource); };
+  const confirmDelete = async () => {
+    if (!deleting) return;
+    setBusy(true); setDialogError(null);
+    try { await deleteResource(organizationId, API_TYPE[deleting.kind], deleting.id); setDeleting(null); await refresh(); }
+    catch (reason) { setDialogError(errorText(reason)); } finally { setBusy(false); }
+  };
+
   const confirmArchive = async () => {
     if (!archiving) return;
     setBusy(true); setDialogError(null);
@@ -109,12 +118,18 @@ export function useViewActions(input: ViewActionsInput) {
     items.push(item('down', t('adm2.views.act.moveDown'), <ArrowDown />, () => reorder(resource, 1), { disabled: locked || index < 0 || index >= list.length - 1 }));
     items.push({ type: 'separator' });
     items.push(item('archive', t('adm2.views.act.archive'), <Archive />, () => requestArchive(resource), { danger: true, disabled: locked || archived }));
+    items.push(item('delete', t('adm2.views.act.delete'), <Trash />, () => requestDelete(resource), { danger: true, disabled: locked }));
     return items;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siblings, t, onInspect, onOpen, onEdit, setModal, locale]);
 
   const dialogs = (
     <>
+      <ConfirmDialog
+        open={Boolean(deleting)} destructive busy={busy} error={dialogError}
+        title={t('adm2.views.delete.title')} description={deleting ? t('adm2.views.delete.body', { name: localName(deleting.name, locale) }) : undefined}
+        confirmLabel={t('adm2.views.act.delete')} onCancel={() => setDeleting(null)} onConfirm={() => void confirmDelete()}
+      />
       <ConfirmDialog
         open={Boolean(archiving)} destructive busy={busy} error={dialogError}
         title={t('adm2.views.archive.title')} description={archiving ? t('adm2.views.archive.body', { name: localName(archiving.name, locale) }) : undefined}

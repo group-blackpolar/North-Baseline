@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Sparkline } from '@/components/charts/Sparkline';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-import { useCellFill, useElementSize } from '../cellFill';
+import { useCellFill, useCellGrowth, useElementSize } from '../cellFill';
 import type { DatasetQueryFilter } from '../datasetQuery';
 import type { AnalyticsRow } from '../types';
 import { analyticsRows, bindingIdOf, useBindingResult, useBindingSource } from './bindingSource';
@@ -66,6 +66,8 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
   const [view, setView] = useGridView(`north-grid-v1:${panelKey}:${componentId}`, columns);
   const [sort, setSort] = useState<Sort | undefined>(defaultSort);
   const [sizeState, setSizeState] = useState(defaultSize);
+  // In a dashboard cell the page size is `auto` (exactly the rows that fit) or a fixed 20/50/100 that makes the page grow and scroll.
+  const [choice, setChoice] = useState<'auto' | number>('auto');
   const [page, setPage] = useState(1);
   const [searchDraft, setSearchDraft] = useState('');
   const [search, setSearch] = useState('');
@@ -84,7 +86,10 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
   // Row and header heights are MEASURED from the rendered table (fonts, zoom and borders change them); 30/34 px until the first rows exist.
   const [metrics, setMetrics] = useState({ row: 30, head: 34, bar: 0 });
   const fitRows = dense && box.height > 0 ? Math.max(3, Math.floor((box.height - metrics.head - metrics.bar - 2) / metrics.row)) : 0;
-  const pageSize = fitRows || sizeState;
+  const auto = dense && choice === 'auto';
+  const pageSize = dense ? (auto ? fitRows || sizeState : (choice as number)) : sizeState;
+  // A fixed page larger than the cell asks the page for the height it needs (toolbar + header + rows + pager); the main area scrolls.
+  useCellGrowth(componentId, dense && !auto ? Math.ceil(46 + metrics.head + metrics.bar + (choice as number) * metrics.row + 44 + 14) : null);
   const request = useMemo(() => ({ ...(sort ? { sort } : {}), offset: (page - 1) * pageSize, limit: pageSize, ...(search ? { search } : {}) }), [page, pageSize, search, sort]);
   const data = useBindingResult(dataId, request);
   const rows = useMemo(() => (data.response ? analyticsRows(data.response) : []), [data.response]);
@@ -280,11 +285,12 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
 
       <div className={cn('flex flex-wrap items-center justify-between gap-2 text-xs text-text-secondary', dense ? 'mt-1' : 'mt-2')}>
         <div className="flex items-center gap-2">
-          {dense ? null : <label className="flex items-center gap-1.5">
+          {<label className="flex items-center gap-1.5">
             <span>{t('grid.rowsPerPage')}</span>
             <span className="relative inline-flex">
-              <select value={pageSize} onChange={(event) => setSizeState(Number(event.target.value))} className="h-7 appearance-none rounded-md border border-border bg-surface pl-2 pr-6 text-xs text-text outline-none focus-visible:ring-2 focus-visible:ring-accent/25">
-                {sizes.map((size) => <option key={size} value={size}>{size}</option>)}
+              <select value={dense ? choice : pageSize} onChange={(event) => (dense ? setChoice(event.target.value === 'auto' ? 'auto' : Number(event.target.value)) : setSizeState(Number(event.target.value)))} className="h-7 appearance-none rounded-md border border-border bg-surface pl-2 pr-6 text-xs text-text outline-none focus-visible:ring-2 focus-visible:ring-accent/25">
+                {dense ? <option value="auto">{t('grid.rowsAuto')}</option> : null}
+                {(dense ? [20, 50, 100] : sizes).map((size) => <option key={size} value={size}>{size}</option>)}
               </select>
               <CaretDown className="pointer-events-none absolute right-1.5 top-1/2 size-3 -translate-y-1/2 text-text-muted" aria-hidden="true" />
             </span>

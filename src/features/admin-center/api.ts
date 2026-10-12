@@ -14,6 +14,11 @@ export type BillingAccount = {
   id: string; organizationId: string; status: 'ACTIVE' | 'PAST_DUE' | 'SUSPENDED' | 'CLOSED'; currency: 'USD'; basePriceMinor: number; memberPriceMinor: number;
   billingEmail?: string | null; createdAt: string; updatedAt: string; billableMemberCount: number; groupsCostMinor: number; estimatedMonthlyMinor: number;
 };
+export type StorageUsage = {
+  limitBytes: string; usedBytes: string; assetBytes: string; reservedBytes: string; importBytes: string; assetCount: number; importCount: number;
+  byCategory: Array<{ category: 'image' | 'video' | 'document' | 'other'; bytes: string; count: number }>;
+};
+export const getStorage = (organizationId: string) => cachedGet<StorageUsage>(`${org(organizationId)}/storage`, { ttlMs: 10_000 });
 export const getBilling = (organizationId: string) => cachedGet<BillingAccount>(`${org(organizationId)}/billing`, { ttlMs: 15_000 });
 export const updateBillingEmail = (organizationId: string, billingEmail: string | null) =>
   apiRequest<BillingAccount>(`${org(organizationId)}/billing`, { method: 'PATCH', body: JSON.stringify({ billingEmail }) });

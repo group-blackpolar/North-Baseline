@@ -19,6 +19,7 @@ import {
   type Group, type Invitation, type IssuedInvitation, type Member, type RegisteredPermission, type TenantRole,
 } from './api';
 import { AddUserDialog } from './AddUserDialog';
+import { CreateUserDialog } from './CreateUserDialog';
 import { AuditScreen } from './AuditScreen';
 import { SettingsScreen } from './SettingsScreen';
 import { LoadError, Loading, Notice, Shell, errorText, memberLabel, selectClass, td, th, useBusy, useList } from './ui';
@@ -72,6 +73,7 @@ function UsersScreen({ organizationId, currentUserId }: { organizationId: string
   const { busy, error, ok, act } = useBusy();
   const [confirmRemove, setConfirmRemove] = useState<Member | null>(null);
   const [adding, setAdding] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'' | TenantRole>('');
   const [statusFilter, setStatusFilter] = useState<'' | 'ACTIVE' | 'SUSPENDED'>('');
@@ -101,7 +103,7 @@ function UsersScreen({ organizationId, currentUserId }: { organizationId: string
   return (
     <Shell title={t('access.users.title')} hint={t('access.users.hint')}>
       <DashboardCard title={t('access.users.members')} description={manage ? undefined : t('access.readOnly')}
-        actions={<div className="flex gap-1"><Button size="sm" variant="ghost" onClick={() => { void members.reload(); void groups.reload(); }}><ArrowsClockwise className="size-3.5" />{t('access.refresh')}</Button>{manage && <Button size="sm" variant="accent" onClick={() => setAdding(true)}><Plus className="size-3.5" />{t('adm.users.add')}</Button>}</div>}>
+        actions={<div className="flex gap-1"><Button size="sm" variant="ghost" onClick={() => { void members.reload(); void groups.reload(); }}><ArrowsClockwise className="size-3.5" />{t('access.refresh')}</Button>{manage && <Button size="sm" variant="secondary" onClick={() => setCreating(true)}><Plus className="size-3.5" />{t('adm.create.open')}</Button>}{manage && <Button size="sm" variant="accent" onClick={() => setAdding(true)}><Plus className="size-3.5" />{t('adm.users.add')}</Button>}</div>}>
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-48 flex-1 sm:max-w-xs"><MagnifyingGlass className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-text-muted" /><Input className="pl-7" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('adm.users.search')} aria-label={t('adm.users.search')} /></div>
           <select aria-label={t('access.col.role')} className={selectClass} value={roleFilter} onChange={(event) => setRoleFilter(event.target.value as typeof roleFilter)}><option value="">{t('adm.users.allRoles')}</option>{TENANT_ROLES.map((role) => <option key={role}>{role}</option>)}</select>
@@ -146,6 +148,7 @@ function UsersScreen({ organizationId, currentUserId }: { organizationId: string
         <p className="text-[11px] text-text-muted">{t('access.users.rolesNote')}</p>
       </DashboardCard>
       <MemberSheet organizationId={organizationId} member={selected} groups={groups.data ?? []} currentUserId={currentUserId} onClose={() => setSelected(null)} />
+      <CreateUserDialog open={creating} organizationId={organizationId} groups={groups.data ?? []} canAssignGroups={can(PERM.permissionsManage)} onClose={() => setCreating(false)} onDone={() => { void members.reload(); void groups.reload(); }} />
       <AddUserDialog open={adding} organizationId={organizationId} groups={groups.data ?? []} canAssignGroups={can(PERM.permissionsManage)} onClose={() => setAdding(false)} onDone={() => { void members.reload(); void groups.reload(); }} />
       <ConfirmDialog open={Boolean(confirmRemove)} destructive busy={busy === confirmRemove?.userId} title={t('adm.users.removeTitle')} description={confirmRemove ? `${memberLabel(confirmRemove)} — ${t('adm.users.removeBody')}` : undefined} confirmLabel={t('access.users.remove')}
         onCancel={() => setConfirmRemove(null)}
