@@ -1,4 +1,4 @@
-import { createContext, lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ArrowsClockwise, ArrowsIn, ArrowsOut, ArrowsOutSimple, Barricade, CaretLeft, Presentation } from '@phosphor-icons/react';
 import type { SessionUser } from '@/lib/auth';
 import type { Tab } from '@/context/TabsContext';
@@ -31,7 +31,7 @@ import { chipsOf, filterModeOf, filtersForDefinitions, loadSelections, saveSelec
 import { PresentationMode } from '@/features/presentation/PresentationMode';
 import { cn } from '@/lib/utils';
 import { CellFillProvider } from '@/features/analytics/cellFill';
-import { OrganizationAvatar } from '@/components/organization/OrganizationAvatar';
+import { DefinitionListBlock, HeroBlock, LinkCardsBlock, OrgBrand, PanelNavigationContext, usePanelNavigation } from '@/features/analytics/pro/InfoBlocks';
 import { navigateToPublishedTarget } from '@/lib/publishedNavigation';
 import { useTabs } from '@/context/TabsContext';
 
@@ -52,27 +52,11 @@ const safeHref = (value: unknown) => {
   try { return ['http:', 'https:', 'mailto:'].includes(new URL(value).protocol) ? value : null; } catch { return null; }
 };
 
-/** Opens another published panel of the same organization. Absent in the public showcase, where internal links render as text. */
-const PanelNavigationContext = createContext<((panelSlug: string) => void) | null>(null);
-
 function PanelLink({ slug, children, className }: { slug: string; children: ReactNode; className?: string }) {
-  const open = useContext(PanelNavigationContext);
+  const open = usePanelNavigation();
   return open
     ? <button type="button" onClick={() => open(slug)} className={cn('text-left text-accent underline-offset-2 hover:underline focus-visible:outline-none focus-visible:underline', className)}>{children}</button>
     : <span className={className}>{children}</span>;
-}
-
-function OrgBrand({ props }: { props: Record<string, unknown> }) {
-  const { activeOrganization } = useOrganization();
-  if (!activeOrganization) return null;
-  const identity = activeOrganization as { name: string; id: string; iconData?: string | null; iconAssetId?: string | null };
-  const align = props.align === 'center' ? 'justify-center' : props.align === 'right' ? 'justify-end' : 'justify-start';
-  return (
-    <div className={cn('flex h-full min-h-0 items-center gap-3', align)}>
-      <OrganizationAvatar name={identity.name} organizationId={identity.id} iconAssetId={identity.iconAssetId} iconData={identity.iconData} className="size-full max-h-16 w-auto max-w-40 aspect-square rounded-lg bg-transparent" />
-      {props.showName === false ? null : <span className="truncate font-display text-lg font-semibold tracking-wide text-text">{identity.name}</span>}
-    </div>
-  );
 }
 
 function RichNode({ node }: { node: unknown }) {
@@ -125,8 +109,10 @@ function PublishedGridItem({ component, breakpoint, matrix, title, children }: {
   if (!matrix) return <div className={cn('min-w-0 rounded-xl border border-border bg-surface shadow-xs', tight ? 'p-3' : 'p-4')} style={gridStyle(component.layout[breakpoint])}>{children}</div>;
   // Fixed-matrix cell: the component fills the cell and scrolls or clips inside it; it never stretches the page.
   const bare = component.type === 'heading' || component.type === 'org_brand' || component.type === 'divider';
+  // These blocks draw their own cards: the cell adds no frame or padding.
+  const frameless = component.type === 'hero' || component.type === 'link_cards' || component.type === 'definition_list';
   return (
-    <div className={cn('group/cell relative flex min-h-0 min-w-0 flex-col rounded-lg', bare ? 'justify-center' : 'border border-border bg-surface p-2 shadow-xs', SELF_SCROLLING.has(component.type) ? 'overflow-hidden' : 'overflow-auto')} style={gridStyle(component.layout[breakpoint])}>
+    <div className={cn('group/cell relative flex min-h-0 min-w-0 flex-col rounded-lg', bare ? 'justify-center' : frameless ? 'overflow-hidden' : 'border border-border bg-surface p-2 shadow-xs', SELF_SCROLLING.has(component.type) || frameless ? 'overflow-hidden' : 'overflow-auto')} style={gridStyle(component.layout[breakpoint])}>
       <CellFillProvider value><div className="flex min-h-0 flex-1 flex-col [&>*]:min-h-0">{children}</div></CellFillProvider>
       {EXPANDABLE.has(component.type) && !bare ? (
         <>
@@ -298,6 +284,9 @@ export function SafeComponent({ type, props, locales }: { type: string; props: R
     return <RichNode node={document} />;
   }
   if (type === 'org_brand') return <OrgBrand props={props} />;
+  if (type === 'hero') return <HeroBlock props={props} locales={locales} />;
+  if (type === 'link_cards') return <LinkCardsBlock props={props} locales={locales} />;
+  if (type === 'definition_list') return <DefinitionListBlock props={props} locales={locales} />;
   if (type === 'link') {
     if (typeof props.panelSlug === 'string') return <PanelLink slug={props.panelSlug}>{localized(props.label, locales)}</PanelLink>;
     const href = safeHref(props.href); return href ? <a className="text-accent underline" href={href} target="_blank" rel="noreferrer">{localized(props.label, locales)}</a> : <span>{localized(props.label, locales)}</span>;

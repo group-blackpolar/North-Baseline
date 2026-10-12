@@ -51,8 +51,8 @@ export function PeriodSelect({ label, from, to, onChange, loadPeriods, compact =
       <button ref={anchorRef} type="button" aria-haspopup="dialog" aria-expanded={open} aria-label={`${label}: ${summary}`} onClick={() => setOpen((current) => !current)}
         className={cn(compact ? 'h-8' : 'h-9', 'flex w-full items-center gap-2 rounded-lg border bg-surface px-3 text-left text-xs text-text transition-[border-color,box-shadow] hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 pointer-coarse:h-(--touch-min)', from || to ? 'border-accent shadow-[0_0_0_1px_var(--color-accent)]' : 'border-border', open && 'border-accent')}>
         <CalendarBlank className="size-3.5 shrink-0 text-text-muted" aria-hidden="true" />
-        {compact ? <span className="max-w-[45%] shrink-0 truncate text-[0.68rem] font-semibold text-text-secondary">{label}</span> : null}
-        <span className={cn('min-w-0 flex-1 truncate', !from && !to && 'text-text-secondary', compact && 'text-right')} title={summary}>{summary}</span>
+        {compact ? <span className={cn('truncate text-[0.7rem] font-semibold text-text-secondary', from || to ? 'max-w-[45%] shrink-0' : 'min-w-0 flex-1')} title={label}>{label}</span> : null}
+        {compact && !from && !to ? null : <span className={cn('min-w-0 flex-1 truncate', !from && !to && 'text-text-secondary', compact && 'text-right')} title={summary}>{summary}</span>}
         <CaretDown className={cn('size-3.5 shrink-0 text-text-muted transition-transform', open && 'rotate-180')} aria-hidden="true" />
       </button>
       <Popover open={open} onOpenChange={setOpen} anchorRef={anchorRef} label={label} minWidth={340}>

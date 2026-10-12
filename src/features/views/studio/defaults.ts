@@ -33,5 +33,8 @@ export function defaultProps(type: ComponentType): Record<string, unknown> {
     case 'insights': return { title: localized('Insights'), items: [{ id: makeId(), rule: 'leader_share', binding: 'data', labelKey: 'label', valueKey: 'value', title: localized('Líder del ranking') }] };
     case 'filter_bar': return { title: localized('Filtros') };
     case 'org_brand': return { showName: true };
+    case 'hero': return { title: localized('Título'), showBrand: true };
+    case 'link_cards': return { items: [{ id: makeId(), title: localized('Enlace'), href: 'https://example.com' }] };
+    case 'definition_list': return { items: [{ id: makeId(), term: localized('Término'), text: localized('Descripción') }] };
   }
 }

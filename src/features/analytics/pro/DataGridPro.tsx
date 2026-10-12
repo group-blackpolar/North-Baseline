@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Sparkline } from '@/components/charts/Sparkline';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-import { useCellFill } from '../cellFill';
+import { useCellFill, useElementSize } from '../cellFill';
 import type { DatasetQueryFilter } from '../datasetQuery';
 import type { AnalyticsRow } from '../types';
 import { analyticsRows, bindingIdOf, useBindingResult, useBindingSource } from './bindingSource';
@@ -99,7 +99,16 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
   const trendData = useBindingResult(trendRequest ? trendId : null, trendRequest ?? {});
   const series = useMemo(() => (trend && trendData.response ? sparklineSeries(analyticsRows(trendData.response), trend.rowKeys, trend.categoryKey, trend.valueKey) : new Map<string, number[]>()), [trend, trendData.response]);
 
-  const shown = visibleColumns(columns, view);
+  // In a fixed cell the table must FIT it: sparklines go first when the cell is narrow, the remaining columns share the width
+  // proportionally (text truncates, nothing is cut off at the edge); outside a cell the declared widths apply and the table scrolls.
+  const [scroller, box] = useElementSize<HTMLDivElement>();
+  const available = box.width - (selectable ? 32 : 0);
+  const base = visibleColumns(columns, view);
+  const shown = dense && box.width > 0 && box.width < 620 && base.length > 3 ? base.filter((column) => column.kind !== 'sparkline') : base;
+  const declared = (column: GridColumn) => view.widths[column.key] ?? column.width ?? 140;
+  const declaredTotal = shown.reduce((sum, column) => sum + declared(column), 0);
+  const fitScale = dense && available > 0 && declaredTotal > available ? available / declaredTotal : 1;
+  const widthOf = (column: GridColumn) => (dense && fitScale < 1 ? Math.max(48, Math.floor(declared(column) * fitScale)) : view.widths[column.key] ?? column.width);
   const maxima = useMemo(() => Object.fromEntries(columns.filter((column) => column.kind === 'bar' || column.heat).map((column) => [column.key, Math.max(0, ...rows.map((row) => asNumber(row[column.key]) ?? 0))])), [columns, rows]);
   // Several rows may share one trend series (a consignee over many months): the row id is positional, the series key is not.
   const rowId = (_row: AnalyticsRow, index: number) => `${page}:${index}`;
@@ -200,7 +209,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
       </div>
       {exportNote ? <p role="status" className="mb-2 text-xs text-text-muted">{exportNote}</p> : null}
 
-      <div className={cn('relative min-h-0 flex-1 overflow-auto rounded-lg border border-border', data.refreshing && 'opacity-70 transition-opacity')} aria-busy={data.status === 'loading' || data.refreshing}>
+      <div ref={scroller} className={cn('relative min-h-0 flex-1 overflow-auto rounded-lg border border-border', data.refreshing && 'opacity-70 transition-opacity')} aria-busy={data.status === 'loading' || data.refreshing}>
         {data.status === 'error' ? (
           <div role="alert" className="flex min-h-40 flex-col items-center justify-center gap-2 text-xs text-error"><WarningCircle className="size-5" aria-hidden="true" />{data.error?.message || t('analytics.error')}<button type="button" className="rounded-md border border-border px-2.5 py-1 font-medium text-text hover:bg-surface-hover" onClick={data.reload}>{t('flt.retry')}</button></div>
         ) : data.status !== 'ready' && !data.response ? (
@@ -208,7 +217,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
         ) : rows.length === 0 ? (
           <p role="status" className="flex min-h-40 items-center justify-center px-4 text-center text-xs text-text-muted">{t('grid.empty')}</p>
         ) : (
-          <table className="w-full border-separate border-spacing-0 text-left text-xs">
+          <table className={cn('w-full border-separate border-spacing-0 text-left text-xs', dense && fitScale < 1 && 'table-fixed')}>
             <thead className="sticky top-0 z-10">
               <tr className="bg-[color-mix(in_srgb,var(--color-surface-hover)_70%,var(--color-surface))]">
                 {selectable ? <th scope="col" className="w-8 border-b border-border px-2"><span className="sr-only">{t('grid.select')}</span></th> : null}
@@ -216,7 +225,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
                   const active = sort?.key === column.key;
                   const Icon = !active ? CaretUpDown : sort.direction === 'ASC' ? ArrowUp : ArrowDown;
                   const sortableColumn = column.sortable !== false && column.kind !== 'sparkline' && column.kind !== 'actions';
-                  const width = view.widths[column.key] ?? column.width;
+                  const width = widthOf(column);
                   return (
                     <th key={column.key} scope="col" style={width ? { width } : undefined} aria-sort={active ? (sort.direction === 'ASC' ? 'ascending' : 'descending') : 'none'} className="group/th relative border-b border-border p-0 text-[0.68rem] font-semibold uppercase tracking-wide text-text-muted">
                       <button type="button" disabled={!sortableColumn} onClick={() => toggleSort(column)} className={cn('flex w-full items-center gap-1 transition-colors', dense ? 'h-8 px-2' : 'h-9 px-3', align(column) === 'right' && 'justify-end', align(column) === 'center' && 'justify-center', sortableColumn && 'hover:bg-surface-hover hover:text-text')}>
