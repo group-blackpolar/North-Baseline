@@ -1,10 +1,13 @@
-import { formatNumber } from './palette';
+import { useI18n } from '@/lib/i18n';
+import { intlTag } from '@/lib/intlTag';
 
 interface Entry { name?: string | number; value?: unknown; color?: string; dataKey?: string | number }
 
 /** The only chart tooltip: elevated, compact, aligned rows. Pass as `<Tooltip content={<NorthChartTooltip />} />`. */
-export function NorthChartTooltip({ active, payload, label, format = formatNumber, labelFormat }: { active?: boolean; payload?: Entry[]; label?: string | number; format?: (value: number) => string; labelFormat?: (label: string | number) => string }) {
+export function NorthChartTooltip({ active, payload, label, format, labelFormat }: { active?: boolean; payload?: Entry[]; label?: string | number; format?: (value: number) => string; labelFormat?: (label: string | number) => string }) {
+  const { locale } = useI18n();
   if (!active || !payload?.length) return null;
+  const formatNumber = format ?? ((value: number) => value.toLocaleString(intlTag(locale)));
   return (
     <div className="min-w-32 rounded-lg border border-border bg-surface px-2.5 py-2 text-xs shadow-pop">
       {label !== undefined && label !== '' && <p className="mb-1 font-medium text-text">{labelFormat ? labelFormat(label) : label}</p>}
@@ -13,7 +16,7 @@ export function NorthChartTooltip({ active, payload, label, format = formatNumbe
           <li key={`${entry.dataKey ?? entry.name}-${index}`} className="flex items-center gap-2 text-text-secondary">
             <span aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ background: entry.color }} />
             <span className="flex-1 truncate">{entry.name}</span>
-            <span className="mono-data tabular-nums text-text">{typeof entry.value === 'number' ? format(entry.value) : String(entry.value ?? '')}</span>
+            <span className="mono-data tabular-nums text-text">{typeof entry.value === 'number' ? formatNumber(entry.value) : String(entry.value ?? '')}</span>
           </li>
         ))}
       </ul>

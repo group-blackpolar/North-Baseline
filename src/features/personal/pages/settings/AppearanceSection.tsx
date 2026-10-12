@@ -44,7 +44,7 @@ export function AppearanceSection() {
   const { theme, setTheme } = useTheme();
 
   return (
-    <DashboardCard title="Appearance" description={t('settings.appearanceDesc')}>
+    <DashboardCard title={t('settings.appearance')} description={t('settings.appearanceDesc')}>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {THEMES.map((option) => {
           const selected = theme === option.id;

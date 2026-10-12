@@ -3,6 +3,21 @@
  * Spanish is the source of the key set; English must define every key (enforced by the type below).
  */
 export const pack16Es = {
+  'map.zoomIn': 'Acercar mapa',
+  'map.zoomOut': 'Alejar mapa',
+  'panel.noContent': 'Este panel publicado no tiene contenido disponible.',
+  'panel.underConstruction': 'Vista en construcción',
+  'panel.underConstructionBody': 'La categoría "{name}" está siendo preparada.',
+  'panel.selectCategory': 'Selecciona una categoría para comenzar',
+  'nav.breadcrumb': 'Ruta de navegación',
+  'views.dialog.namePlaceholder.category': 'p. ej. Operaciones',
+  'views.dialog.slugPlaceholder.category': 'p. ej. operaciones',
+  'views.dialog.namePlaceholder.subcategory': 'p. ej. Logística',
+  'views.dialog.slugPlaceholder.subcategory': 'p. ej. logistica',
+  'views.dialog.namePlaceholder.panel': 'p. ej. Manifiestos',
+  'views.dialog.slugPlaceholder.panel': 'p. ej. manifiestos',
+  'map.selected': 'Seleccionado',
+  'flt.crossHint': 'Clic para filtrar',
   'panel.refresh': 'Actualizar',
   'imp.open': 'Importar datos',
   'imp.openFile': 'Importar archivo',
@@ -164,6 +179,21 @@ export const pack16Es = {
 export type Pack16Dictionary = typeof pack16Es;
 
 export const pack16En: Pack16Dictionary = {
+  'map.zoomIn': 'Zoom in',
+  'map.zoomOut': 'Zoom out',
+  'panel.noContent': 'This published panel has no content available.',
+  'panel.underConstruction': 'View under construction',
+  'panel.underConstructionBody': 'The category "{name}" is being prepared.',
+  'panel.selectCategory': 'Select a category to get started',
+  'nav.breadcrumb': 'Breadcrumb',
+  'views.dialog.namePlaceholder.category': 'e.g. Operations',
+  'views.dialog.slugPlaceholder.category': 'e.g. operations',
+  'views.dialog.namePlaceholder.subcategory': 'e.g. Logistics',
+  'views.dialog.slugPlaceholder.subcategory': 'e.g. logistics',
+  'views.dialog.namePlaceholder.panel': 'e.g. Manifests',
+  'views.dialog.slugPlaceholder.panel': 'e.g. manifests',
+  'map.selected': 'Selected',
+  'flt.crossHint': 'Click to filter',
   'panel.refresh': 'Refresh',
   'imp.open': 'Import data',
   'imp.openFile': 'Import file',

@@ -72,8 +72,8 @@ export function ComparisonCard({ label, current, previous, currentLabel, previou
 }
 
 /** Progress toward a target. `value`/`target` are numbers; the bar is clamped to 0–100 % but the label keeps the true ratio. */
-export function ProgressIndicator({ label, value, target, formatValue = String, className }: {
-  label: string; value: number | null | undefined; target: number | null | undefined; formatValue?: (value: number) => string; className?: string;
+export function ProgressIndicator({ label, value, target, formatValue = String, locale, className }: {
+  label: string; value: number | null | undefined; target: number | null | undefined; formatValue?: (value: number) => string; locale?: string; className?: string;
 }) {
   const ratio = value != null && target ? value / target : null;
   const pct = ratio === null || !Number.isFinite(ratio) ? null : Math.max(0, Math.min(100, ratio * 100));
@@ -86,7 +86,7 @@ export function ProgressIndicator({ label, value, target, formatValue = String, 
       <div role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct === null ? undefined : Math.round(pct)} className="h-2 overflow-hidden rounded-full bg-surface-active">
         <div className="h-full rounded-full bg-accent transition-[width] duration-(--duration-slow) motion-reduce:transition-none" style={{ width: `${pct ?? 0}%` }} />
       </div>
-      <p className="text-right text-[11px] tabular-nums text-text-muted">{ratio === null || !Number.isFinite(ratio) ? dash : `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(ratio * 100)}%`}</p>
+      <p className="text-right text-[11px] tabular-nums text-text-muted">{ratio === null || !Number.isFinite(ratio) ? dash : `${new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(ratio * 100)}%`}</p>
     </div>
   );
 }

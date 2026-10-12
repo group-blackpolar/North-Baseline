@@ -131,11 +131,11 @@ export function ViewsDialogs() {
             <div className="space-y-3">
               <label className="block text-xs font-medium text-text-secondary">
                 {t('views.nameLabel')}
-                <Input required autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Operaciones" className="mt-1" />
+                <Input required autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={t('views.dialog.namePlaceholder.category')} className="mt-1" />
               </label>
               <label className="block text-xs font-medium text-text-secondary">
                 {t('views.slugLabel')}
-                <Input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))} placeholder="e.g. operaciones" className="mt-1" />
+                <Input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))} placeholder={t('views.dialog.slugPlaceholder.category')} className="mt-1" />
                 <span className="mt-1 block text-[11px] text-text-muted">{t('views.slugHint')}</span>
               </label>
             </div>
@@ -152,11 +152,11 @@ export function ViewsDialogs() {
             <div className="space-y-3">
               <label className="block text-xs font-medium text-text-secondary">
                 {t('views.nameLabel')}
-                <Input required autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Logística" className="mt-1" />
+                <Input required autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={t('views.dialog.namePlaceholder.subcategory')} className="mt-1" />
               </label>
               <label className="block text-xs font-medium text-text-secondary">
                 {t('views.slugLabel')}
-                <Input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))} placeholder="e.g. logistica" className="mt-1" />
+                <Input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))} placeholder={t('views.dialog.slugPlaceholder.subcategory')} className="mt-1" />
                 <span className="mt-1 block text-[11px] text-text-muted">{t('views.slugHint')}</span>
               </label>
             </div>
@@ -173,11 +173,11 @@ export function ViewsDialogs() {
             <div className="space-y-3">
               <label className="block text-xs font-medium text-text-secondary">
                 {t('views.nameLabel')}
-                <Input required autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Manifiestos" className="mt-1" />
+                <Input required autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={t('views.dialog.namePlaceholder.panel')} className="mt-1" />
               </label>
               <label className="block text-xs font-medium text-text-secondary">
                 {t('views.slugLabel')}
-                <Input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))} placeholder="e.g. manifiestos" className="mt-1" />
+                <Input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))} placeholder={t('views.dialog.slugPlaceholder.panel')} className="mt-1" />
                 <span className="mt-1 block text-[11px] text-text-muted">{t('views.slugHint')}</span>
               </label>
               <div>
