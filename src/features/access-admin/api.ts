@@ -50,6 +50,9 @@ export const listAudit = (o: string, before?: string) => apiRequest<AuditEvent[]
 export const revokeInvitation = (o: string, id: string) => apiRequest<void>(`${org(o)}/invitations/${encodeURIComponent(id)}`, { method: 'DELETE' });
 export const replaceInvitation = (o: string, id: string) => apiRequest<IssuedInvitation>(`${org(o)}/invitations/${encodeURIComponent(id)}/replace`, { method: 'POST' });
 
+export type OrganizationPolicy = { defaultMemberRole: 'VIEWER' | 'MEMBER' | 'BILLING_ADMIN'; defaultGroupIds: string[]; importRetentionDays: number | null };
+export const getOrganizationPolicy = (o: string) => apiRequest<OrganizationPolicy>(`${org(o)}/policy`);
+export const saveOrganizationPolicy = (o: string, input: OrganizationPolicy) => apiRequest<OrganizationPolicy>(`${org(o)}/policy`, { method: 'PUT', body: json(input) });
 export type RoleDataAccessResult = { role: TenantRole; capabilityGranted: boolean; datasetIds: string[]; rulesCreated: number };
 /** One audited, idempotent step: north.data.query for the role plus an ALLOW rule on each dataset. */
 export const grantRoleDataAccess = (o: string, input: { role: TenantRole; datasetIds: string[] }) =>
