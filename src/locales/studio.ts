@@ -4,6 +4,8 @@
  */
 export const studioEs = {
   // toolbar
+  'st.data.manage': 'Conexiones de esta vista', 'st.data.remove': 'Eliminar conexión', 'st.data.removeTitle': '¿Eliminar la conexión «{name}»?',
+  'st.data.removeBody': 'Se elimina la conexión de datos. Si el borrador o la versión publicada todavía la usan, no se podrá eliminar.', 'st.data.removed': 'Conexión eliminada.', 'st.data.removeFailed': 'No se pudo eliminar la conexión.',
   'st.window.notFound': 'No se encontró esta vista', 'st.window.notFoundBody': 'No existe o no tienes permiso para editarla. Vuelve a NORTH y ábrela desde Administración → Vistas.',
   'st.toolbar.fullscreen': 'Pantalla completa', 'st.toolbar.exitFullscreen': 'Salir de pantalla completa',
   'st.toolbar.exit': 'Salir del editor', 'st.toolbar.modes': 'Modo del editor', 'st.toolbar.device': 'Dispositivo de vista previa',
@@ -112,6 +114,8 @@ export const studioEs = {
 export type StudioDictionary = Record<keyof typeof studioEs, string>;
 
 export const studioEn: StudioDictionary = {
+  'st.data.manage': 'Connections of this view', 'st.data.remove': 'Delete connection', 'st.data.removeTitle': 'Delete the connection “{name}”?',
+  'st.data.removeBody': 'The data connection is deleted. If the draft or the published version still uses it, it cannot be deleted.', 'st.data.removed': 'Connection deleted.', 'st.data.removeFailed': 'The connection could not be deleted.',
   'st.window.notFound': 'This view was not found', 'st.window.notFoundBody': 'It does not exist or you are not allowed to edit it. Go back to NORTH and open it from Administration → Views.',
   'st.toolbar.fullscreen': 'Full screen', 'st.toolbar.exitFullscreen': 'Exit full screen',
   'st.toolbar.exit': 'Exit editor', 'st.toolbar.modes': 'Editor mode', 'st.toolbar.device': 'Preview device',

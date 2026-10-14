@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { listDatasets } from '@/features/admin-center/api';
 import { PERMISSION_GROUPS, permissionHintKey, permissionLabelKey } from './permissionCatalog';
 import { ArrowsClockwise, Copy, EnvelopeSimple, Key, MagnifyingGlass, Plus, ShieldCheck, Trash, Users } from '@phosphor-icons/react';
@@ -17,8 +17,8 @@ import { cn } from '@/lib/utils';
 import {
   INVITABLE_ROLES, TENANT_ROLES, addGroupMember, changeMemberRole, createGroup, createInvitation, createInvitationKey, deleteGroup,
   grantGroupPermission, grantMemberPermission, listGroups, listInvitations, listMemberGrants, listMembers, removeGroupMember, removeMember,
-  archiveInvitation, deleteInvitation, getOrganizationPolicy, grantRoleDataAccess, saveOrganizationPolicy, replaceInvitation, restoreInvitation, revokeGroupPermission, revokeInvitation, revokeMemberPermission,
-  type Group, type Invitation, type IssuedInvitation, type Member, type RegisteredPermission, type TenantRole,
+  archiveInvitation, deleteInvitation, getAccessSimulation, getOrganizationPolicy, grantRoleDataAccess, saveOrganizationPolicy, replaceInvitation, restoreInvitation, revokeGroupPermission, revokeInvitation, revokeMemberPermission,
+  type AccessSimulation, type Group, type Invitation, type IssuedInvitation, type Member, type RegisteredPermission, type TenantRole,
 } from './api';
 import { AddUserDialog } from './AddUserDialog';
 import { CreateUserDialog } from './CreateUserDialog';
@@ -406,6 +406,50 @@ function PermissionChecklist({ granted, disabled, onToggle }: { granted: Registe
   );
 }
 
+/** "View as this user": the server simulates the member's access; nothing here signs in as them or reads their data. */
+function AccessSimulationCard({ organizationId, userId }: { organizationId: string; userId: string }) {
+  const { t, locale } = useI18n();
+  const [result, setResult] = useState<AccessSimulation | null>(null);
+  const { busy, error, act } = useBusy();
+  useEffect(() => { setResult(null); }, [userId]);
+  const run = () => void act('sim', async () => { setResult(await getAccessSimulation(organizationId, userId)); });
+  const label = (names: Record<string, string>, fallback: string) => names[locale] ?? names.es ?? names.en ?? Object.values(names)[0] ?? fallback;
+  const origin = (entry: AccessSimulation['permissions'][number]['origins'][number]) => t(`sim.origin.${entry.type}` as never, { name: entry.name ?? '' });
+  return (
+    <DashboardCard title={t('sim.title')} description={t('sim.hint')}>
+      {!userId ? <p className="text-xs text-text-muted">{t('sim.pick')}</p> : (
+        <div className="space-y-3">
+          <Button size="sm" variant="secondary" loading={busy === 'sim'} onClick={run}>{t('sim.run')}</Button>
+          <Notice error={error} ok={null} />
+          {result ? (
+            <div className="space-y-4" aria-live="polite">
+              <p className="text-xs text-text-secondary"><span className="font-medium text-text">{result.user.name ?? result.user.email}</span> · {t('sim.role')}: {result.role} · {t('sim.groups')}: {result.groups.length ? result.groups.map((group) => group.name).join(', ') : t('sim.none')}</p>
+              {result.notes.platformPrivileges ? <p className="text-[11px] text-warning">{result.notes.platformPrivileges}</p> : null}
+              <section><h4 className="ui-label mb-1">{t('sim.permissions')}</h4>
+                <ul className="space-y-1">{result.permissions.map((entry) => (
+                  <li key={entry.permission} className="flex flex-wrap items-baseline justify-between gap-x-3 text-xs"><span className="text-text">{t(permissionLabelKey(entry.permission) as never)}</span><span className="text-text-muted">{entry.origins.map(origin).join(' · ')}</span></li>
+                ))}</ul>
+              </section>
+              <section><h4 className="ui-label mb-1">{t('sim.datasets')}</h4>
+                {result.data.datasets.length === 0 ? <p className="text-xs text-text-muted">{t('sim.noDatasets')}</p> : <ul className="space-y-1">{result.data.datasets.map((dataset) => (
+                  <li key={dataset.id} className="flex flex-wrap items-baseline justify-between gap-x-3 text-xs"><span className="text-text">{label(dataset.name, dataset.slug)}</span><span className={dataset.canQuery ? 'text-success' : 'text-text-muted'}>{dataset.canQuery ? t('sim.ok') : t('sim.no')} · {t(`sim.reason.${dataset.reason}` as never)}</span></li>
+                ))}</ul>}
+                {result.data.truncated ? <p className="text-[11px] text-text-muted">{t('sim.truncated')}</p> : null}
+              </section>
+              <section><h4 className="ui-label mb-1">{t('sim.views')}</h4>
+                {result.views.panels.length === 0 ? <p className="text-xs text-text-muted">{t('sim.noViews')}</p> : <ul className="space-y-1">{result.views.panels.map((panel) => (
+                  <li key={panel.id} className="flex flex-wrap items-baseline justify-between gap-x-3 text-xs"><span className="text-text">{label(panel.name, panel.slug)}</span><span className={panel.visible ? 'text-success' : 'text-text-muted'}>{panel.visible ? t('sim.ok') : t('sim.no')} · {t(`sim.reason.${panel.reason}` as never)}</span></li>
+                ))}</ul>}
+                {result.views.truncated ? <p className="text-[11px] text-text-muted">{t('sim.truncated')}</p> : null}
+              </section>
+            </div>
+          ) : null}
+        </div>
+      )}
+    </DashboardCard>
+  );
+}
+
 /** Defaults for new accounts (role, groups) and import-history retention; saved in one audited call. */
 function PolicyCard({ organizationId, manage }: { organizationId: string; manage: boolean }) {
   const { t } = useI18n();
@@ -512,6 +556,7 @@ function PermissionsScreen({ organizationId }: { organizationId: string }) {
           <p className="flex items-center gap-1.5 text-[11px] text-text-muted"><Key className="size-3" />{t('access.perm.note')}</p>
         </DashboardCard>
         <RoleDataAccessCard organizationId={organizationId} manage={manage} />
+        <AccessSimulationCard organizationId={organizationId} userId={userId} />
         <PolicyCard organizationId={organizationId} manage={manage} />
       </div>
     </Shell>

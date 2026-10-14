@@ -1,16 +1,18 @@
 import { useMemo, useState } from 'react';
-import { Database, Plus, WarningCircle } from '@phosphor-icons/react';
+import { Database, Plus, Trash, WarningCircle } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { listDatasetFields, listDatasets, type DatasetField, type DatasetSummary } from '@/features/admin-center/api';
 import { useResource } from '@/features/admin-center/hooks';
 import { measuresFor, type FieldType, type Measure } from '@/features/queries/queryBuilder';
-import { ApiError } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { bindingColumns, measureAlias, staleKeys, suggestProps, type FieldInfo } from './bindingModel';
 import type { Component } from './documentOps';
 import { SelectField, TextField, Group, Field, NumberField } from './fields';
 import { DATA_BINDING_KEY, definitionOf } from './registry';
-import { createPanelBinding, type AllowedFilter, type PanelBinding } from './studioApi';
+import { createPanelBinding, deletePanelBinding, type AllowedFilter, type PanelBinding } from './studioApi';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { IconButton } from '@/components/ui/icon-button';
+import { ApiError } from '@/lib/api';
 
 const localName = (value: Record<string, string> | undefined, locale: string) => (value ? value[locale] ?? value.es ?? value.en ?? Object.values(value)[0] ?? '' : '');
 
@@ -126,6 +128,7 @@ export function DataTab({ organizationId, panelId, component, bindings, onBindin
           ) : null}
         </Group>
       ) : null}
+      <ManageBindings organizationId={organizationId} panelId={panelId} bindings={bindings} onChanged={onBindingsChanged} />
       <NewBinding organizationId={organizationId} panelId={panelId} onCreated={async (binding, labels) => { await onBindingsChanged(); setIncompatible(null); attachWith(binding, labels); }} />
     </div>
   );
@@ -235,6 +238,35 @@ function NewBinding({ organizationId, panelId, onCreated }: { organizationId: st
           </div>
         </>
       ) : null}
+    </Group>
+  );
+}
+
+/** Lists the view's connections with a delete action; the server decides whether one is still in use. */
+function ManageBindings({ organizationId, panelId, bindings, onChanged }: { organizationId: string; panelId: string; bindings: ReadonlyArray<PanelBinding>; onChanged: () => Promise<void> }) {
+  const { t } = useI18n();
+  const [target, setTarget] = useState<PanelBinding | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (bindings.length === 0) return null;
+  const remove = async () => {
+    if (!target) return;
+    setBusy(true); setError(null);
+    try { await deletePanelBinding(organizationId, panelId, target.id); await onChanged(); setTarget(null); }
+    catch (reason) { setError(reason instanceof ApiError ? `${reason.message}${reason.requestId ? ` (${reason.requestId})` : ''}` : t('st.data.removeFailed')); }
+    finally { setBusy(false); }
+  };
+  return (
+    <Group title={t('st.data.manage')}>
+      <ul className="space-y-0.5">
+        {bindings.map((item) => (
+          <li key={item.id} className="flex items-center justify-between gap-2 text-xs text-text">
+            <span className="truncate">{item.name}</span>
+            <IconButton label={t('st.data.remove')} icon={<Trash />} onClick={() => { setError(null); setTarget(item); }} />
+          </li>
+        ))}
+      </ul>
+      <ConfirmDialog open={Boolean(target)} destructive busy={busy} error={error} title={t('st.data.removeTitle', { name: target?.name ?? '' })} description={t('st.data.removeBody')} confirmLabel={t('st.data.remove')} onCancel={() => setTarget(null)} onConfirm={() => void remove()} />
     </Group>
   );
 }
