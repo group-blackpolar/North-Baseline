@@ -40,7 +40,7 @@ import { useTabs } from '@/context/TabsContext';
 // Administration is the largest authenticated surface and most sessions never open it: load it on demand.
 const AdminCenter = lazy(() => import('@/features/admin-center/AdminCenter').then((module) => ({ default: module.AdminCenter })));
 
-const PERSONAL_CATEGORIES = new Set(['home', 'profile', 'billing', 'preferences', 'settings']);
+const PERSONAL_CATEGORIES = new Set(['home', 'profile', 'billing', 'preferences', 'settings', 'platform-administration']);
 const GAP = { none: 'gap-0', sm: 'gap-2', md: 'gap-4', lg: 'gap-6' } as const;
 
 const localized = (value: unknown, locales: string[]) => {

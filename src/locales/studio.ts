@@ -4,6 +4,8 @@
  */
 export const studioEs = {
   // toolbar
+  'st.window.notFound': 'No se encontró esta vista', 'st.window.notFoundBody': 'No existe o no tienes permiso para editarla. Vuelve a NORTH y ábrela desde Administración → Vistas.',
+  'st.toolbar.fullscreen': 'Pantalla completa', 'st.toolbar.exitFullscreen': 'Salir de pantalla completa',
   'st.toolbar.exit': 'Salir del editor', 'st.toolbar.modes': 'Modo del editor', 'st.toolbar.device': 'Dispositivo de vista previa',
   'st.toolbar.undo': 'Deshacer', 'st.toolbar.redo': 'Rehacer', 'st.toolbar.save': 'Guardar', 'st.toolbar.publish': 'Publicar',
   'st.toolbar.check': 'Comprobar vista', 'st.toolbar.healthy': 'Sin problemas', 'st.toolbar.errors': '{n} errores', 'st.toolbar.warnings': '{n} avisos',
@@ -110,6 +112,8 @@ export const studioEs = {
 export type StudioDictionary = Record<keyof typeof studioEs, string>;
 
 export const studioEn: StudioDictionary = {
+  'st.window.notFound': 'This view was not found', 'st.window.notFoundBody': 'It does not exist or you are not allowed to edit it. Go back to NORTH and open it from Administration → Views.',
+  'st.toolbar.fullscreen': 'Full screen', 'st.toolbar.exitFullscreen': 'Exit full screen',
   'st.toolbar.exit': 'Exit editor', 'st.toolbar.modes': 'Editor mode', 'st.toolbar.device': 'Preview device',
   'st.toolbar.undo': 'Undo', 'st.toolbar.redo': 'Redo', 'st.toolbar.save': 'Save', 'st.toolbar.publish': 'Publish',
   'st.toolbar.check': 'Check view', 'st.toolbar.healthy': 'No issues', 'st.toolbar.errors': '{n} errors', 'st.toolbar.warnings': '{n} warnings',

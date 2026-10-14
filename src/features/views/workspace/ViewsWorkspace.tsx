@@ -88,10 +88,15 @@ export function ViewsWorkspace({ loadError, onRetry, onOpenEditor }: { loadError
 
   const edit = useCallback((resource: ViewResource) => {
     if (resource.kind !== 'PANEL') return;
+    // The Studio owns a whole browser tab with its own URL. If the browser blocks the new tab, edit in place instead.
+    if (activeOrganization?.slug) {
+      const opened = window.open(`/${encodeURIComponent(activeOrganization.slug)}/studio/${encodeURIComponent(resource.id)}`, '_blank'); // no noopener: window.open would return null even when it succeeded, and the tab is same-origin
+      if (opened) return;
+    }
     selectPanel(resource.categoryId, resource.subcategoryId!, resource.id);
     setActiveMode('editor');
     onOpenEditor();
-  }, [onOpenEditor, selectPanel, setActiveMode]);
+  }, [activeOrganization?.slug, onOpenEditor, selectPanel, setActiveMode]);
 
   /** Opens the *published* view in the shell through the normal tab system (current tab navigates; no new tab). */
   const open = useCallback(async (resource: ViewResource) => {

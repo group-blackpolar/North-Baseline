@@ -3,7 +3,19 @@ import { PERSONAL_WS_ID } from '@/lib/demo/store';
 
 
 /** Catálogo del workspace Personal. Platform administration remains a global route. */
-function personalCatalog(includePlatformAdministration = false): CategoryModel[] {
+/** Black Polar platform administration, as navigation inside the shell (CORECROW still authorizes every request). */
+const PLATFORM_SECTIONS: Array<{ id: string; icon: string; superadmin?: boolean }> = [
+  { id: 'dashboard', icon: 'layout' },
+  { id: 'users', icon: 'users' },
+  { id: 'organizations', icon: 'stack' },
+  { id: 'billing', icon: 'receipt' },
+  { id: 'contacts', icon: 'note' },
+  { id: 'audit', icon: 'scroll', superadmin: true },
+  { id: 'permissions', icon: 'key', superadmin: true },
+  { id: 'templates', icon: 'palette', superadmin: true },
+];
+
+function personalCatalog(includePlatformAdministration = false, includeSuperadmin = false): CategoryModel[] {
   const categories: CategoryModel[] = [
     {
       id: 'home',
@@ -50,7 +62,10 @@ function personalCatalog(includePlatformAdministration = false): CategoryModel[]
       name: 'Administration',
       icon: 'shield-check',
       order: 2,
-      subcategories: [],
+      subcategories: PLATFORM_SECTIONS.filter((section) => includeSuperadmin || !section.superadmin).map((section, index) => ({
+        id: section.id, categoryId: 'platform-administration', name: section.id, labelKey: `pa.nav.${section.id}`, icon: section.icon,
+        group: 'Black Polar', route: `/workspace/admin/${section.id}`, order: index,
+      })),
     });
   }
 
@@ -84,10 +99,10 @@ function customCatalog(workspaceId: string): CategoryModel[] {
 /** Router: decide qué catálogo servir según el workspaceId. */
 export function demoCatalogFor(
   workspaceId: string | null,
-  options?: { includePlatformAdministration?: boolean }
+  options?: { includePlatformAdministration?: boolean; includeSuperadminAdministration?: boolean }
 ): CategoryModel[] | null {
   if (!workspaceId) return null;
-  if (workspaceId === PERSONAL_WS_ID) return personalCatalog(options?.includePlatformAdministration);
+  if (workspaceId === PERSONAL_WS_ID) return personalCatalog(options?.includePlatformAdministration, options?.includeSuperadminAdministration);
   if (workspaceId.startsWith('ws-')) return customCatalog(workspaceId);
   return null;
 }

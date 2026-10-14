@@ -1,4 +1,6 @@
 import { ArrowCounterClockwise, ArrowClockwise, ArrowLeft, ArrowUpRight, Check, CircleNotch, ClockCounterClockwise, DeviceMobile, DeviceTablet, Desktop, Eye, FloppyDisk, Gear, PencilSimple, SidebarSimple, Stack, WarningCircle } from '@phosphor-icons/react';
+import { useEffect, useState } from 'react';
+import { ArrowsIn, ArrowsOut } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Status } from '@/components/ui/status';
@@ -14,6 +16,21 @@ const MODES: Array<{ id: ActiveTabMode; icon: typeof Eye; key: 'st.mode.edit' | 
   { id: 'revisions', icon: ClockCounterClockwise, key: 'st.mode.versions' },
 ];
 const DEVICE_ICON: Record<Device, typeof Desktop> = { desktop: Desktop, tablet: DeviceTablet, mobile: DeviceMobile };
+
+/** Real Fullscreen API, only from a user gesture; hidden where the browser does not offer it (the editor already fills its tab). */
+function FullscreenButton() {
+  const { t } = useI18n();
+  const [active, setActive] = useState(() => Boolean(document.fullscreenElement));
+  useEffect(() => {
+    const sync = () => setActive(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', sync);
+    return () => document.removeEventListener('fullscreenchange', sync);
+  }, []);
+  if (!document.fullscreenEnabled) return null;
+  const toggle = () => { void (active ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(() => undefined); };
+  const label = active ? t('st.toolbar.exitFullscreen') : t('st.toolbar.fullscreen');
+  return <IconButton label={label} icon={active ? <ArrowsIn /> : <ArrowsOut />} aria-pressed={active} onClick={toggle} />;
+}
 
 export function StudioToolbar({ compact, exiting, issues, onExit, onPublish, onValidate, validating, onToggleLibrary, onToggleInspector, libraryOpen, inspectorOpen }: {
   compact: boolean;
@@ -84,6 +101,7 @@ export function StudioToolbar({ compact, exiting, issues, onExit, onPublish, onV
       ) : null}
 
       <div className="ml-auto flex items-center gap-2">
+        <FullscreenButton />
         <Status tone={stateTone[state]} role="status" aria-live="polite">{t(`st.save.${state}` as 'st.save.saved')}</Status>
         <Button size="sm" variant="ghost" onClick={onValidate} loading={validating} aria-label={t('st.toolbar.check')} title={t('st.toolbar.check')}>
           {issues && issues.errors > 0 ? <WarningCircle className="text-error" aria-hidden="true" /> : <Check aria-hidden="true" />}
