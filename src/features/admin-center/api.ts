@@ -56,6 +56,19 @@ export const listDatasetFields = (organizationId: string, datasetId: string) => 
 export const listDatasetImports = (organizationId: string, datasetId: string) => cachedGet<DatasetImport[]>(`${org(organizationId)}/datasets/${encodeURIComponent(datasetId)}/imports`, { ttlMs: 15_000 });
 export const listSchemaVersions = (organizationId: string, datasetId: string) => cachedGet<SchemaVersion[]>(`${org(organizationId)}/datasets/${encodeURIComponent(datasetId)}/schema-versions`, { ttlMs: 30_000 });
 
+export const setDatasetStatus = (organizationId: string, datasetId: string, status: 'ACTIVE' | 'ARCHIVED') =>
+  apiRequest<DatasetSummary>(`${org(organizationId)}/datasets/${encodeURIComponent(datasetId)}`, { method: 'PATCH', body: JSON.stringify({ status }) });
+export type DatasetDependencies = { bindings: number; panels: number; runningImports: number };
+export const getDatasetDependencies = (organizationId: string, datasetId: string) =>
+  apiRequest<DatasetDependencies>(`${org(organizationId)}/datasets/${encodeURIComponent(datasetId)}/dependencies`);
+/** Permanent. CORECROW refuses unless the dataset is archived and nothing reads it (409 DATASET_NOT_ARCHIVED / DATASET_IN_USE). */
+export const eraseDataset = (organizationId: string, datasetId: string) =>
+  apiRequest<null>(`${org(organizationId)}/datasets/${encodeURIComponent(datasetId)}`, { method: 'DELETE' });
+export type PurgeResult = { matched: number; purged: number; dryRun: boolean };
+/** Operational sync history only (failed / cancelled / rejected / abandoned imports); security audit is a different store. */
+export const purgeDatasetImports = (organizationId: string, datasetId: string, input: { olderThanDays: number; dryRun: boolean }) =>
+  apiRequest<PurgeResult>(`${org(organizationId)}/datasets/${encodeURIComponent(datasetId)}/imports/purge`, { method: 'POST', body: JSON.stringify(input) });
+
 /** Public liveness probe of CORECROW itself (the only "connection" NORTH can verify without a connector registry). */
 export async function probeApiHealth(): Promise<{ ok: boolean; status: number; latencyMs: number }> {
   const started = performance.now();

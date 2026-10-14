@@ -15,7 +15,7 @@ export type RegisteredPermission = (typeof REGISTERED_PERMISSIONS)[number];
 export type Member = { id: string; organizationId: string; userId: string; role: TenantRole; createdAt: string; email?: string; name?: string | null; status?: 'ACTIVE' | 'SUSPENDED' };
 export type Invitation = {
   id: string; kind: 'EMAIL' | 'CODE'; email: string | null; role: TenantRole; status: 'PENDING' | 'ACCEPTED' | 'REVOKED' | 'EXPIRED';
-  expiresAt: string; acceptedAt: string | null; revokedAt: string | null; createdAt: string; groupIds: string[]; permissions: RegisteredPermission[];
+  expiresAt: string; acceptedAt: string | null; revokedAt: string | null; archivedAt?: string | null; createdAt: string; groupIds: string[]; permissions: RegisteredPermission[];
   maxUses: number; useCount: number; createdByUserId: string | null; keyHint: string | null;
 };
 export type IssuedInvitation = Invitation & { token?: string; delivery: 'sent' | 'failed' | 'not_applicable' };
@@ -28,7 +28,11 @@ export const listMembers = (o: string) => apiRequest<Member[]>(`${org(o)}/member
 export const changeMemberRole = (o: string, userId: string, role: TenantRole) => apiRequest<Member>(`${org(o)}/members/${encodeURIComponent(userId)}`, { method: 'PATCH', body: json({ role }) });
 export const removeMember = (o: string, userId: string) => apiRequest<void>(`${org(o)}/members/${encodeURIComponent(userId)}`, { method: 'DELETE' });
 
-export const listInvitations = (o: string) => apiRequest<Invitation[]>(`${org(o)}/invitations`);
+export const listInvitations = (o: string, archived = false) => apiRequest<Invitation[]>(`${org(o)}/invitations${archived ? '?archived=true' : ''}`);
+export const archiveInvitation = (o: string, id: string) => apiRequest<null>(`${org(o)}/invitations/${encodeURIComponent(id)}/archive`, { method: 'POST' });
+export const restoreInvitation = (o: string, id: string) => apiRequest<null>(`${org(o)}/invitations/${encodeURIComponent(id)}/restore`, { method: 'POST' });
+/** Only revoked/expired invitations that were never accepted; accepted ones are membership history. */
+export const deleteInvitation = (o: string, id: string) => apiRequest<null>(`${org(o)}/invitations/${encodeURIComponent(id)}/permanent`, { method: 'DELETE' });
 export const createInvitation = (o: string, input: { email: string; role: (typeof INVITABLE_ROLES)[number]; expiresInHours: number; groupIds: string[]; permissions: RegisteredPermission[] }) =>
   apiRequest<IssuedInvitation>(`${org(o)}/invitations`, { method: 'POST', body: json({ kind: 'EMAIL', ...input }) });
 export const createInvitationKey = (o: string, input: { role: (typeof INVITABLE_ROLES)[number]; expiresInHours: number; maxUses: number; groupIds: string[] }) =>
@@ -45,6 +49,11 @@ export type AuditEvent = { id: string; action: string; actorId: string | null; t
 export const listAudit = (o: string, before?: string) => apiRequest<AuditEvent[]>(`${org(o)}/audit?limit=50${before ? `&before=${encodeURIComponent(before)}` : ''}`);
 export const revokeInvitation = (o: string, id: string) => apiRequest<void>(`${org(o)}/invitations/${encodeURIComponent(id)}`, { method: 'DELETE' });
 export const replaceInvitation = (o: string, id: string) => apiRequest<IssuedInvitation>(`${org(o)}/invitations/${encodeURIComponent(id)}/replace`, { method: 'POST' });
+
+export type RoleDataAccessResult = { role: TenantRole; capabilityGranted: boolean; datasetIds: string[]; rulesCreated: number };
+/** One audited, idempotent step: north.data.query for the role plus an ALLOW rule on each dataset. */
+export const grantRoleDataAccess = (o: string, input: { role: TenantRole; datasetIds: string[] }) =>
+  apiRequest<RoleDataAccessResult>(`${org(o)}/north/role-data-access`, { method: 'POST', body: json(input) });
 
 export const listGroups = (o: string) => apiRequest<Group[]>(`${org(o)}/groups`);
 export const createGroup = (o: string, input: { name: string; description?: string | null }) => apiRequest<Group>(`${org(o)}/groups`, { method: 'POST', body: json(input) });
