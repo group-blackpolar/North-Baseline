@@ -10,14 +10,15 @@ import { pack12Es, pack12En, type Pack12Dictionary } from '@/locales/pack12';
 import { pack13Es, pack13En, type Pack13Dictionary } from '@/locales/pack13';
 import { studioEs, studioEn, type StudioDictionary } from '@/locales/studio';
 import { pack16Es, pack16En, type Pack16Dictionary } from '@/locales/pack16';
+import { pack17Es, pack17En, type Pack17Dictionary } from '@/locales/pack17';
 
-export type Dictionary = BaseDictionary & AuthDictionary & AdminDictionary & MediaDictionary & AssistantDictionary & Pack12Dictionary & Pack13Dictionary & StudioDictionary & Pack16Dictionary;
+export type Dictionary = BaseDictionary & AuthDictionary & AdminDictionary & MediaDictionary & AssistantDictionary & Pack12Dictionary & Pack13Dictionary & StudioDictionary & Pack16Dictionary & Pack17Dictionary;
 export type Locale = 'es' | 'en';
 
 /** Registrar un idioma nuevo = añadir su archivo base + auth */
 const REGISTRIES: Record<Locale, Dictionary> = {
-  es: { ...baseEs, ...authEs, ...adminEs, ...mediaEs, ...assistantEs, ...pack12Es, ...pack13Es, ...studioEs, ...pack16Es },
-  en: { ...baseEn, ...authEn, ...adminEn, ...mediaEn, ...assistantEn, ...pack12En, ...pack13En, ...studioEn, ...pack16En },
+  es: { ...baseEs, ...authEs, ...adminEs, ...mediaEs, ...assistantEs, ...pack12Es, ...pack13Es, ...studioEs, ...pack16Es, ...pack17Es },
+  en: { ...baseEn, ...authEn, ...adminEn, ...mediaEn, ...assistantEn, ...pack12En, ...pack13En, ...studioEn, ...pack16En, ...pack17En },
 };
 
 const STORAGE_KEY = 'north-locale';

@@ -1,14 +1,9 @@
-import { useState, type ReactNode } from 'react';
-import { ArrowLeft, Buildings, List, ClockCounterClockwise, Key, Layout, PaperPlaneTilt, Receipt, ShieldWarning, SquaresFour, Users } from '@phosphor-icons/react';
-import { Badge } from '@/components/ui/badge';
+import type { ReactNode } from 'react';
+import { Buildings, ClockCounterClockwise, Key, Layout, PaperPlaneTilt, Receipt, ShieldWarning, SquaresFour, Users } from '@phosphor-icons/react';
 import { EmptyState } from '@/components/ui/empty-state';
-import { IconButton } from '@/components/ui/icon-button';
-import { Sheet } from '@/components/ui/sheet';
-import { useOverlayHistory } from '@/lib/overlayHistory';
-import { useIsCompactShell } from '@/lib/responsive';
 import type { SessionUser } from '@/lib/auth';
 import { useI18n } from '@/lib/i18n';
-import { pushPath, type NorthRoute } from '@/lib/routes';
+import { pushPath } from '@/lib/routes';
 import { DashboardScreen } from './screens/DashboardScreen';
 import { UsersScreen } from './screens/UsersScreen';
 import { OrganizationsScreen } from './screens/OrganizationsScreen';
@@ -55,12 +50,6 @@ const SECTIONS: SectionDefinition[] = [
   { id: 'templates', labelKey: 'pa.nav.templates', icon: Layout, superadminOnly: true },
 ];
 
-function sectionOf(path: string): PlatformSection | null {
-  const parts = path.split('/').filter(Boolean);
-  const candidate = parts[2];
-  return SECTIONS.some((entry) => entry.id === candidate) ? (candidate as PlatformSection) : null;
-}
-
 function screenFor(section: PlatformSection, canManage: boolean): ReactNode {
   switch (section) {
     case 'users':
@@ -82,149 +71,34 @@ function screenFor(section: PlatformSection, canManage: boolean): ReactNode {
   }
 }
 
-/** Platform Administration shell (§9, §21).
- *
- * It renders outside the organization providers: no `activeOrganization`, no
- * organization catalog and no `key={activeOrganization.id}` remount. Platform
- * Administration is global, not tenant-scoped. */
-export function PlatformAdminView({ user, route }: { user: SessionUser; route: NorthRoute }) {
+/** Platform Administration inside the NORTH shell: the content of one subcategory of the Administration category.
+ * Visibility only drives navigation; a forced URL for a section the role may not see renders a denied state, and every
+ * request is authorized by CORECROW. */
+export function PlatformSectionContent({ user, section }: { user: SessionUser; section: string | null }) {
   const { t } = useI18n();
-  const compact = useIsCompactShell();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const go = useOverlayHistory(menuOpen, () => setMenuOpen(false));
-  const isOperator = user.role === 'ADMIN' || user.role === 'SUPERADMIN';
   const isSuperAdmin = user.role === 'SUPERADMIN';
+  const isOperator = user.role === 'ADMIN' || isSuperAdmin;
   const visible = SECTIONS.filter((entry) => !entry.superadminOnly || isSuperAdmin);
-  const section = sectionOf(route.path);
-  const allowed = section !== null && visible.some((entry) => entry.id === section);
-
-  if (!isOperator) {
+  const allowed = isOperator && visible.some((entry) => entry.id === section);
+  if (!allowed) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-background p-6">
-        <div className="max-w-md">
-          <EmptyState icon={ShieldWarning} title={t('pa.state.deniedTitle')} body={t('pa.state.deniedBody')} />
-        </div>
+      <div className="max-w-md p-6">
+        <EmptyState
+          icon={ShieldWarning}
+          title={t('pa.state.deniedTitle')}
+          body={t('pa.state.deniedBody')}
+          action={isOperator ? <button type="button" onClick={() => pushPath('/workspace/admin/dashboard')} className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover">{t('pa.nav.dashboard')}</button> : undefined}
+        />
       </div>
     );
   }
-
   return (
-    <div className={`h-screen w-screen flex ${compact ? 'flex-col' : ''} bg-background text-text`}>
-      {compact ? (
-        <>
-          <header className="box-content flex h-12 shrink-0 items-center gap-2 border-b border-border bg-surface px-2 pt-[env(safe-area-inset-top)]">
-            <IconButton label={t('shell.openMenu')} icon={<List size={20} />} onClick={() => setMenuOpen(true)} />
-            <p className="min-w-0 flex-1 truncate font-display text-[15px] font-semibold">{t('pa.title')}</p>
-            <Badge>{user.role}</Badge>
-          </header>
-          <Sheet open={menuOpen} onOpenChange={(open) => { if (!open) go(() => {}); }} side="left" title={t('pa.title')}>
-            <nav aria-label={t('pa.title')} className="flex min-h-full flex-col">
-        <div className="border-b border-border px-4 py-4">
-                <p className="ui-label">{t('pa.eyebrow')}</p>
-                <p className="font-display text-sm font-semibold">{t('pa.title')}</p>
-                <Badge className="mt-2">{user.role}</Badge>
-              </div>
-              <ul className="flex-1 overflow-y-auto p-2 space-y-1">
-                {visible.map((entry) => {
-                  const active = entry.id === section;
-                  return (
-                    <li key={entry.id}>
-                      <button
-                        type="button"
-                        onClick={() => (compact ? go(() => pushPath(`/workspace/admin/${entry.id}`)) : pushPath(`/workspace/admin/${entry.id}`))}
-                        aria-current={active ? 'page' : undefined}
-                        className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors duration-(--duration-fast) ${
-                          active ? 'bg-surface-active font-medium text-text' : 'text-text-secondary hover:bg-surface-hover'
-                        }`}
-                      >
-                        <entry.icon className={`h-4 w-4 ${active ? 'text-accent' : 'text-text-muted'}`} />
-                        {t(entry.labelKey)}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-              <div className="border-t border-border p-2">
-                <button
-                  type="button"
-                  onClick={() => (compact ? go(() => pushPath('/workspace')) : pushPath('/workspace'))}
-                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-text-secondary hover:bg-surface-hover"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  {t('pa.backToWorkspace')}
-                </button>
-              </div>
-            </nav>
-          </Sheet>
-        </>
-      ) : (
-      <nav className="w-60 shrink-0 border-r border-border bg-surface flex flex-col" aria-label={t('pa.title')}>
-          <div className="border-b border-border px-4 py-4">
-            <p className="ui-label">{t('pa.eyebrow')}</p>
-            <p className="font-display text-sm font-semibold">{t('pa.title')}</p>
-            <Badge className="mt-2">{user.role}</Badge>
-          </div>
-          <ul className="flex-1 overflow-y-auto p-2 space-y-1">
-            {visible.map((entry) => {
-              const active = entry.id === section;
-              return (
-                <li key={entry.id}>
-                  <button
-                    type="button"
-                    onClick={() => pushPath(`/workspace/admin/${entry.id}`)}
-                    aria-current={active ? 'page' : undefined}
-                    className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors duration-(--duration-fast) ${
-                      active ? 'bg-surface-active font-medium text-text' : 'text-text-secondary hover:bg-surface-hover'
-                    }`}
-                  >
-                    <entry.icon className={`h-4 w-4 ${active ? 'text-accent' : 'text-text-muted'}`} />
-                    {t(entry.labelKey)}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-          <div className="border-t border-border p-2">
-            <button
-              type="button"
-              onClick={() => pushPath('/workspace')}
-              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-text-secondary hover:bg-surface-hover"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              {t('pa.backToWorkspace')}
-            </button>
-          </div>
-        </nav>
-      )}
-
-      <main className="flex-1 min-w-0 overflow-y-auto">
-        <div className="mx-auto max-w-6xl space-y-5 p-4 md:p-6">
-          <header>
-            <h1 className="font-display text-xl font-semibold">{t('pa.title')}</h1>
-            <p className="text-sm text-text-secondary">{t('pa.description')}</p>
-          </header>
-          {allowed && section ? (
-            screenFor(section, isSuperAdmin)
-          ) : (
-            <div className="max-w-md">
-              <EmptyState
-                icon={ShieldWarning}
-                title={t('pa.state.deniedTitle')}
-                body={t('pa.state.deniedBody')}
-                action={
-                  <button
-                    type="button"
-                    onClick={() => pushPath('/workspace/admin/dashboard')}
-                    className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover"
-                  >
-                    {t('pa.nav.dashboard')}
-                  </button>
-                }
-              />
-            </div>
-          )}
-        </div>
-      </main>
+    <div className="mx-auto max-w-6xl space-y-5 p-4 md:p-6">
+      <header>
+        <h1 className="font-display text-xl font-semibold">{t(visible.find((entry) => entry.id === section)!.labelKey)}</h1>
+        <p className="text-sm text-text-secondary">{t('pa.description')}</p>
+      </header>
+      {screenFor(section as PlatformSection, isSuperAdmin)}
     </div>
   );
 }

@@ -15,6 +15,8 @@ export type NorthRoute =
   | { kind: 'platform-admin'; path: string }
   | { kind: 'showcase'; organizationSlug: string; panel: { categorySlug: string; subcategorySlug: string; panelSlug: string } | null; path: string }
   | { kind: 'organization'; organizationSlug: string; path: string }
+  /** Views Studio in its own browser tab: /:organization/studio/:panelId (no NORTH shell). */
+  | { kind: 'studio'; organizationSlug: string; panelId: string; path: string }
   | { kind: 'panel'; organizationSlug: string; categorySlug: string; subcategorySlug: string; panelSlug: string; path: string }
   | { kind: 'unknown'; path: string };
 
@@ -33,6 +35,9 @@ export function parseNorthRoute(pathname: string): NorthRoute {
   }
   if (parts[0] === 'workspace') {
     return parts[1] === 'admin' ? { kind: 'platform-admin', path } : { kind: 'workspace', path };
+  }
+  if (parts.length === 3 && parts[1] === 'studio' && parts[0] && parts[2] && !RESERVED_ROOTS.has(parts[0])) {
+    return { kind: 'studio', organizationSlug: parts[0], panelId: parts[2], path };
   }
   if (parts.length === 1 && parts[0] && !RESERVED_ROOTS.has(parts[0])) {
     return { kind: 'organization', organizationSlug: parts[0], path };

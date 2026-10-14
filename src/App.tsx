@@ -14,7 +14,9 @@ import { OrganizationProvider, useOrganization } from '@/context/OrganizationCon
 import { WorkspaceProvider, useWorkspace } from '@/context/WorkspaceContext';
 import { TabsProvider, useTabs } from '@/context/TabsContext';
 import { CatalogProvider, useCatalog } from '@/context/CatalogContext';
+import { PERSONAL_ORG_ID } from '@/lib/demo/store';
 import { PermissionProvider } from '@/context/PermissionContext';
+import { StudioWindow } from '@/features/views/StudioWindow';
 import { I18nProvider, useI18n } from '@/lib/i18n';
 import { SessionGuard } from '@/components/session/SessionGuard';
 import { ErrorProvider } from '@/context/ErrorContext';
@@ -48,7 +50,6 @@ import { GenericNotFound, OrganizationAccessGate } from '@/components/organizati
 import { InspectionBanner } from '@/components/organization/InspectionBanner';
 import { ConnectionProblem } from '@/components/errors/ConnectionProblem';
 import { useInspection } from '@/lib/inspection';
-import { PlatformAdminView } from '@/features/platform-admin/PlatformAdminView';
 import { InvitationLanding } from '@/features/invitations/InvitationLanding';
 import { isInvitationCredential, normalizeInvitationCredential } from '@/lib/invitationKey';
 import { ShowcaseView } from '@/features/showcase/ShowcaseView';
@@ -234,6 +235,7 @@ function WorkspaceGate({
             <CatalogSync>
               <RestoredPanels />
               <PublishedRouteIntent route={route} />
+              <PlatformAdminRouteIntent route={route} />
               {/* The organization rail and the shell frame live outside this keyed subtree (see AppShell), so
                   switching organization keeps them on screen while the tenant-scoped state below remounts. */}
               <div className="flex min-w-0 flex-1">
@@ -570,6 +572,31 @@ function TermsAcceptance({
  * Resolves a shared published URL only after the member-only shell is mounted.
  * CoreCrow returns 404 for both missing and unauthorized resources, so the
  * client deliberately presents the same generic state in both cases. */
+/** `/workspace/admin/:section` selects the Administration subcategory of the personal workspace inside the normal shell. */
+function PlatformAdminRouteIntent({ route }: { route: NorthRoute }) {
+  const { activeTab, navigate } = useTabs();
+  const { isLoading } = useCatalog();
+  const section = (route.kind === 'platform-admin' ? route.path.split('/').filter(Boolean)[2]?.toLowerCase() : undefined) || 'dashboard';
+  const path = route.kind === 'platform-admin' ? route.path : null;
+  const handled = useRef<string | null>(null);
+  useEffect(() => {
+    // CatalogSync (the parent) opens a default tab first when there is none; select ours only afterwards, once per URL.
+    if (!path || isLoading || !activeTab || handled.current === path) return;
+    handled.current = path;
+    if (activeTab.route.categoryId !== 'platform-administration' || activeTab.route.subcategoryId !== section) navigate('platform-administration', section);
+  }, [path, section, isLoading, activeTab, navigate]);
+  return null;
+}
+
+/** Platform administration is part of the personal workspace: switch to it (once) and render the regular shell. */
+function PlatformAdminEntry({ user, onAuthError, route }: { user: SessionUser; onAuthError: () => void; route: NorthRoute }) {
+  const { activeOrganization, switchOrganization } = useOrganization();
+  const personal = activeOrganization?.id === PERSONAL_ORG_ID;
+  useEffect(() => { if (!personal) switchOrganization(PERSONAL_ORG_ID); }, [personal, switchOrganization]);
+  if (!personal) return <ShellSkeleton />;
+  return <AppShell user={user} onAuthError={onAuthError} route={route} />;
+}
+
 function PublishedRouteIntent({ route }: { route: NorthRoute }) {
   const { activeTab, navigate } = useTabs();
   const { categories, isLoading } = useCatalog();
@@ -658,9 +685,13 @@ function AuthenticatedRouter({ user, onAuthError, route, pendingInvitation, onIn
 
   // Platform Administration is global: it must render before the organization
   // shell so it never depends on activeOrganization or its remount boundary (§9).
-  if (route.kind === 'platform-admin') {
-    return <div className="north-app-shell north-app-shell-host"><PlatformAdminView user={user} route={route} /></div>;
+  if (route.kind === 'studio') {
+    const studioMember = organizations.find((organization) => organization.slug === route.organizationSlug);
+    if (isLoading) return <ShellSkeleton />;
+    if (!studioMember) return <GenericNotFound />;
+    return <StudioWindow organizationId={studioMember.id} organizationSlug={route.organizationSlug} panelId={route.panelId} />;
   }
+  if (route.kind === 'platform-admin') return <PlatformAdminEntry user={user} onAuthError={onAuthError} route={route} />;
   if (!isOrganizationRoute) return <AppShell user={user} onAuthError={onAuthError} route={route} />;
   if (isLoading) return <ShellSkeleton />;
   // The organization list could not be loaded: that is an API problem, never "you are not a member".

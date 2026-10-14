@@ -5,7 +5,7 @@ import { demoCatalogFor } from '@/lib/demo/catalogs';
  *  Hoy sirve catálogos demo; mañana llamará a la API de CoreCrow. */
 export async function fetchCatalog(
   workspaceId: string | null,
-  options?: { includePlatformAdministration?: boolean }
+  options?: { includePlatformAdministration?: boolean; includeSuperadminAdministration?: boolean }
 ): Promise<CategoryModel[]> {
   // Intentar catálogo demo primero
   const demo = demoCatalogFor(workspaceId, options);

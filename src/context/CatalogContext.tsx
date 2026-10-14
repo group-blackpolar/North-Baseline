@@ -37,7 +37,7 @@ export function CatalogProvider({
 
   const load = useCallback(async (force: boolean) => {
     const catalog = organizationId === PERSONAL_ORG_ID
-      ? fetchCatalog(workspaceId, { includePlatformAdministration: platformRole === 'ADMIN' || platformRole === 'SUPERADMIN' })
+      ? fetchCatalog(workspaceId, { includePlatformAdministration: platformRole === 'ADMIN' || platformRole === 'SUPERADMIN', includeSuperadminAdministration: platformRole === 'SUPERADMIN' })
       : getOrganizationNavigation(organizationId, { force }).then(navigationToCatalog);
     return catalog;
   }, [organizationId, platformRole, workspaceId]);

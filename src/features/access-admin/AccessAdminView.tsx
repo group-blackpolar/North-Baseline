@@ -1,4 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react';
+import { listDatasets } from '@/features/admin-center/api';
+import { PERMISSION_GROUPS, permissionHintKey, permissionLabelKey } from './permissionCatalog';
 import { ArrowsClockwise, Copy, EnvelopeSimple, Key, MagnifyingGlass, Plus, ShieldCheck, Trash, Users } from '@phosphor-icons/react';
 import { DashboardCard } from '@/components/dashboard/primitives';
 import { Button } from '@/components/ui/button';
@@ -13,9 +15,9 @@ import { useI18n } from '@/lib/i18n';
 import { PERM } from '@/lib/permission';
 import { cn } from '@/lib/utils';
 import {
-  INVITABLE_ROLES, REGISTERED_PERMISSIONS, TENANT_ROLES, addGroupMember, changeMemberRole, createGroup, createInvitation, createInvitationKey, deleteGroup,
+  INVITABLE_ROLES, TENANT_ROLES, addGroupMember, changeMemberRole, createGroup, createInvitation, createInvitationKey, deleteGroup,
   grantGroupPermission, grantMemberPermission, listGroups, listInvitations, listMemberGrants, listMembers, removeGroupMember, removeMember,
-  replaceInvitation, revokeGroupPermission, revokeInvitation, revokeMemberPermission,
+  archiveInvitation, deleteInvitation, grantRoleDataAccess, replaceInvitation, restoreInvitation, revokeGroupPermission, revokeInvitation, revokeMemberPermission,
   type Group, type Invitation, type IssuedInvitation, type Member, type RegisteredPermission, type TenantRole,
 } from './api';
 import { AddUserDialog } from './AddUserDialog';
@@ -166,7 +168,8 @@ function InvitationsScreen({ organizationId }: { organizationId: string }) {
   const { can } = usePermissions();
   const { push } = useNotifications();
   const manage = can(PERM.invitationsManage);
-  const invitations = useList(() => listInvitations(organizationId), [organizationId]);
+  const [showArchived, setShowArchived] = useState(false);
+  const invitations = useList(() => listInvitations(organizationId, showArchived), [organizationId, showArchived]);
   const groups = useList(() => listGroups(organizationId), [organizationId]);
   const { busy, error, ok, act } = useBusy();
   const [tab, setTab] = useState<'EMAIL' | 'CODE'>('EMAIL');
@@ -177,6 +180,7 @@ function InvitationsScreen({ organizationId }: { organizationId: string }) {
   const [groupIds, setGroupIds] = useState<string[]>([]);
   const [issued, setIssued] = useState<IssuedInvitation | null>(null);
   const [revoking, setRevoking] = useState<Invitation | null>(null);
+  const [deleting, setDeleting] = useState<Invitation | null>(null);
 
   const isKey = tab === 'CODE';
   const rows = (invitations.data ?? []).filter((invitation) => invitation.kind === tab);
@@ -196,7 +200,13 @@ function InvitationsScreen({ organizationId }: { organizationId: string }) {
   };
   const statusClass = (status: Invitation['status']) => status === 'PENDING' ? 'text-accent' : status === 'ACCEPTED' ? 'text-success' : 'text-text-muted';
   const label = (invitation: Invitation) => invitation.email ?? `${t('adm.col.key')} …${invitation.keyHint ?? '????'}`;
-  const actions = (invitation: Invitation) => invitation.status === 'PENDING' && (
+  const finishedActions = (invitation: Invitation) => (
+    <span className="inline-flex gap-1">
+      <Button size="sm" variant="ghost" disabled={!manage || busy === invitation.id} onClick={() => void act(invitation.id, () => (showArchived ? restoreInvitation : archiveInvitation)(organizationId, invitation.id), showArchived ? t('access.inv.restored') : t('access.inv.archived')).then(() => invitations.reload())}>{showArchived ? t('access.inv.restore') : t('access.inv.archive')}</Button>
+      {invitation.status !== 'ACCEPTED' && <Button size="sm" variant="ghost" disabled={!manage || busy === invitation.id} onClick={() => setDeleting(invitation)}>{t('access.inv.delete')}</Button>}
+    </span>
+  );
+  const actions = (invitation: Invitation) => invitation.status !== 'PENDING' ? finishedActions(invitation) : (
     <span className="inline-flex gap-1">
       {invitation.kind === 'EMAIL' && <Button size="sm" variant="ghost" disabled={!manage || busy === invitation.id} onClick={() => void act(invitation.id, async () => { setIssued(await replaceInvitation(organizationId, invitation.id)); }, t('access.inv.replaced')).then(() => invitations.reload())}>{t('access.inv.replace')}</Button>}
       <Button size="sm" variant="ghost" disabled={!manage || busy === invitation.id} onClick={() => setRevoking(invitation)}>{t('access.inv.revoke')}</Button>
@@ -237,7 +247,7 @@ function InvitationsScreen({ organizationId }: { organizationId: string }) {
           </form>
         </DashboardCard>
 
-        <DashboardCard title={isKey ? t('adm.keys.list') : t('access.inv.list')} actions={<Button size="sm" variant="ghost" onClick={() => void invitations.reload()}><ArrowsClockwise className="size-3.5" />{t('access.refresh')}</Button>}>
+        <DashboardCard title={isKey ? t('adm.keys.list') : t('access.inv.list')} actions={<span className="inline-flex gap-1"><Button size="sm" variant="ghost" aria-pressed={showArchived} onClick={() => setShowArchived((value) => !value)}>{showArchived ? t('access.inv.showActive') : t('access.inv.showArchived')}</Button><Button size="sm" variant="ghost" onClick={() => void invitations.reload()}><ArrowsClockwise className="size-3.5" />{t('access.refresh')}</Button></span>}>
           {invitations.error && invitations.data && <Notice error={invitations.error} />}
           <LoadError list={invitations} />
           {invitations.loading && !invitations.data ? <Loading /> : invitations.data && rows.length === 0 ? <EmptyState icon={isKey ? Key : EnvelopeSimple} title={isKey ? t('adm.keys.empty') : t('access.inv.empty')} /> : invitations.data && (
@@ -273,6 +283,9 @@ function InvitationsScreen({ organizationId }: { organizationId: string }) {
       <ConfirmDialog open={Boolean(revoking)} destructive busy={busy === revoking?.id} title={revoking?.kind === 'CODE' ? t('adm.keys.revokeTitle') : t('adm.inv.revokeTitle')} description={revoking?.kind === 'CODE' ? t('adm.keys.revokeBody') : t('adm.inv.revokeBody')} confirmLabel={t('access.inv.revoke')}
         onCancel={() => setRevoking(null)}
         onConfirm={() => { const target = revoking; if (target) void act(target.id, () => revokeInvitation(organizationId, target.id), t('access.inv.revoked')).then(() => { setRevoking(null); return invitations.reload(); }); }} />
+      <ConfirmDialog open={Boolean(deleting)} destructive busy={busy === deleting?.id} title={t('access.inv.deleteTitle')} description={t('access.inv.deleteBody', { name: deleting ? label(deleting) : '' })} confirmLabel={t('access.inv.delete')}
+        onCancel={() => setDeleting(null)}
+        onConfirm={() => { const target = deleting; if (target) void act(target.id, () => deleteInvitation(organizationId, target.id), t('access.inv.deleted')).then(() => { setDeleting(null); return invitations.reload(); }); }} />
     </Shell>
   );
 }
@@ -354,13 +367,76 @@ function GroupsScreen({ organizationId }: { organizationId: string }) {
 }
 
 function PermissionChecklist({ granted, disabled, onToggle }: { granted: RegisteredPermission[]; disabled: boolean; onToggle: (permission: RegisteredPermission, grant: boolean) => void }) {
+  const { t } = useI18n();
+  const [advanced, setAdvanced] = useState(false);
+  const [query, setQuery] = useState('');
+  const needle = query.trim().toLowerCase();
+  const matches = (permission: RegisteredPermission) => !needle || permission.includes(needle) || t(permissionLabelKey(permission) as never).toLowerCase().includes(needle);
   return (
-    <div className="grid gap-1 sm:grid-cols-2 xl:grid-cols-3">
-      {REGISTERED_PERMISSIONS.map((permission) => {
-        const on = granted.includes(permission);
-        return <label key={permission} className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1 text-xs text-text-secondary hover:bg-surface-hover pointer-coarse:min-h-(--touch-min)"><input type="checkbox" checked={on} disabled={disabled} onChange={() => onToggle(permission, !on)} /><span className="mono-data truncate">{permission}</span></label>;
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} aria-label={t('perm.search')} placeholder={t('perm.search')} className={cn(selectClass, 'min-w-0 flex-1')} />
+        <label className="flex items-center gap-1.5 text-xs text-text-secondary"><input type="checkbox" checked={advanced} onChange={() => setAdvanced((value) => !value)} />{t('perm.advanced')}</label>
+      </div>
+      {PERMISSION_GROUPS.map((group) => {
+        const visible = group.permissions.filter(matches);
+        if (visible.length === 0) return null;
+        return (
+          <fieldset key={group.id} className="space-y-1">
+            <legend className="ui-label mb-1">{t(group.labelKey as never)}</legend>
+            <div className="grid gap-1 sm:grid-cols-2">
+              {visible.map((permission) => {
+                const on = granted.includes(permission);
+                return (
+                  <label key={permission} title={t(permissionHintKey(permission) as never)} className="flex min-w-0 items-start gap-2 rounded-md px-2 py-1.5 text-xs text-text-secondary hover:bg-surface-hover pointer-coarse:min-h-(--touch-min)">
+                    <input type="checkbox" className="mt-0.5" checked={on} disabled={disabled} onChange={() => onToggle(permission, !on)} />
+                    <span className="min-w-0">
+                      <span className="block font-medium text-text">{t(permissionLabelKey(permission) as never)}</span>
+                      <span className="block text-[11px] leading-4 text-text-muted">{t(permissionHintKey(permission) as never)}</span>
+                      {advanced ? <span className="mono-data block truncate text-[11px] text-text-muted">{permission}</span> : null}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+        );
       })}
     </div>
+  );
+}
+
+/** Lets a role render the dashboards backed by chosen datasets (north.data.query + dataset ACL) in one audited step. */
+function RoleDataAccessCard({ organizationId, manage }: { organizationId: string; manage: boolean }) {
+  const { t, locale } = useI18n();
+  const datasets = useList(() => listDatasets(organizationId), [organizationId]);
+  const [role, setRole] = useState<'VIEWER' | 'MEMBER' | 'BILLING_ADMIN'>('VIEWER');
+  const [chosen, setChosen] = useState<string[]>([]);
+  const { busy, error, ok, act } = useBusy();
+  const rows = (datasets.data ?? []).filter((dataset) => dataset.status === 'ACTIVE');
+  const toggle = (id: string) => setChosen((current) => (current.includes(id) ? current.filter((value) => value !== id) : [...current, id]));
+  const apply = () => void act('rda', async () => { await grantRoleDataAccess(organizationId, { role, datasetIds: chosen }); }, t('rda.done', { n: chosen.length }));
+  return (
+    <DashboardCard title={t('rda.title')} description={manage ? t('rda.hint') : t('access.readOnly')}>
+      <div className="space-y-3">
+        <label className="block text-xs text-text-secondary">{t('rda.role')}
+          <select className={cn(selectClass, 'mt-1 w-full')} value={role} disabled={!manage} onChange={(event) => setRole(event.target.value as typeof role)}>
+            {(['VIEWER', 'MEMBER', 'BILLING_ADMIN'] as const).map((value) => <option key={value} value={value}>{value}</option>)}
+          </select>
+        </label>
+        <fieldset className="space-y-1"><legend className="ui-label mb-1">{t('rda.datasets')}</legend>
+          {datasets.loading && !datasets.data ? <Loading /> : rows.length === 0 ? <p className="text-xs text-text-muted">{t('rda.none')}</p> : rows.map((dataset) => (
+            <label key={dataset.id} className="flex items-center gap-2 rounded-md px-2 py-1 text-xs text-text-secondary hover:bg-surface-hover pointer-coarse:min-h-(--touch-min)">
+              <input type="checkbox" checked={chosen.includes(dataset.id)} disabled={!manage} onChange={() => toggle(dataset.id)} />
+              <span className="truncate">{dataset.name[locale] ?? dataset.name.es ?? dataset.name.en ?? dataset.slug}</span>
+            </label>
+          ))}
+        </fieldset>
+        <Notice error={error ?? datasets.error} ok={ok} />
+        <Button size="sm" disabled={!manage || chosen.length === 0 || busy !== null} loading={busy === 'rda'} onClick={apply}>{t('rda.apply')}</Button>
+        <p className="text-[11px] text-text-muted">{t('rda.note')}</p>
+      </div>
+    </DashboardCard>
   );
 }
 
@@ -381,7 +457,7 @@ function PermissionsScreen({ organizationId }: { organizationId: string }) {
     <Shell title={t('access.perm.title')} hint={t('access.perm.hint')}>
       <div className="grid gap-4 xl:grid-cols-2">
         <DashboardCard title={t('access.perm.mine')} description={t('access.perm.mineHint')}>
-          {permissions.length === 0 ? <EmptyState icon={ShieldCheck} title={t('access.perm.none')} /> : <ul className="flex flex-wrap gap-1.5">{permissions.map((permission) => <li key={permission} className="mono-data rounded-md border border-border bg-surface-hover px-2 py-0.5">{permission}</li>)}</ul>}
+          {permissions.length === 0 ? <EmptyState icon={ShieldCheck} title={t('access.perm.none')} /> : <ul className="flex flex-wrap gap-1.5">{permissions.map((permission) => <li key={permission} title={permission} className="rounded-md border border-border bg-surface-hover px-2 py-0.5 text-xs">{t(permissionLabelKey(permission) as never)}</li>)}</ul>}
         </DashboardCard>
         <DashboardCard title={t('access.perm.direct')} description={manage ? t('access.perm.directHint') : t('access.readOnly')}>
           <select className={cn(selectClass, 'w-full')} aria-label={t('access.col.user')} value={userId} onChange={(event) => setUserId(event.target.value)}>
@@ -394,6 +470,7 @@ function PermissionsScreen({ organizationId }: { organizationId: string }) {
           ))}
           <p className="flex items-center gap-1.5 text-[11px] text-text-muted"><Key className="size-3" />{t('access.perm.note')}</p>
         </DashboardCard>
+        <RoleDataAccessCard organizationId={organizationId} manage={manage} />
       </div>
     </Shell>
   );

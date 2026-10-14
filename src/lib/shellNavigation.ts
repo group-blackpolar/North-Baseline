@@ -20,12 +20,13 @@ export function useCategoryNavigation() {
   const { navigate } = useTabs();
   const { activeOrganization } = useOrganization();
   return useCallback((category: CategoryModel, explicitSub?: SubcategoryModel) => {
-    // The rail's platform-administration entry opens the admin route; its own subcategories navigate normally.
-    if (category.id === 'platform-administration' && !explicitSub) {
-      pushPath('/workspace/admin/dashboard');
+    const subcategory = explicitSub ?? category.subcategories[0];
+    // Black Polar administration is a normal category of the personal workspace; its URL mirrors the active subcategory.
+    if (category.id === 'platform-administration') {
+      pushPath(`/workspace/admin/${subcategory?.id ?? 'dashboard'}`);
+      navigate(category.id, subcategory?.id ?? null);
       return;
     }
-    const subcategory = explicitSub ?? category.subcategories[0];
     void navigateToPublishedTarget({
       organizationSlug: activeOrganization?.slug,
       category,
