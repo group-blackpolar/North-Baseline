@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 import {
   INVITABLE_ROLES, TENANT_ROLES, addGroupMember, changeMemberRole, createGroup, createInvitation, createInvitationKey, deleteGroup,
   grantGroupPermission, grantMemberPermission, listGroups, listInvitations, listMemberGrants, listMembers, removeGroupMember, removeMember,
-  archiveInvitation, deleteInvitation, grantRoleDataAccess, replaceInvitation, restoreInvitation, revokeGroupPermission, revokeInvitation, revokeMemberPermission,
+  archiveInvitation, deleteInvitation, getOrganizationPolicy, grantRoleDataAccess, saveOrganizationPolicy, replaceInvitation, restoreInvitation, revokeGroupPermission, revokeInvitation, revokeMemberPermission,
   type Group, type Invitation, type IssuedInvitation, type Member, type RegisteredPermission, type TenantRole,
 } from './api';
 import { AddUserDialog } from './AddUserDialog';
@@ -406,6 +406,47 @@ function PermissionChecklist({ granted, disabled, onToggle }: { granted: Registe
   );
 }
 
+/** Defaults for new accounts (role, groups) and import-history retention; saved in one audited call. */
+function PolicyCard({ organizationId, manage }: { organizationId: string; manage: boolean }) {
+  const { t } = useI18n();
+  const policy = useList(() => getOrganizationPolicy(organizationId), [organizationId]);
+  const groups = useList(() => listGroups(organizationId), [organizationId]);
+  const { busy, error, ok, act } = useBusy();
+  const [draft, setDraft] = useState<{ role: 'VIEWER' | 'MEMBER' | 'BILLING_ADMIN'; groupIds: string[]; days: string } | null>(null);
+  const current = draft ?? (policy.data ? { role: policy.data.defaultMemberRole, groupIds: policy.data.defaultGroupIds, days: policy.data.importRetentionDays === null ? '' : String(policy.data.importRetentionDays) } : null);
+  const days = current?.days.trim() === '' ? null : Number(current?.days);
+  const daysValid = days === null || (Number.isInteger(days) && days >= 1 && days <= 3650);
+  const toggle = (id: string) => current && setDraft({ ...current, groupIds: current.groupIds.includes(id) ? current.groupIds.filter((value) => value !== id) : [...current.groupIds, id] });
+  const save = () => current && void act('policy', async () => { await saveOrganizationPolicy(organizationId, { defaultMemberRole: current.role, defaultGroupIds: current.groupIds, importRetentionDays: days }); setDraft(null); await policy.reload(); }, t('pol.saved'));
+  return (
+    <DashboardCard title={t('pol.title')} description={manage ? t('pol.hint') : t('access.readOnly')}>
+      {!current ? <Loading /> : (
+        <div className="space-y-3">
+          <label className="block text-xs text-text-secondary">{t('pol.role')}
+            <select className={cn(selectClass, 'mt-1 w-full')} value={current.role} disabled={!manage} onChange={(event) => setDraft({ ...current, role: event.target.value as typeof current.role })}>
+              {(['VIEWER', 'MEMBER', 'BILLING_ADMIN'] as const).map((value) => <option key={value} value={value}>{value}</option>)}
+            </select>
+          </label>
+          <fieldset className="space-y-1"><legend className="ui-label mb-1">{t('pol.groups')}</legend>
+            {(groups.data ?? []).length === 0 ? <p className="text-xs text-text-muted">{t('pol.noGroups')}</p> : (groups.data ?? []).map((group) => (
+              <label key={group.id} className="flex items-center gap-2 rounded-md px-2 py-1 text-xs text-text-secondary hover:bg-surface-hover pointer-coarse:min-h-(--touch-min)">
+                <input type="checkbox" checked={current.groupIds.includes(group.id)} disabled={!manage} onChange={() => toggle(group.id)} /><span className="truncate">{group.name}</span>
+              </label>
+            ))}
+          </fieldset>
+          <label className="block text-xs text-text-secondary">{t('pol.retention')}
+            <input type="number" min={1} max={3650} className={cn(selectClass, 'mt-1 w-32')} value={current.days} disabled={!manage} aria-invalid={!daysValid} onChange={(event) => setDraft({ ...current, days: event.target.value })} />
+            <span className="mt-1 block text-[11px] text-text-muted">{t('pol.retentionHint')}</span>
+          </label>
+          <Notice error={error ?? policy.error ?? groups.error} ok={ok} />
+          <Button size="sm" disabled={!manage || !daysValid || busy !== null || draft === null} loading={busy === 'policy'} onClick={save}>{t('pol.save')}</Button>
+          <p className="text-[11px] text-text-muted">{t('pol.note')}</p>
+        </div>
+      )}
+    </DashboardCard>
+  );
+}
+
 /** Lets a role render the dashboards backed by chosen datasets (north.data.query + dataset ACL) in one audited step. */
 function RoleDataAccessCard({ organizationId, manage }: { organizationId: string; manage: boolean }) {
   const { t, locale } = useI18n();
@@ -471,6 +512,7 @@ function PermissionsScreen({ organizationId }: { organizationId: string }) {
           <p className="flex items-center gap-1.5 text-[11px] text-text-muted"><Key className="size-3" />{t('access.perm.note')}</p>
         </DashboardCard>
         <RoleDataAccessCard organizationId={organizationId} manage={manage} />
+        <PolicyCard organizationId={organizationId} manage={manage} />
       </div>
     </Shell>
   );
