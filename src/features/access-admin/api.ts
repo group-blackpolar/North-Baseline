@@ -53,6 +53,16 @@ export const replaceInvitation = (o: string, id: string) => apiRequest<IssuedInv
 export type OrganizationPolicy = { defaultMemberRole: 'VIEWER' | 'MEMBER' | 'BILLING_ADMIN'; defaultGroupIds: string[]; importRetentionDays: number | null };
 export const getOrganizationPolicy = (o: string) => apiRequest<OrganizationPolicy>(`${org(o)}/policy`);
 export const saveOrganizationPolicy = (o: string, input: OrganizationPolicy) => apiRequest<OrganizationPolicy>(`${org(o)}/policy`, { method: 'PUT', body: json(input) });
+export type SimulationOrigin = { type: 'ROLE' | 'GROUP' | 'DIRECT'; id?: string; name?: string };
+export type AccessSimulation = {
+  user: { id: string; name: string | null; email: string; status: string }; role: TenantRole; platformRole: string; groups: Array<{ id: string; name: string }>;
+  permissions: Array<{ permission: RegisteredPermission; origins: SimulationOrigin[] }>;
+  data: { canQuery: boolean; canManage: boolean; truncated: boolean; datasets: Array<{ id: string; name: Record<string, string>; slug: string; status: string; canQuery: boolean; reason: 'OK' | 'ARCHIVED' | 'NO_QUERY_CAPABILITY' | 'ACL_DENIED' }> };
+  views: { truncated: boolean; panels: Array<{ id: string; name: Record<string, string>; slug: string; visible: boolean; reason: 'OK' | 'NO_READ_PERMISSION' | 'AUDIENCE_DENIED' | 'UNSUPPORTED_POLICY' }> };
+  notes: { platformPrivileges: string | null };
+};
+/** Read-only simulation computed by CORECROW with the same checks as real requests; it never signs in as the member. */
+export const getAccessSimulation = (o: string, userId: string) => apiRequest<AccessSimulation>(`${org(o)}/members/${encodeURIComponent(userId)}/access-simulation`);
 export type RoleDataAccessResult = { role: TenantRole; capabilityGranted: boolean; datasetIds: string[]; rulesCreated: number };
 /** One audited, idempotent step: north.data.query for the role plus an ALLOW rule on each dataset. */
 export const grantRoleDataAccess = (o: string, input: { role: TenantRole; datasetIds: string[] }) =>

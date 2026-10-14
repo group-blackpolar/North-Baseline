@@ -35,5 +35,9 @@ export interface PanelBinding {
 export const listPanelBindings = (organizationId: string, panelId: string, signal?: AbortSignal) =>
   apiRequest<PanelBinding[]>(`${panelPath(organizationId, panelId)}/analytics-bindings`, { signal });
 
+/** CORECROW refuses (409 BINDING_IN_USE) while a draft or published version of the view still reads the connection. */
+export const deletePanelBinding = (organizationId: string, panelId: string, bindingId: string) =>
+  apiRequest<null>(`${panelPath(organizationId, panelId)}/analytics-bindings/${encodeURIComponent(bindingId)}`, { method: 'DELETE' });
+
 export const createPanelBinding = (organizationId: string, panelId: string, input: { name: string; datasetId: string; query: unknown; allowedFilters?: AllowedFilter[] }) =>
   apiRequest<PanelBinding>(`${panelPath(organizationId, panelId)}/analytics-bindings`, { method: 'POST', body: JSON.stringify(input) });
