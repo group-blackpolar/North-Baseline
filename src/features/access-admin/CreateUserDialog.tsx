@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Check, Copy, Plus } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
@@ -7,9 +7,9 @@ import { useOrganization } from '@/context/OrganizationContext';
 import { useNotifications } from '@/context/NotificationContext';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-import { INVITABLE_ROLES, createMemberAccount, type Group } from './api';
+import { INVITABLE_ROLES, createMemberAccount, listAccessTemplates, type AccessTemplate, type Group } from './api';
 import { errorText, selectClass } from './ui';
-import { generatePassword, previewLocalPart } from './credentials';
+import { generatePassword, previewAddress } from './credentials';
 
 /**
  * An organization administrator creates a member account: name, an address `name@<org>.bp` assigned automatically and a password
@@ -26,20 +26,39 @@ export function CreateUserDialog({ open, organizationId, groups, canAssignGroups
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<(typeof INVITABLE_ROLES)[number]>('MEMBER');
   const [groupIds, setGroupIds] = useState<string[]>([]);
+  const [templates, setTemplates] = useState<AccessTemplate[]>([]);
+  const [templateId, setTemplateId] = useState('');
+  const [primaryGroupId, setPrimaryGroupId] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<{ email: string; password: string } | null>(null);
   const [copied, setCopied] = useState(false);
-  const address = useMemo(() => `${previewLocalPart(name)}@${slug.toLowerCase()}.bp`, [name, slug]);
+  const template = templates.find((item) => item.id === templateId) ?? null;
+  const primaryGroup = groups.find((group) => group.id === primaryGroupId && groupIds.includes(group.id));
+  const address = useMemo(() => previewAddress(name, slug, primaryGroup?.name), [name, slug, primaryGroup?.name]);
 
-  const close = () => { setName(''); setPassword(''); setRole('MEMBER'); setGroupIds([]); setError(null); setCreated(null); setCopied(false); onClose(); };
+  // Templates are optional: an account can still be set up by hand, and a failed load must not block the dialog.
+  useEffect(() => {
+    if (!open) return;
+    let live = true;
+    listAccessTemplates(organizationId).then((value) => { if (live) setTemplates(value); }).catch(() => { if (live) setTemplates([]); });
+    return () => { live = false; };
+  }, [open, organizationId]);
+  const pickTemplate = (id: string) => {
+    setTemplateId(id);
+    const next = templates.find((item) => item.id === id);
+    if (next) { setRole(next.role === 'ADMIN' || next.role === 'BILLING_ADMIN' || next.role === 'MEMBER' || next.role === 'VIEWER' ? next.role : 'MEMBER'); if (canAssignGroups) setGroupIds(next.groupIds.filter((gid) => groups.some((group) => group.id === gid))); }
+    setPrimaryGroupId('');
+  };
+
+  const close = () => { setName(''); setPassword(''); setRole('MEMBER'); setGroupIds([]); setTemplateId(''); setPrimaryGroupId(''); setError(null); setCreated(null); setCopied(false); onClose(); };
   const submit = async () => {
     if (name.trim().length < 2) { setError(t('inv.nameRequired')); return; }
     const chosen = password || generatePassword(slug);
     if (chosen.length < 12) { setError(t('inv.passwordShort', { n: 12 })); return; }
     setBusy(true); setError(null);
     try {
-      const result = await createMemberAccount(organizationId, { name: name.trim(), password: chosen, role, groupIds });
+      const result = await createMemberAccount(organizationId, { name: name.trim(), password: chosen, role, groupIds, ...(templateId ? { templateId } : {}), ...(primaryGroup ? { primaryGroupId: primaryGroup.id } : {}) });
       setCreated({ email: result.user.email, password: chosen });
       push({ type: 'success', title: t('adm.create.done'), body: result.user.email });
       onDone();
@@ -71,7 +90,7 @@ export function CreateUserDialog({ open, organizationId, groups, canAssignGroups
           </label>
           <div className="space-y-1"><span className="ui-label">{t('adm.create.address')}</span>
             <p className="rounded-md border border-border bg-surface-hover px-3 py-2 font-mono text-sm text-text-secondary" data-testid="assigned-address">{address}</p>
-            <p className="text-[0.7rem] text-text-muted">{t('adm.create.addressHint')}</p>
+            <p className="text-[0.7rem] text-text-muted">{t('adm.create.addressHint')} {primaryGroup ? t('tpl.dialog.aliasNote') : ''}</p>
           </div>
           <label className="block space-y-1"><span className="ui-label">{t('inv.password')}</span>
             <span className="flex gap-2">
@@ -80,6 +99,14 @@ export function CreateUserDialog({ open, organizationId, groups, canAssignGroups
             </span>
             <span className="block text-[0.7rem] text-text-muted">{t('adm.create.passwordHint')}</span>
           </label>
+          {templates.length > 0 ? (
+            <label className="block space-y-1"><span className="ui-label">{t('tpl.dialog.pick')}</span>
+              <select className={cn(selectClass, 'w-full')} value={templateId} onChange={(event) => pickTemplate(event.target.value)}>
+                <option value="">{t('tpl.dialog.none')}</option>
+                {templates.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+              </select>
+            </label>
+          ) : null}
           <label className="block space-y-1"><span className="ui-label">{t('access.col.role')}</span>
             <select className={cn(selectClass, 'w-full')} value={role} onChange={(event) => setRole(event.target.value as typeof role)}>{INVITABLE_ROLES.map((item) => <option key={item}>{item}</option>)}</select>
           </label>
@@ -90,6 +117,24 @@ export function CreateUserDialog({ open, organizationId, groups, canAssignGroups
               ))}</div>
             </fieldset>
           ) : null}
+          {canAssignGroups && groupIds.length > 0 ? (
+            <label className="block space-y-1"><span className="ui-label">{t('tpl.dialog.primary')}</span>
+              <select className={cn(selectClass, 'w-full')} value={primaryGroup?.id ?? ''} onChange={(event) => setPrimaryGroupId(event.target.value)}>
+                <option value="">{t('tpl.dialog.noPrimary')}</option>
+                {groups.filter((group) => groupIds.includes(group.id)).map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
+              </select>
+              <span className="block text-[0.7rem] text-text-muted">{t('tpl.dialog.primaryHint')}</span>
+            </label>
+          ) : null}
+          <div className="rounded-lg border border-border bg-surface-hover p-3 text-xs text-text-secondary" aria-live="polite">
+            <p className="ui-label mb-1">{t('tpl.dialog.gives')}</p>
+            <ul className="list-disc space-y-0.5 pl-4">
+              {template && template.datasetIds.length > 0 ? <li>{t('tpl.dialog.data', { n: template.datasetIds.length })}</li> : null}
+              {template && template.permissions.length > 0 ? <li>{t('tpl.dialog.perms', { n: template.permissions.length })}</li> : null}
+              {role === 'ADMIN' ? <li className="text-warning">{t('tpl.dialog.admin')}</li> : null}
+              {!template || template.datasetIds.length === 0 ? <li className="text-text-muted">{t('tpl.dialog.noData')}</li> : null}
+            </ul>
+          </div>
           {error ? <p role="alert" className="text-xs text-error">{error}</p> : null}
           <button type="submit" className="hidden" aria-hidden="true" tabIndex={-1} />
         </form>

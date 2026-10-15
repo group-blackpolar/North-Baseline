@@ -13,3 +13,9 @@ export const previewLocalPart = (name: string) => {
   const first = name.trim().split(/\s+/)[0] ?? '';
   return first.normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase().replace(/[^a-z0-9._-]/g, '').replace(/^[^a-z0-9]+/, '').slice(0, 40) || 'usuario';
 };
+
+/** Mirrors the server's group alias fragment ("Finanzas Chile" -> "finanzaschile"). */
+export const groupAliasSlug = (name: string) => name.normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20) || 'grupo';
+/** `name@org.bp`, or `name.group@org.bp` when the account has a primary group. */
+export const previewAddress = (name: string, organizationSlug: string, primaryGroupName?: string) =>
+  `${previewLocalPart(name)}${primaryGroupName ? `.${groupAliasSlug(primaryGroupName)}` : ''}@${organizationSlug.toLowerCase()}.bp`;

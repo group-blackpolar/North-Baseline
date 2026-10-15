@@ -40,7 +40,15 @@ export const createInvitationKey = (o: string, input: { role: (typeof INVITABLE_
 export type UserLookup = { exists: boolean; user: { id: string; email: string; name: string | null; emailVerified: boolean } | null; alreadyMember: boolean };
 export type CreatedMember = { membership: { id: string }; user: { id: string; email: string; name: string }; password: string | null };
 /** The server assigns `name@<org>.bp` and hashes the password; nothing is emailed. */
-export const createMemberAccount = (o: string, input: { name: string; password?: string; role: (typeof INVITABLE_ROLES)[number]; groupIds: string[]; localPart?: string }) =>
+export type AccessTemplate = { id: string; name: string; description: string | null; role: 'VIEWER' | 'MEMBER' | 'BILLING_ADMIN' | 'ADMIN'; permissions: RegisteredPermission[]; datasetIds: string[]; groupIds: string[]; updatedAt: string };
+export type AccessTemplateInput = Omit<AccessTemplate, 'id' | 'updatedAt'>;
+export const listAccessTemplates = (o: string) => apiRequest<AccessTemplate[]>(`${org(o)}/access-templates`);
+export const createAccessTemplate = (o: string, input: AccessTemplateInput) => apiRequest<AccessTemplate>(`${org(o)}/access-templates`, { method: 'POST', body: json(input) });
+export const updateAccessTemplate = (o: string, id: string, input: AccessTemplateInput) => apiRequest<AccessTemplate>(`${org(o)}/access-templates/${encodeURIComponent(id)}`, { method: 'PUT', body: json(input) });
+export const deleteAccessTemplate = (o: string, id: string) => apiRequest<null>(`${org(o)}/access-templates/${encodeURIComponent(id)}`, { method: 'DELETE' });
+/** Role, permissions, groups and dataset access in one step (includes the data-query capability the dataset rule alone lacks). */
+export const applyAccessTemplate = (o: string, userId: string, templateId: string) => apiRequest<{ templateId: string; role: string; datasets: number; capabilityGranted: boolean }>(`${org(o)}/members/${encodeURIComponent(userId)}/apply-template`, { method: 'POST', body: json({ templateId }) });
+export const createMemberAccount = (o: string, input: { name: string; password?: string; role?: (typeof INVITABLE_ROLES)[number]; groupIds?: string[]; localPart?: string; templateId?: string; primaryGroupId?: string }) =>
   apiRequest<CreatedMember>(`${org(o)}/members/new`, { method: 'POST', body: JSON.stringify(input) });
 export const lookupUser = (o: string, email: string) => apiRequest<UserLookup>(`${org(o)}/user-lookup?email=${encodeURIComponent(email)}`);
 export const addMember = (o: string, input: { email: string; role: (typeof INVITABLE_ROLES)[number]; groupIds: string[] }) =>
