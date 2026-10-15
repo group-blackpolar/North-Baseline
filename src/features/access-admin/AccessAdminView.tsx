@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { listDatasets } from '@/features/admin-center/api';
 import { PERMISSION_GROUPS, permissionHintKey, permissionLabelKey } from './permissionCatalog';
 import { AccessRequestQueueCard, ExpiryNote, RequestAccessCard } from './AccessRequests';
+import { AccessTemplatesCard, ApplyTemplateRow } from './AccessTemplates';
 import { ArrowsClockwise, Copy, EnvelopeSimple, Key, MagnifyingGlass, Plus, ShieldCheck, Trash, Users } from '@phosphor-icons/react';
 import { DashboardCard } from '@/components/dashboard/primitives';
 import { Button } from '@/components/ui/button';
@@ -557,6 +558,7 @@ function PermissionsScreen({ organizationId }: { organizationId: string }) {
           <Notice error={error ?? members.error ?? grants.error} ok={ok} />
           {userId && (grants.loading && !grants.data ? <Loading /> : (
             <>
+              {manage ? <ApplyTemplateRow organizationId={organizationId} userId={userId} onApplied={() => { void grants.reload(); void details.reload(); }} /> : null}
               {manage ? <label className="mb-2 block text-xs text-text-secondary">{t('ar.grantDays')}<Input className="mt-1 w-28" type="number" min={1} max={365} value={grantDays} aria-invalid={!grantDaysValid} onChange={(event) => setGrantDays(event.target.value)} /></label> : null}
               <PermissionChecklist granted={grants.data ?? []} expiry={expiry} disabled={!manage || busy !== null || (!grantDaysValid)}
                 onToggle={(permission, grant) => void act(permission, () => (grant ? grantMemberPermission(organizationId, userId, permission, grantDays.trim() ? Number(grantDays) : undefined) : revokeMemberPermission(organizationId, userId, permission))).then(async (done) => { if (done) { await grants.reload(); await details.reload(); } })} />
@@ -564,6 +566,7 @@ function PermissionsScreen({ organizationId }: { organizationId: string }) {
           ))}
           <p className="flex items-center gap-1.5 text-[11px] text-text-muted"><Key className="size-3" />{t('access.perm.note')}</p>
         </DashboardCard>
+        <AccessTemplatesCard organizationId={organizationId} manage={manage} />
         <RequestAccessCard organizationId={organizationId} onChanged={() => void grants.reload()} />
         {manage ? <AccessRequestQueueCard organizationId={organizationId} onChanged={() => { void grants.reload(); void details.reload(); }} /> : null}
         <RoleDataAccessCard organizationId={organizationId} manage={manage} />
