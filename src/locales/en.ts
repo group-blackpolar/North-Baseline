@@ -433,7 +433,7 @@ const en: Dictionary = {
   'views.autosave.saving': 'Saving…',
   'views.autosave.saved': 'Saved',
   'views.autosave.conflictShort': 'Version conflict',
-  'views.autosave.conflict': 'The draft changed in another session. Reload before saving; content was not overwritten.',
+  'views.autosave.conflict': 'The draft changed in another session. Nothing was overwritten: compare the versions and choose which to keep.',
   'views.autosave.reload': 'Reload',
   'views.autosave.unsafeShort': 'Disallowed content',
   'views.autosave.errorShort': 'Could not save',

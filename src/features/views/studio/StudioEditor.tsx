@@ -17,6 +17,7 @@ import { DevJsonModal } from '../DevJsonModal';
 import { addComponent as addComponentOp, findComponent, validateStructure } from './documentOps';
 import { clearPreviewCache } from './previewCache';
 import { PublishDialog } from './PublishDialog';
+import { ConflictDialog } from './ConflictDialog';
 import { clearRecovery, readRecovery, recoveryKey, shouldOffer, writeRecovery, type RecoveryEntry } from './recovery';
 import { StudioCanvas } from './StudioCanvas';
 import { StudioInspector } from './StudioInspector';
@@ -62,6 +63,7 @@ export function StudioEditor({ onExit }: { onExit: () => void }) {
   const [inspectorOpen, setInspectorOpen] = useState(() => { try { return localStorage.getItem('north-studio-inspector') !== '0'; } catch { return true; } });
   const [sheet, setSheet] = useState<'library' | 'inspector' | null>(null);
   const [publishOpen, setPublishOpen] = useState(false);
+  const [conflictOpen, setConflictOpen] = useState(false);
   const [report, setReport] = useState<DraftReport | null>(null);
   const [validating, setValidating] = useState(false);
   const [exiting, setExiting] = useState(false);
@@ -240,9 +242,10 @@ export function StudioEditor({ onExit }: { onExit: () => void }) {
       {(conflict || saveError === 'conflict') ? (
         <div role="alert" className="flex shrink-0 items-center gap-2 border-b border-border bg-warning/10 px-4 py-2 text-xs text-text-secondary">
           <Warning className="size-4 shrink-0 text-warning" aria-hidden="true" /><span className="flex-1">{t('views.autosave.conflict')}</span>
-          <Button size="sm" variant="outline" onClick={() => void reloadDraft()}>{t('views.autosave.reload')}</Button>
+          <Button size="sm" variant="outline" onClick={() => setConflictOpen(true)}>{t('st.conflict.resolve')}</Button>
         </div>
       ) : null}
+      <ConflictDialog open={conflictOpen} onClose={() => setConflictOpen(false)} />
       {unsafe || (saveStatus === 'error' && saveError && saveError !== 'conflict' && saveError !== 'unsafe') ? (
         <div role="alert" className="flex shrink-0 items-center gap-2 border-b border-border bg-error/10 px-4 py-2 text-xs text-error"><Warning className="size-4 shrink-0" aria-hidden="true" /><span className="flex-1">{unsafe ? t('views.publishUnsafe') : saveError}</span>{!unsafe ? <Button size="sm" variant="outline" onClick={() => void saveNow()}>{t('admin.retry')}</Button> : null}</div>
       ) : null}
