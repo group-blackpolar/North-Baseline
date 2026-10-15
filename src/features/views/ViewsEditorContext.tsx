@@ -79,6 +79,8 @@ interface ViewsEditorContextValue {
   saveNow: () => Promise<boolean>;
   conflict: boolean;
   reloadDraft: () => Promise<void>;
+  /** After a conflict: adopt the server's current version tag and save the local document over it (explicit, never automatic). */
+  overwriteWithMine: () => Promise<boolean>;
 }
 
 const ViewsEditorContext = createContext<ViewsEditorContextValue | null>(null);
@@ -265,6 +267,24 @@ export function ViewsEditorProvider({
     }
   }, [organizationId, setActiveDocument]);
 
+  const overwriteWithMine = useCallback(async () => {
+    const panelId = panelRef.current;
+    if (!panelId) return false;
+    try {
+      const latest = await getDraft(organizationId, panelId);
+      if (panelRef.current !== panelId) return false;
+      setEtag(latest.etag);
+      etagRef.current = latest.etag;
+      setConflict(false);
+      setSaveError(null);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Request failed');
+      setSaveStatus('error');
+      return false;
+    }
+    return saveNow();
+  }, [organizationId, saveNow]);
+
   const getDocument = useCallback(() => docRef.current, []);
 
   const activePanel = (selection.categoryId && selection.subcategoryId && selection.panelId && taxonomy)
@@ -292,7 +312,7 @@ export function ViewsEditorProvider({
         selection: effectiveSelection, selectCategory, selectSubcategory, selectPanel, selectComponent, selectSection, clearComponentSelection,
         activePanel, activeDocument, setActiveDocument, isDirty, setIsDirty, modal, setModal, refreshTaxonomy,
         device, setDevice, getDocument, commit, edit, updateComponentProps, undo, redo, canUndo, canRedo, epoch,
-        etag, setEtag, saveStatus, setSaveStatus, saveError, setSaveError, saveNow, conflict, reloadDraft,
+        etag, setEtag, saveStatus, setSaveStatus, saveError, setSaveError, saveNow, conflict, reloadDraft, overwriteWithMine,
       }}
     >
       {children}

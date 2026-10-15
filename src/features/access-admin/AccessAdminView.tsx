@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { listDatasets } from '@/features/admin-center/api';
 import { PERMISSION_GROUPS, permissionHintKey, permissionLabelKey } from './permissionCatalog';
+import { AccessRequestQueueCard, ExpiryNote, RequestAccessCard } from './AccessRequests';
 import { ArrowsClockwise, Copy, EnvelopeSimple, Key, MagnifyingGlass, Plus, ShieldCheck, Trash, Users } from '@phosphor-icons/react';
 import { DashboardCard } from '@/components/dashboard/primitives';
 import { Button } from '@/components/ui/button';
@@ -17,7 +18,7 @@ import { cn } from '@/lib/utils';
 import {
   INVITABLE_ROLES, TENANT_ROLES, addGroupMember, changeMemberRole, createGroup, createInvitation, createInvitationKey, deleteGroup,
   grantGroupPermission, grantMemberPermission, listGroups, listInvitations, listMemberGrants, listMembers, removeGroupMember, removeMember,
-  archiveInvitation, deleteInvitation, getAccessSimulation, getOrganizationPolicy, grantRoleDataAccess, saveOrganizationPolicy, replaceInvitation, restoreInvitation, revokeGroupPermission, revokeInvitation, revokeMemberPermission,
+  archiveInvitation, deleteInvitation, getAccessSimulation, getOrganizationPolicy, grantRoleDataAccess, listMemberGrantDetails, saveOrganizationPolicy, replaceInvitation, restoreInvitation, revokeGroupPermission, revokeInvitation, revokeMemberPermission,
   type AccessSimulation, type Group, type Invitation, type IssuedInvitation, type Member, type RegisteredPermission, type TenantRole,
 } from './api';
 import { AddUserDialog } from './AddUserDialog';
@@ -366,7 +367,7 @@ function GroupsScreen({ organizationId }: { organizationId: string }) {
   );
 }
 
-function PermissionChecklist({ granted, disabled, onToggle }: { granted: RegisteredPermission[]; disabled: boolean; onToggle: (permission: RegisteredPermission, grant: boolean) => void }) {
+function PermissionChecklist({ granted, disabled, onToggle, expiry }: { granted: RegisteredPermission[]; disabled: boolean; onToggle: (permission: RegisteredPermission, grant: boolean) => void; expiry?: Record<string, string | null> }) {
   const { t } = useI18n();
   const [advanced, setAdvanced] = useState(false);
   const [query, setQuery] = useState('');
@@ -393,6 +394,7 @@ function PermissionChecklist({ granted, disabled, onToggle }: { granted: Registe
                     <span className="min-w-0">
                       <span className="block font-medium text-text">{t(permissionLabelKey(permission) as never)}</span>
                       <span className="block text-[11px] leading-4 text-text-muted">{t(permissionHintKey(permission) as never)}</span>
+                      {on ? <ExpiryNote expiresAt={expiry?.[permission]} /> : null}
                       {advanced ? <span className="mono-data block truncate text-[11px] text-text-muted">{permission}</span> : null}
                     </span>
                   </label>
@@ -536,6 +538,10 @@ function PermissionsScreen({ organizationId }: { organizationId: string }) {
   const members = useList(() => listMembers(organizationId), [organizationId]);
   const [userId, setUserId] = useState('');
   const grants = useList(() => (userId ? listMemberGrants(organizationId, userId) : Promise.resolve([] as RegisteredPermission[])), [organizationId, userId]);
+  const details = useList(() => (userId && manage ? listMemberGrantDetails(organizationId, userId) : Promise.resolve([])), [organizationId, userId, manage]);
+  const [grantDays, setGrantDays] = useState('');
+  const grantDaysValid = grantDays.trim() === '' || (Number.isInteger(Number(grantDays)) && Number(grantDays) >= 1 && Number(grantDays) <= 365);
+  const expiry = Object.fromEntries((details.data ?? []).map((entry) => [entry.permission, entry.expiresAt]));
   const { busy, error, ok, act } = useBusy();
 
   return (
@@ -550,11 +556,16 @@ function PermissionsScreen({ organizationId }: { organizationId: string }) {
           </select>
           <Notice error={error ?? members.error ?? grants.error} ok={ok} />
           {userId && (grants.loading && !grants.data ? <Loading /> : (
-            <PermissionChecklist granted={grants.data ?? []} disabled={!manage || busy !== null}
-              onToggle={(permission, grant) => void act(permission, () => (grant ? grantMemberPermission : revokeMemberPermission)(organizationId, userId, permission)).then(async (done) => { if (done) await grants.reload(); })} />
+            <>
+              {manage ? <label className="mb-2 block text-xs text-text-secondary">{t('ar.grantDays')}<Input className="mt-1 w-28" type="number" min={1} max={365} value={grantDays} aria-invalid={!grantDaysValid} onChange={(event) => setGrantDays(event.target.value)} /></label> : null}
+              <PermissionChecklist granted={grants.data ?? []} expiry={expiry} disabled={!manage || busy !== null || (!grantDaysValid)}
+                onToggle={(permission, grant) => void act(permission, () => (grant ? grantMemberPermission(organizationId, userId, permission, grantDays.trim() ? Number(grantDays) : undefined) : revokeMemberPermission(organizationId, userId, permission))).then(async (done) => { if (done) { await grants.reload(); await details.reload(); } })} />
+            </>
           ))}
           <p className="flex items-center gap-1.5 text-[11px] text-text-muted"><Key className="size-3" />{t('access.perm.note')}</p>
         </DashboardCard>
+        <RequestAccessCard organizationId={organizationId} onChanged={() => void grants.reload()} />
+        {manage ? <AccessRequestQueueCard organizationId={organizationId} onChanged={() => { void grants.reload(); void details.reload(); }} /> : null}
         <RoleDataAccessCard organizationId={organizationId} manage={manage} />
         <AccessSimulationCard organizationId={organizationId} userId={userId} />
         <PolicyCard organizationId={organizationId} manage={manage} />

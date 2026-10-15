@@ -431,7 +431,7 @@ const es = {
   'views.autosave.saving': 'Guardando…',
   'views.autosave.saved': 'Guardado',
   'views.autosave.conflictShort': 'Conflicto de versión',
-  'views.autosave.conflict': 'El borrador cambió en otra sesión. Recarga antes de guardar; no se sobrescribió contenido.',
+  'views.autosave.conflict': 'El borrador cambió en otra sesión. No se sobrescribió nada: compara las versiones y elige cuál conservar.',
   'views.autosave.reload': 'Recargar',
   'views.autosave.unsafeShort': 'Contenido no permitido',
   'views.autosave.errorShort': 'No se pudo guardar',

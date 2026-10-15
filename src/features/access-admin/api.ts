@@ -77,5 +77,17 @@ export const grantGroupPermission = (o: string, groupId: string, permission: Reg
 export const revokeGroupPermission = (o: string, groupId: string, permission: RegisteredPermission) => apiRequest<void>(`${org(o)}/groups/${encodeURIComponent(groupId)}/permissions/${encodeURIComponent(permission)}`, { method: 'DELETE' });
 
 export const listMemberGrants = (o: string, userId: string) => apiRequest<RegisteredPermission[]>(`${org(o)}/members/${encodeURIComponent(userId)}/permission-grants`);
-export const grantMemberPermission = (o: string, userId: string, permission: RegisteredPermission) => apiRequest<unknown>(`${org(o)}/members/${encodeURIComponent(userId)}/permission-grants`, { method: 'POST', body: json({ permission }) });
+export const grantMemberPermission = (o: string, userId: string, permission: RegisteredPermission, days?: number) => apiRequest<unknown>(`${org(o)}/members/${encodeURIComponent(userId)}/permission-grants`, { method: 'POST', body: json({ permission, ...(days ? { days } : {}) }) });
+export type DirectGrantDetail = { permission: RegisteredPermission; expiresAt: string | null; grantedBy: string | null };
+export const listMemberGrantDetails = (o: string, userId: string) => apiRequest<DirectGrantDetail[]>(`${org(o)}/members/${encodeURIComponent(userId)}/permission-grants/details`);
+export type AccessRequest = {
+  id: string; permission: RegisteredPermission; reason: string; requestedDays: number | null; status: 'PENDING' | 'APPROVED' | 'DENIED' | 'CANCELLED';
+  decidedBy: string | null; decidedAt: string | null; decisionNote: string | null; grantExpiresAt: string | null; createdAt: string;
+  requester: { userId: string; name: string | null; email: string } | null;
+};
+export const createAccessRequest = (o: string, input: { permission: RegisteredPermission; reason: string; days?: number }) => apiRequest<AccessRequest>(`${org(o)}/access-requests`, { method: 'POST', body: json(input) });
+export const listAccessRequests = (o: string, scope: 'mine' | 'all', status?: AccessRequest['status']) => apiRequest<AccessRequest[]>(`${org(o)}/access-requests?scope=${scope}${status ? `&status=${status}` : ''}`);
+export const cancelAccessRequest = (o: string, id: string) => apiRequest<null>(`${org(o)}/access-requests/${encodeURIComponent(id)}/cancel`, { method: 'POST' });
+/** `days: null` = permanent; omitted = what the member asked for. The server refuses self-approval and privilege escalation. */
+export const decideAccessRequest = (o: string, id: string, input: { decision: 'APPROVE' | 'DENY'; note?: string; days?: number | null }) => apiRequest<AccessRequest>(`${org(o)}/access-requests/${encodeURIComponent(id)}/decision`, { method: 'POST', body: json(input) });
 export const revokeMemberPermission = (o: string, userId: string, permission: RegisteredPermission) => apiRequest<void>(`${org(o)}/members/${encodeURIComponent(userId)}/permission-grants/${encodeURIComponent(permission)}`, { method: 'DELETE' });

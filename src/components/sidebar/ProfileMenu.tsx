@@ -1,16 +1,22 @@
 import { useState, useRef, useEffect } from 'react';
-import { CircleNotch, SignOut } from '@phosphor-icons/react';
+import { CircleNotch, HandPointing, SignOut } from '@phosphor-icons/react';
 import { useI18n } from '@/lib/i18n';
 import { useNotifications } from '@/context/NotificationContext';
 import { useLogout } from '@/hooks/useLogout';
 import type { SessionUser } from '@/lib/auth';
 import { UserAvatar } from '@/components/ui/user-avatar';
+import { useOrganization } from '@/context/OrganizationContext';
+import { PERSONAL_ORG_ID } from '@/lib/demo/store';
+import { RequestAccessDialog } from '@/features/access-admin/AccessRequests';
 
 export function ProfileMenu({ user }: { user: SessionUser }) {
   const { t } = useI18n();
   const { push } = useNotifications();
   const { logout, isLoggingOut } = useLogout();
   const [open, setOpen] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+  const { activeOrganization } = useOrganization();
+  const organizationId = activeOrganization && activeOrganization.id !== PERSONAL_ORG_ID ? activeOrganization.id : null;
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -60,6 +66,11 @@ export function ProfileMenu({ user }: { user: SessionUser }) {
             <p className="text-xs font-semibold text-text">{displayName}</p>
             <p className="text-[11px] text-text-muted mono-data truncate">{user.role}</p>
           </div>
+          {organizationId ? (
+            <button type="button" onClick={() => { setOpen(false); setRequesting(true); }} className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-text hover:bg-surface-hover transition-colors duration-(--duration-fast)">
+              <HandPointing className="w-4 h-4" aria-hidden="true" />{t('ar.menu')}
+            </button>
+          ) : null}
           <button
             type="button"
             disabled={isLoggingOut}
@@ -73,6 +84,7 @@ export function ProfileMenu({ user }: { user: SessionUser }) {
           </button>
         </div>
       )}
+      {organizationId ? <RequestAccessDialog organizationId={organizationId} open={requesting} onClose={() => setRequesting(false)} /> : null}
     </div>
   );
 }
