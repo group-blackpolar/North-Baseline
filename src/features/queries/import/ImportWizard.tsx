@@ -10,7 +10,7 @@ import { ApiError } from '@/lib/api';
 import { listDatasets, type DatasetField, type DatasetSummary } from '@/features/admin-center/api';
 import { localName } from '@/features/views/workspace/resources';
 import {
-  activateImport, cancelImport, confirmImport, createDataset, createMapping, fieldsOf, newIdempotencyKey, prepareImport, readAnalysis, readImport, sha256Hex, uploadToSignedUrl,
+  MULTIPART_THRESHOLD, activateImport, bumpAttempt, cancelImport, confirmImport, createDataset, resumableKey, startMultipart, uploadParts, createMapping, fieldsOf, newIdempotencyKey, prepareImport, readAnalysis, readImport, sha256Hex, uploadToSignedUrl,
   type ImportAnalysis, type ImportJob,
 } from './importApi';
 import { FAILED_STATES, FIELD_TYPES, IMPORT_STAGES, slugFromName, stageIndex, suggestMapping, toMappingInput, validateDrafts, type ColumnDraft, type FieldType } from './mappingModel';
@@ -42,6 +42,7 @@ export function ImportWizard({ organizationId, open, onOpenChange, initialDatase
   const [duplicates, setDuplicates] = useState<'KEEP' | 'SKIP_EXACT'>('SKIP_EXACT');
   // Never replace by default: adding a period keeps the history; replacing is an explicit, labelled choice.
   const [mode, setMode] = useState<'APPEND' | 'REPLACE_DATASET'>('APPEND');
+  const [partInfo, setPartInfo] = useState<{ done: number; total: number } | null>(null);
   const [periodStart, setPeriodStart] = useState('');
   const [periodEnd, setPeriodEnd] = useState('');
   const periodOk = mode === 'REPLACE_DATASET' || (periodStart !== '' && periodEnd !== '' && periodEnd >= periodStart);
@@ -99,9 +100,21 @@ export function ImportWizard({ organizationId, open, onOpenChange, initialDatase
     try {
       if (file.size > MAX_BYTES) throw new Error(t('imp.tooLarge', { mb: MAX_BYTES / 1024 / 1024 }));
       const checksum = await sha256Hex(file);
-      const prepared = await prepareImport(organizationId, datasetId, file, checksum, newIdempotencyKey());
+      const large = file.size > MULTIPART_THRESHOLD;
+      let prepared = await prepareImport(organizationId, datasetId, file, checksum, large ? resumableKey(datasetId, checksum) : newIdempotencyKey());
       setJob(prepared.import);
-      await uploadToSignedUrl(prepared.upload, file, setUploadFraction, controller.signal);
+      if (large) {
+        // A replayed job that can no longer take bytes (cancelled, rejected, already processed) is dead: move to a fresh key once.
+        let state;
+        try { state = await startMultipart(organizationId, datasetId, prepared.import.id); } catch (reason) {
+          if (!(reason instanceof ApiError) || reason.code !== 'IMPORT_UPLOAD_NOT_AVAILABLE') throw reason;
+          bumpAttempt(checksum);
+          prepared = await prepareImport(organizationId, datasetId, file, checksum, resumableKey(datasetId, checksum));
+          setJob(prepared.import);
+          state = await startMultipart(organizationId, datasetId, prepared.import.id);
+        }
+        await uploadParts(organizationId, datasetId, prepared.import.id, file, state, (fraction, done, total) => { setUploadFraction(fraction); setPartInfo({ done, total }); }, controller.signal);
+      } else await uploadToSignedUrl(prepared.upload, file, setUploadFraction, controller.signal);
       setUploadFraction(1);
       setJob(await confirmImport(organizationId, datasetId, prepared.import.id));
       await follow(prepared.import.id, datasetId, (status) => status === 'AWAITING_MAPPING', controller.signal);
@@ -186,7 +199,7 @@ export function ImportWizard({ organizationId, open, onOpenChange, initialDatase
                   return (
                     <li key={stage} className="flex items-center gap-2">
                       {state === 'done' ? <CheckCircle className="size-4 text-success" weight="fill" aria-hidden="true" /> : state === 'active' ? <CircleNotch className="size-4 animate-spin text-accent" aria-hidden="true" /> : <span className="size-4 rounded-full border border-border" aria-hidden="true" />}
-                      <span className={cn(state === 'todo' && 'text-text-muted')}>{stageLabel(stage)}{stage === 'AWAITING_UPLOAD' && uploadFraction !== null && uploadFraction < 1 ? ` · ${Math.round(uploadFraction * 100)}%` : ''}</span>
+                      <span className={cn(state === 'todo' && 'text-text-muted')}>{stageLabel(stage)}{stage === 'AWAITING_UPLOAD' && uploadFraction !== null && uploadFraction < 1 ? ` · ${Math.round(uploadFraction * 100)}%${partInfo ? ` · ${t('imp.part', { done: partInfo.done, total: partInfo.total })}` : ''}` : ''}</span>
                     </li>
                   );
                 })}

@@ -12,7 +12,9 @@ import { ApiError } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { listDatasets, type DatasetSummary } from '@/features/admin-center/api';
 import { useResource } from '@/features/admin-center/hooks';
-import { KeyValue, Loading, Notice, Unavailable, invalidateOrganization, selectClass, td, th, useBusy } from '@/features/admin-center/ui';
+import { KeyValue, Loading, Notice, SectionTabs, Unavailable, invalidateOrganization, selectClass, td, th, useBusy } from '@/features/admin-center/ui';
+import { PipelinePanel } from './PipelinePanel';
+import { QualityPanel } from './QualityPanel';
 import { localName } from '@/features/views/workspace/resources';
 import {
   assignDataset, createGroup, deleteGroup, formatBytes, groupAudit, groupDependencies, listGroups, readGroup, setGroupStatus, slugOf,
@@ -96,6 +98,7 @@ function GroupSheet({ organizationId, groupId, onClose, onChanged }: { organizat
   const [end, setEnd] = useState('');
   const [label, setLabel] = useState('');
   const [overlap, setOverlap] = useState(false);
+  const [tab, setTab] = useState<'overview' | 'datasets' | 'pipeline' | 'quality' | 'audit' | 'settings'>('overview');
   const [deleting, setDeleting] = useState<GroupDependencies | null>(null);
   const free = useMemo(() => (datasets.data ?? []).filter((dataset: DatasetSummary) => dataset.status === 'ACTIVE' && !dataset.groupId), [datasets.data]);
   const reload = async () => { await Promise.all([detail.reload(), audit.reload(), datasets.reload()]); onChanged(); };
@@ -112,9 +115,10 @@ function GroupSheet({ organizationId, groupId, onClose, onChanged }: { organizat
   }, t('dg.saved'));
 
   return (
-    <Sheet open={groupId !== null} onOpenChange={(open) => { if (!open) onClose(); }} side="right" title={group ? localName(group.name, locale) : ''} description={group?.slug} className="sm:w-[30rem]">
+    <Sheet open={groupId !== null} onOpenChange={(open) => { if (!open) onClose(); }} side="right" title={group ? localName(group.name, locale) : ''} description={group?.slug} className="sm:w-[38rem]">
       {detail.status === 'loading' ? <Loading /> : detail.status !== 'ready' || !group ? <Notice error={detail.error} /> : (
         <div className="space-y-5">
+          {tab === 'overview' ? (<>
           <dl>
             <KeyValue label={t('access.col.status')}>{group.status === 'ARCHIVED' ? t('dg.archived') : <Status tone={healthTone[group.summary.health]}>{t(`dg.health.${group.summary.health}`)}</Status>}</KeyValue>
             <KeyValue label={t('dg.col.datasets')}>{group.summary.datasetCount}</KeyValue>
@@ -124,8 +128,17 @@ function GroupSheet({ organizationId, groupId, onClose, onChanged }: { organizat
             {group.category ? <KeyValue label={t('dg.create.category')}>{group.category}</KeyValue> : null}
             {group.tags.length ? <KeyValue label={t('dg.create.tags')}>{group.tags.join(', ')}</KeyValue> : null}
           </dl>
+          </>) : null}
+          <SectionTabs label={group.slug} value={tab} onChange={setTab} tabs={[
+            { id: 'overview', label: t('dg.section.overview') }, { id: 'datasets', label: t('dg.section.datasets'), badge: group.datasets.length },
+            { id: 'pipeline', label: t('dg.section.pipeline') }, { id: 'quality', label: t('dg.section.quality') },
+            { id: 'audit', label: t('dg.section.audit') }, { id: 'settings', label: t('dg.section.settings') },
+          ]} />
           <Notice error={error} ok={ok} />
+          {tab === 'pipeline' ? <PipelinePanel organizationId={organizationId} groupId={group.id} datasets={group.datasets} /> : null}
+          {tab === 'quality' ? <QualityPanel organizationId={organizationId} group={group} /> : null}
 
+          {tab === 'datasets' ? (<>
           <section>
             <h3 className="ui-label mb-1.5">{t('dg.section.datasets')}</h3>
             {group.datasets.length === 0 ? <p className="text-xs text-text-muted">{t('dg.ds.none')}</p> : (
@@ -161,7 +174,9 @@ function GroupSheet({ organizationId, groupId, onClose, onChanged }: { organizat
               )}
             </section>
           ) : null}
+          </>) : null}
 
+          {tab === 'audit' ? (<>
           <section>
             <h3 className="ui-label mb-1.5">{t('dg.section.audit')}</h3>
             {(audit.data ?? []).length === 0 ? <p className="text-xs text-text-muted">{t('dg.audit.empty')}</p> : (
@@ -170,11 +185,14 @@ function GroupSheet({ organizationId, groupId, onClose, onChanged }: { organizat
               </ul>
             )}
           </section>
+          </>) : null}
 
+          {tab === 'settings' ? (<>
           <section className="flex flex-wrap gap-2 border-t border-border pt-3" aria-label={t('dg.section.settings')}>
             <Button variant="secondary" loading={busy === 'status'} onClick={() => void act('status', async () => { await setGroupStatus(organizationId, group.id, group.status === 'ACTIVE' ? 'ARCHIVED' : 'ACTIVE'); await reload(); }, t('dg.saved'))}>{group.status === 'ACTIVE' ? t('dg.archive') : t('dg.restore')}</Button>
             {group.status === 'ARCHIVED' ? <Button variant="destructive" loading={busy === 'scope'} onClick={() => void act('scope', async () => setDeleting(await groupDependencies(organizationId, group.id)))}>{t('dg.delete')}</Button> : null}
           </section>
+          </>) : null}
 
           <ConfirmDialog open={deleting !== null} destructive busy={busy === 'delete'} title={t('dg.delete.title', { name: localName(group.name, locale) })} confirmLabel={t('dg.delete.confirm')}
             disabled={(deleting?.runningImports ?? 0) > 0} error={error}
