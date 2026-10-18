@@ -16,6 +16,8 @@ export const pack18Es = {
   'dg.delete.bindings': 'Hay {bindings} vínculos analíticos en {panels} paneles que usan estos datasets; no se modifican.', 'dg.delete.running': 'Hay importaciones en curso: espera a que terminen o cancélalas.',
   'dg.delete.needArchive': 'Archiva el grupo antes de eliminarlo.', 'dg.delete.confirm': 'Eliminar grupo',
   'dg.saved': 'Cambios guardados.',
+  'imp.strategy': 'Cómo incorporar los datos', 'imp.strategy.append': 'Añadir período', 'imp.strategy.appendHint': 'Suma estos registros a los existentes. Se rechaza el mismo archivo ya importado y los períodos que se solapan.',
+  'imp.strategy.replace': 'Reemplazar todo el dataset', 'imp.strategy.replaceHint': 'Sustituye todos los datos actuales por este archivo. Las revisiones anteriores se conservan, pero los paneles verán solo los datos nuevos.',
 } as const;
 
 export type Pack18Dictionary = Record<keyof typeof pack18Es, string>;
@@ -37,4 +39,6 @@ export const pack18En: Pack18Dictionary = {
   'dg.delete.bindings': '{bindings} analytics bindings across {panels} panels use these datasets; they are not modified.', 'dg.delete.running': 'Imports are running: wait for them to finish or cancel them.',
   'dg.delete.needArchive': 'Archive the group before deleting it.', 'dg.delete.confirm': 'Delete group',
   'dg.saved': 'Changes saved.',
+  'imp.strategy': 'How to bring the data in', 'imp.strategy.append': 'Add a period', 'imp.strategy.appendHint': 'Adds these records to the existing ones. The same file imported before and overlapping periods are rejected.',
+  'imp.strategy.replace': 'Replace the whole dataset', 'imp.strategy.replaceHint': 'Replaces all current data with this file. Earlier revisions are kept, but panels will only see the new data.',
 };

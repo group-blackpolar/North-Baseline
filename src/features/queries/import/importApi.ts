@@ -55,6 +55,7 @@ export const readAnalysis = (organizationId: string, datasetId: string, importId
   apiRequest<ImportAnalysis>(`${base(organizationId, datasetId)}/imports/${encodeURIComponent(importId)}/analysis`);
 export const createMapping = (organizationId: string, datasetId: string, importId: string, input: MappingInput) =>
   apiRequest<MappingRecord>(`${base(organizationId, datasetId)}/imports/${encodeURIComponent(importId)}/mappings`, { method: 'POST', body: JSON.stringify(input) });
-export const activateImport = (organizationId: string, datasetId: string, importId: string, mappingId: string) =>
-  apiRequest<ImportJob>(`${base(organizationId, datasetId)}/imports/${encodeURIComponent(importId)}/activate`, { method: 'POST', body: JSON.stringify({ mappingId, mode: 'REPLACE_DATASET' }) });
+export type ActivationOptions = { mode: 'APPEND' | 'REPLACE_DATASET'; periodStart?: string; periodEnd?: string };
+export const activateImport = (organizationId: string, datasetId: string, importId: string, mappingId: string, options: ActivationOptions) =>
+  apiRequest<ImportJob>(`${base(organizationId, datasetId)}/imports/${encodeURIComponent(importId)}/activate`, { method: 'POST', body: JSON.stringify({ mappingId, ...options }) });
 export const fieldsOf = (organizationId: string, datasetId: string) => apiRequest<DatasetField[]>(`${base(organizationId, datasetId)}/fields`);

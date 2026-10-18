@@ -40,6 +40,11 @@ export function ImportWizard({ organizationId, open, onOpenChange, initialDatase
   const [analysis, setAnalysis] = useState<ImportAnalysis | null>(null);
   const [drafts, setDrafts] = useState<ColumnDraft[]>([]);
   const [duplicates, setDuplicates] = useState<'KEEP' | 'SKIP_EXACT'>('SKIP_EXACT');
+  // Never replace by default: adding a period keeps the history; replacing is an explicit, labelled choice.
+  const [mode, setMode] = useState<'APPEND' | 'REPLACE_DATASET'>('APPEND');
+  const [periodStart, setPeriodStart] = useState('');
+  const [periodEnd, setPeriodEnd] = useState('');
+  const periodOk = mode === 'REPLACE_DATASET' || (periodStart !== '' && periodEnd !== '' && periodEnd >= periodStart);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<number | null>(null);
@@ -120,7 +125,7 @@ export function ImportWizard({ organizationId, open, onOpenChange, initialDatase
     setBusy(true); setError(null); setStep('result');
     try {
       const mapping = await createMapping(organizationId, job.datasetId, job.id, toMappingInput(analysis.workbook.sheets[0]!.ordinal, drafts, duplicates));
-      setJob(await activateImport(organizationId, job.datasetId, job.id, mapping.id));
+      setJob(await activateImport(organizationId, job.datasetId, job.id, mapping.id, mode === 'APPEND' ? { mode, periodStart, periodEnd } : { mode }));
       await follow(job.id, job.datasetId, (status) => status === 'SUCCEEDED', controller.signal);
       const count = await queryDataset(organizationId, job.datasetId, { mode: 'AGGREGATE', measures: [{ operation: 'COUNT', alias: 'rows' }] }).catch(() => null);
       const value = count?.rows[0]?.rows;
@@ -221,7 +226,22 @@ export function ImportWizard({ organizationId, open, onOpenChange, initialDatase
               <input type="checkbox" checked={duplicates === 'SKIP_EXACT'} onChange={(event) => setDuplicates(event.target.checked ? 'SKIP_EXACT' : 'KEEP')} className="mt-0.5 size-4 accent-(--color-accent)" />
               <span><span className="block font-medium text-text">{t('imp.skipDuplicates')}</span><span className="text-text-muted">{t('imp.skipDuplicatesHint')}</span></span>
             </label>
-            <div className="flex justify-end gap-2"><Button variant="ghost" onClick={() => setStep('file')}>{t('imp.back')}</Button><Button variant="accent" disabled={issues.length > 0} onClick={() => void activate()}>{t('imp.import')}</Button></div>
+            <fieldset className="space-y-2 rounded-lg border border-border p-3 text-xs">
+              <legend className="px-1 font-medium text-text">{t('imp.strategy')}</legend>
+              {(['APPEND', 'REPLACE_DATASET'] as const).map((value) => (
+                <label key={value} className="flex items-start gap-2">
+                  <input type="radio" name="import-strategy" checked={mode === value} onChange={() => setMode(value)} className="mt-0.5 size-4 accent-(--color-accent)" />
+                  <span><span className="block font-medium text-text">{t(value === 'APPEND' ? 'imp.strategy.append' : 'imp.strategy.replace')}</span><span className="text-text-muted">{t(value === 'APPEND' ? 'imp.strategy.appendHint' : 'imp.strategy.replaceHint')}</span></span>
+                </label>
+              ))}
+              {mode === 'APPEND' ? (
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <label className="space-y-1"><span className="text-text-secondary">{t('dg.ds.start')}</span><input type="date" value={periodStart} onChange={(event) => setPeriodStart(event.target.value)} className="h-9 w-full rounded-md border border-border bg-surface px-2 text-base md:text-xs text-text" /></label>
+                  <label className="space-y-1"><span className="text-text-secondary">{t('dg.ds.end')}</span><input type="date" value={periodEnd} min={periodStart || undefined} onChange={(event) => setPeriodEnd(event.target.value)} className="h-9 w-full rounded-md border border-border bg-surface px-2 text-base md:text-xs text-text" /></label>
+                </div>
+              ) : null}
+            </fieldset>
+            <div className="flex justify-end gap-2"><Button variant="ghost" onClick={() => setStep('file')}>{t('imp.back')}</Button><Button variant="accent" disabled={issues.length > 0 || !periodOk} onClick={() => void activate()}>{t('imp.import')}</Button></div>
           </div>
         ) : null}
 
