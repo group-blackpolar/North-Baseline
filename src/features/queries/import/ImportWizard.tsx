@@ -16,7 +16,7 @@ import {
 import { FAILED_STATES, FIELD_TYPES, IMPORT_STAGES, slugFromName, stageIndex, suggestMapping, toMappingInput, validateDrafts, type ColumnDraft, type FieldType } from './mappingModel';
 
 type Step = 'dataset' | 'file' | 'mapping' | 'result';
-const MAX_BYTES = 50 * 1024 * 1024;
+const MAX_BYTES = 100 * 1024 * 1024; // CORECROW default; the server enforces its own (<=256 MiB) ceiling
 const delay = (milliseconds: number, signal: AbortSignal) => new Promise<void>((resolve, reject) => {
   const timer = window.setTimeout(resolve, milliseconds);
   signal.addEventListener('abort', () => { window.clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); }, { once: true });
