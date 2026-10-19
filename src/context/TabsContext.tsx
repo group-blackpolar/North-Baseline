@@ -109,6 +109,9 @@ export function TabsProvider({ children, persistKey }: { children: ReactNode; pe
   return <TabsContext.Provider value={value}>{children}</TabsContext.Provider>;
 }
 
+/** For components that may render outside the workspace shell (Studio preview, public showcase). */
+export function useOptionalTabs() { return useContext(TabsContext); }
+
 export function useTabs() {
   const context = useContext(TabsContext);
   if (!context) throw new Error('useTabs must be used within TabsProvider');

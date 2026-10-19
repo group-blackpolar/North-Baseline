@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { adminSectionOf } from '@/features/admin-center/sections';
 import { PersonalView } from '@/features/personal/PersonalView';
 import { OrganizationHome } from '@/features/home/OrganizationHome';
+import { ReportCardsBlock } from '@/features/home/ReportCardsBlock';
 import { PERSONAL_ORG_ID } from '@/lib/demo/store';
 import { AnalyticsBarChart, AnalyticsDataGrid, AnalyticsDonutChart, AnalyticsKpi, AnalyticsLineAreaChart } from '@/features/analytics/AnalyticsVisuals';
 import type { AnalyticsColumn, AnalyticsResult, AnalyticsValue } from '@/features/analytics/types';
@@ -106,15 +107,18 @@ const SELF_SCROLLING = new Set(['kpi_card', 'data_grid', 'geo_map', 'insights', 
 
 const EXPANDABLE = new Set(['bar_chart', 'line_chart', 'donut_chart', 'geo_map', 'data_grid', 'insights']);
 
+// These blocks draw their own cards: the cell adds no frame or padding.
+const isFrameless = (type: string) => type === 'hero' || type === 'link_cards' || type === 'definition_list' || type === 'report_cards';
+
 function PublishedGridItem({ component, breakpoint, matrix, title, rowOffset = 0, placed = true, children }: { component: PublishedPanelDocument['sections'][number]['components'][number]; breakpoint: Breakpoint; matrix: boolean; title: string; /** Rows taken by a band lifted above the matrix. */ rowOffset?: number; /** false: drawn inside a panel group, not at its own grid cell. */ placed?: boolean; children: ReactNode }) {
   const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const tight = component.type === 'kpi_card';
-  if (!matrix) return <div className={cn('min-w-0 rounded-xl border border-border bg-surface shadow-xs', tight ? 'p-3' : 'p-4')} style={gridStyle(component.layout[breakpoint])}>{children}</div>;
+  if (!matrix) return <div className={cn('min-w-0', !isFrameless(component.type) && 'rounded-xl border border-border bg-surface shadow-xs', !isFrameless(component.type) && (tight ? 'p-3' : 'p-4'))} style={gridStyle(component.layout[breakpoint])}>{children}</div>;
   // Fixed-matrix cell: the component fills the cell and scrolls or clips inside it; it never stretches the page.
   const bare = component.type === 'heading' || component.type === 'org_brand' || component.type === 'divider';
   // These blocks draw their own cards: the cell adds no frame or padding.
-  const frameless = component.type === 'hero' || component.type === 'link_cards' || component.type === 'definition_list';
+  const frameless = isFrameless(component.type);
   return (
     <div className={cn('group/cell relative flex min-h-0 min-w-0 flex-col rounded-lg', !placed && 'h-full', bare ? 'justify-center' : frameless ? 'overflow-hidden' : 'border border-border bg-surface p-2 shadow-xs', SELF_SCROLLING.has(component.type) || frameless ? 'overflow-hidden' : 'overflow-auto')} style={placed ? gridStyle(component.layout[breakpoint], rowOffset) : undefined}>
       <CellFillProvider value><div className="flex min-h-0 flex-1 flex-col [&>*]:min-h-0">{children}</div></CellFillProvider>
@@ -293,6 +297,7 @@ export function SafeComponent({ type, props, locales }: { type: string; props: R
   if (type === 'org_brand') return <OrgBrand props={props} />;
   if (type === 'hero') return <HeroBlock props={props} locales={locales} />;
   if (type === 'link_cards') return <LinkCardsBlock props={props} locales={locales} />;
+  if (type === 'report_cards') return <ReportCardsBlock props={props} locales={locales} />;
   if (type === 'definition_list') return <DefinitionListBlock props={props} locales={locales} />;
   if (type === 'link') {
     if (typeof props.panelSlug === 'string') return <PanelLink slug={props.panelSlug}>{localized(props.label, locales)}</PanelLink>;
@@ -556,7 +561,8 @@ export function ViewRenderer({ user, tab }: { user: SessionUser; tab: Tab | null
     );
   }
   // The system Home is implementation-backed (it has no stored document): an organization renders its own Home for it.
-  if (activeOrganization && activeOrganization.id !== PERSONAL_ORG_ID && category?.slug === 'home') return <OrganizationHome user={user} />;
+  // An edited Home (a published document) is rendered like any panel; the built-in Home is only the fallback while there is none.
+  if (activeOrganization && activeOrganization.id !== PERSONAL_ORG_ID && category?.slug === 'home' && !tab.publishedPanel?.document) return <OrganizationHome user={user} />;
   if (tab.publishedPanel) return <PanelNavigationBridge><PublishedPanel key={tab.publishedPanel.id} title={tab.publishedPanel.title} document={tab.publishedPanel.document} locales={tab.publishedPanel.localeOrder} organizationId={activeOrganization?.id} panelId={tab.publishedPanel.id} /></PanelNavigationBridge>;
   if (PERSONAL_CATEGORIES.has(tab.route.categoryId)) return <PersonalView route={tab.route} user={user} />;
   return <div className="p-6"><EmptyState icon={Barricade} title={t('panel.underConstruction')} body={t('panel.underConstructionBody', { name: tab.route.categoryId })} className="max-w-md" /></div>;
