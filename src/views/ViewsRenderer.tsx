@@ -108,6 +108,9 @@ const SELF_SCROLLING = new Set(['kpi_card', 'data_grid', 'geo_map', 'insights', 
 const EXPANDABLE = new Set(['bar_chart', 'line_chart', 'donut_chart', 'geo_map', 'data_grid', 'insights']);
 
 // These blocks draw their own cards: the cell adds no frame or padding.
+/** Reports are drawn at 80 % (CSS zoom: percentage widths/heights still fill the cell, so the page keeps fitting the viewport). The rest of the shell stays at 100 %. */
+const REPORT_ZOOM = 0.8;
+
 const isFrameless = (type: string) => type === 'hero' || type === 'link_cards' || type === 'definition_list' || type === 'report_cards' || type === 'title_bar';
 
 function PublishedGridItem({ component, breakpoint, matrix, title, rowOffset = 0, placed = true, children }: { component: PublishedPanelDocument['sections'][number]['components'][number]; breakpoint: Breakpoint; matrix: boolean; title: string; /** Rows taken by a band lifted above the matrix. */ rowOffset?: number; /** false: drawn inside a panel group, not at its own grid cell. */ placed?: boolean; children: ReactNode }) {
@@ -514,7 +517,7 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
   };
   const toolbarButton = 'inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs font-medium text-text-secondary transition-colors duration-(--duration-fast) hover:bg-surface-hover hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 pointer-coarse:h-(--touch-min)';
 
-  return <BindingSourceProvider source={bindingSource}><article ref={articleRef} className={cn('north-enter mx-auto w-full max-w-[1680px]', fitted ? 'flex h-full flex-col gap-2 p-2 lg:p-3' : 'space-y-5 p-4 lg:p-5', fullscreen && 'max-w-none overflow-auto bg-background')}>
+  return <BindingSourceProvider source={bindingSource}><article ref={articleRef} style={{ zoom: REPORT_ZOOM }} className={cn('north-enter mx-auto w-full max-w-[1680px]', fitted ? 'flex h-full flex-col gap-2 p-2 lg:p-3' : 'space-y-5 p-4 lg:p-5', fullscreen && 'max-w-none overflow-auto bg-background')}>
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h1 className={cn('font-display font-semibold', fitted ? 'text-lg' : 'text-2xl')}>{title}</h1>
       <div className="flex items-center gap-2">
