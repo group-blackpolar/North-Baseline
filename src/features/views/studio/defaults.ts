@@ -35,6 +35,7 @@ export function defaultProps(type: ComponentType): Record<string, unknown> {
     case 'org_brand': return { showName: true };
     case 'hero': return { title: localized('Título'), showBrand: true };
     case 'link_cards': return { items: [{ id: makeId(), title: localized('Enlace'), href: 'https://example.com' }] };
+    case 'report_cards': return { title: localized('Reportes'), items: [{ id: makeId(), categorySlug: 'nuevo-reporte', title: localized('Nuevo reporte'), icon: 'chart', tone: 'blue' }] };
     case 'panel_group': return { items: [{ componentId: 'a', label: localized('A') }, { componentId: 'b', label: localized('B') }] };
     case 'definition_list': return { items: [{ id: makeId(), term: localized('Término'), text: localized('Descripción') }] };
   }

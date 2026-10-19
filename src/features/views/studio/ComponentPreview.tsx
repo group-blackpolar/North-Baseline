@@ -7,6 +7,7 @@ import { publishedBarChartProps, publishedDonutChartProps, publishedLineChartPro
 import type { AnalyticsResult } from '@/features/analytics/types';
 import { useI18n } from '@/lib/i18n';
 import { SafeComponent } from '@/views/ViewsRenderer';
+import { ReportCardsOrganizationContext } from '@/features/home/ReportCardsBlock';
 import { BindingSourceProvider } from '@/features/analytics/pro/bindingSource';
 import { ProComponent } from '@/features/analytics/pro/ProComponent';
 import { makePreviewSource } from './previewSource';
@@ -113,5 +114,6 @@ export const ComponentPreview = memo(function ComponentPreview({ organizationId,
     return <Notice icon={Glyph}>{t('st.preview.unbound')}</Notice>;
   }
   if (component.type === 'document_workspace') return <Notice icon={Database}>{t('st.preview.documents')}</Notice>;
+  if (component.type === 'report_cards') return <ReportCardsOrganizationContext.Provider value={organizationId}>{SafeComponent({ type: component.type, props: component.props, locales })}</ReportCardsOrganizationContext.Provider>;
   return <>{SafeComponent({ type: component.type, props: component.props, locales })}</>;
 });

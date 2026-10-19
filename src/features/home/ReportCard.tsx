@@ -6,11 +6,9 @@ import { cn } from '@/lib/utils';
 import type { CardState } from './cardState';
 export type { CardState };
 
-const PHOTO = '/brand/shark-port-hero.webp';
-
 /** Colours come only from the active theme tokens (`accent` is a `var(--chart-N)` / `var(--color-accent)` reference), so every theme and organization brand is respected. */
-export function ReportCard({ name, description, icon: Glyph, accent, crop, state, index, onOpen }: {
-  name: string; description?: string; icon: IconComponent; accent: string; crop: { position: string; scale: number };
+export function ReportCard({ name, description, icon: Glyph, accent, image, state, index, onOpen }: {
+  name: string; description?: string; icon: IconComponent; accent: string; image?: string;
   state: CardState; index: number; onOpen?: () => void;
 }) {
   const { t } = useI18n();
@@ -28,10 +26,9 @@ export function ReportCard({ name, description, icon: Glyph, accent, crop, state
       {/* Image layer: decorative and replaceable. Name, icon and colour carry the meaning if it never loads. */}
       <div aria-hidden="true" className="absolute inset-0 overflow-hidden">
         <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, color-mix(in srgb, ${accent} 30%, var(--color-surface)), var(--color-surface) 75%)` }} />
-        {!imageFailed && state !== 'loading' ? (
-          <img src={PHOTO} alt="" loading="lazy" decoding="async" onError={() => setImageFailed(true)}
-            className={cn('absolute inset-0 size-full object-cover transition-[filter,transform,opacity] duration-300', muted ? 'opacity-40 blur-[3px] saturate-50' : 'opacity-70 group-hover/card:opacity-85')}
-            style={{ objectPosition: crop.position, transform: `scale(${muted ? 1.05 : crop.scale})`, transformOrigin: crop.position }} />
+        {image && !imageFailed && state !== 'loading' ? (
+          <img src={image} alt="" loading="lazy" decoding="async" onError={() => setImageFailed(true)}
+            className={cn('absolute inset-0 size-full object-cover transition-[filter,transform,opacity] duration-300', muted ? 'scale-[1.05] opacity-40 blur-[3px] saturate-50' : 'opacity-80 group-hover/card:scale-[1.04] group-hover/card:opacity-90')} />
         ) : null}
         {/* The surface colour fades the photo out under the text, so contrast holds in light, dark and midnight. */}
         <div className={cn('absolute inset-0', muted ? 'bg-surface/70' : 'bg-gradient-to-t from-surface via-surface/75 to-transparent')} />

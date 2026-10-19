@@ -33,6 +33,7 @@ const DEFINITIONS: ComponentDefinition[] = [
   { type: 'org_brand', category: 'content', iconKey: 'image', size: { w: 3, h: 3 }, binding: 'none', addable: true, appearance: ['align'] },
   { type: 'hero', category: 'content', iconKey: 'card', size: { w: 12, h: 6 }, binding: 'none', addable: false, appearance: [] },
   { type: 'link_cards', category: 'content', iconKey: 'link', size: { w: 8, h: 8 }, binding: 'none', addable: false, appearance: [] },
+  { type: 'report_cards', category: 'content', iconKey: 'link', size: { w: 12, h: 12 }, binding: 'none', addable: true, appearance: [] },
   { type: 'definition_list', category: 'content', iconKey: 'list', size: { w: 4, h: 8 }, binding: 'none', addable: false, appearance: [] },
   { type: 'panel_group', category: 'layout', iconKey: 'card', size: { w: 6, h: 8 }, binding: 'none', addable: false, appearance: [] },
   { type: 'divider', category: 'layout', iconKey: 'divider', size: { w: 12, h: 1 }, binding: 'none', addable: true, appearance: ['variant', 'spacing'] },

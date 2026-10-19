@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ArrowsClockwise, Package, WarningCircle } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { OrganizationAvatar } from '@/components/organization/OrganizationAvatar';
@@ -9,31 +9,13 @@ import { useI18n } from '@/lib/i18n';
 import { navigateToPublishedTarget } from '@/lib/publishedNavigation';
 import type { SessionUser } from '@/lib/auth';
 import type { CategoryModel } from '@/lib/models';
-import { CURATED_REPORTS, GENERIC_ACCENTS, GENERIC_CROPS, type ReportDefinition } from './homeReports';
-import { getReportAccess, type ReportAccessTarget } from './reportAccessApi';
+import { CURATED_REPORTS, GENERIC_ACCENTS, GENERIC_IMAGES, type ReportDefinition } from './homeReports';
+import type { ReportAccessTarget } from './reportAccessApi';
+import { useReportAccess } from './useReportAccess';
 import { ReportCard } from './ReportCard';
-import { deriveCardState, type AccessLookup, type CardState } from './cardState';
+import { deriveCardState, type CardState } from './cardState';
 
-type Access = AccessLookup;
 const SYSTEM_CATEGORIES = new Set(['home', 'admin']);
-
-/** Reports of a curated organization: one authorized request answers every card. */
-function useReportAccess(organizationId: string | undefined, slugs: string[]) {
-  const [access, setAccess] = useState<Access>({ status: 'loading' });
-  const key = slugs.join(',');
-  const [attempt, setAttempt] = useState(0);
-  useEffect(() => {
-    if (!organizationId || !key) return;
-    const controller = new AbortController();
-    setAccess({ status: 'loading' });
-    getReportAccess(organizationId, key.split(','), controller.signal)
-      .then((rows) => setAccess({ status: 'ready', rows: new Map(rows.map((row) => [row.slug, row])) }))
-      // A failed lookup says nothing about access: never fall back to "allowed".
-      .catch(() => { if (!controller.signal.aborted) setAccess({ status: 'error' }); });
-    return () => controller.abort();
-  }, [organizationId, key, attempt]);
-  return { access, retry: () => setAttempt((value) => value + 1) };
-}
 
 const firstTarget = (category: CategoryModel): ReportAccessTarget | null => {
   const subcategory = category.subcategories.find((item) => item.publishedPanels?.length);
@@ -61,18 +43,18 @@ export function OrganizationHome({ user }: { user: SessionUser }) {
     void navigateToPublishedTarget({ organizationSlug: activeOrganization?.slug, category, subcategory: category.subcategories.find((item) => item.id === target.subcategoryId), navigate, history: 'push', panelSlug: target.panelSlug }).catch(() => setOpenError(true));
   }, [activeOrganization?.slug, categories, navigate]);
 
-  type Entry = { key: string; name: string; description?: string; icon: ReportDefinition['icon']; accent: string; crop: ReportDefinition['crop']; state: CardState; target: ReportAccessTarget | null };
+  type Entry = { key: string; name: string; description?: string; icon: ReportDefinition['icon']; accent: string; image: string; state: CardState; target: ReportAccessTarget | null };
   const entries = useMemo<Entry[]>(() => {
     if (curated) {
       return curated.reports.map((report): Entry => {
         const row = access.status === 'ready' ? access.rows.get(report.slug) : undefined;
         const state = deriveCardState(access, report.slug);
-        return { key: report.slug, name: t(report.nameKey), description: t(report.descriptionKey), icon: report.icon, accent: report.accent, crop: report.crop, state, target: row?.state === 'ALLOWED' ? row.target : null };
+        return { key: report.slug, name: t(report.nameKey), description: t(report.descriptionKey), icon: report.icon, accent: report.accent, image: report.image, state, target: row?.state === 'ALLOWED' ? row.target : null };
       });
     }
     return categories.filter((category) => category.slug && !SYSTEM_CATEGORIES.has(category.slug)).flatMap((category, index): Entry[] => {
       const target = firstTarget(category);
-      return target ? [{ key: category.id, name: category.name, icon: Package, accent: GENERIC_ACCENTS[index % GENERIC_ACCENTS.length]!, crop: GENERIC_CROPS[index % GENERIC_CROPS.length]!, state: 'allowed', target }] : [];
+      return target ? [{ key: category.id, name: category.name, icon: Package, accent: GENERIC_ACCENTS[index % GENERIC_ACCENTS.length]!, image: GENERIC_IMAGES[index % GENERIC_IMAGES.length]!, state: 'allowed', target }] : [];
     });
   }, [access, categories, curated, t]);
 
@@ -129,9 +111,9 @@ export function OrganizationHome({ user }: { user: SessionUser }) {
             <p className="rounded-2xl border border-dashed border-border-strong px-6 py-10 text-center text-sm text-text-secondary">{t('oh.empty')}</p>
           ) : (
             <ul className="grid grid-cols-1 gap-4 @[34rem]:grid-cols-2 @[62rem]:grid-cols-3">
-              {(entries.length ? entries : Array.from({ length: 6 }, (_, index): Entry => ({ key: String(index), name: '…', icon: Package, accent: GENERIC_ACCENTS[index]!, crop: GENERIC_CROPS[index]!, state: 'loading', target: null }))).map((entry, index) => (
+              {(entries.length ? entries : Array.from({ length: 6 }, (_, index): Entry => ({ key: String(index), name: '…', icon: Package, accent: GENERIC_ACCENTS[index]!, image: GENERIC_IMAGES[index]!, state: 'loading', target: null }))).map((entry, index) => (
                 <li key={entry.key} className="min-w-0">
-                  <ReportCard name={entry.name} description={entry.description} icon={entry.icon} accent={entry.accent} crop={entry.crop} state={entry.state} index={index} onOpen={entry.target ? () => open(entry.target!) : undefined} />
+                  <ReportCard name={entry.name} description={entry.description} icon={entry.icon} accent={entry.accent} image={entry.image} state={entry.state} index={index} onOpen={entry.target ? () => open(entry.target!) : undefined} />
                 </li>
               ))}
             </ul>

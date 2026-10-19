@@ -50,6 +50,29 @@ export function HeroBlock({ props, locales }: { props: Props; locales: string[] 
   const aside = props.aside && typeof props.aside === 'object' ? props.aside as Props : null;
   const AsideIcon = aside ? iconOf(aside.icon) : null;
   const [imageFailed, setImageFailed] = useState(false);
+  if (props.centered === true) {
+    const chipList = chips;
+    return (
+      <div className="@container relative isolate flex flex-col items-center gap-5 overflow-hidden rounded-3xl border border-border bg-surface px-6 py-8 text-center @[48rem]:py-12">
+        {typeof props.backgroundImage === 'string' && !imageFailed ? <img src={props.backgroundImage} alt="" aria-hidden="true" decoding="async" onError={() => setImageFailed(true)} className="absolute inset-0 -z-20 size-full object-cover opacity-35" /> : null}
+        <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,color-mix(in_srgb,var(--color-surface)_92%,transparent)_30%,color-mix(in_srgb,var(--color-surface)_60%,transparent)_100%)]" />
+        <div aria-hidden="true" className="absolute inset-x-0 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-accent to-transparent" />
+        {props.showBrand === false ? null : typeof props.logoImage === 'string'
+          ? <span className="grid h-36 w-32 shrink-0 place-items-center rounded-2xl bg-white p-3 shadow-pop @[48rem]:h-44 @[48rem]:w-40"><img src={props.logoImage} alt="" className="size-full object-contain" /></span>
+          : <OrgBrand props={{ showName: false, align: 'center' }} size="hero" />}
+        <div className="max-w-2xl space-y-3">
+          {eyebrow ? <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-muted">{eyebrow}</p> : null}
+          <h2 className="font-display text-3xl font-bold leading-tight tracking-tight text-text @[48rem]:text-4xl">{title}</h2>
+          {body ? <p className="text-base leading-relaxed text-text-secondary">{body}</p> : null}
+        </div>
+        {chipList.length ? (
+          <ul className="flex flex-wrap justify-center gap-2">
+            {chipList.map((chip, index) => { const Glyph = iconOf(chip.icon); return <li key={index} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-xs text-text-secondary"><Glyph className="size-3.5" aria-hidden="true" />{localizedText(chip.label, locales)}</li>; })}
+          </ul>
+        ) : null}
+      </div>
+    );
+  }
   return (
     <div className="@container relative isolate flex h-full min-h-0 items-center gap-4 overflow-hidden rounded-xl px-3 py-2 @[700px]:px-6">
       <div aria-hidden="true" className="absolute inset-0 -z-20 bg-[linear-gradient(110deg,color-mix(in_srgb,var(--color-accent)_7%,var(--color-surface))_0%,var(--color-surface)_45%,color-mix(in_srgb,var(--color-accent)_18%,var(--color-surface))_100%)]" />

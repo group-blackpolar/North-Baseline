@@ -10,6 +10,7 @@ import { DataTab } from './DataTab';
 import { findComponent, setComponentBinding, setComponentCell, setComponentProps, removeComponent, duplicateComponent, removeSection, duplicateSection, setSectionLayout, setSectionName, type Component } from './documentOps';
 import { ColorField, Group, NumberField, SegmentedField, SelectField, SliderField, TextField, ToggleField } from './fields';
 import { ANALYTICS_TYPES, DATA_BINDING_KEY, definitionOf } from './registry';
+import { HeroFields, ReportCardsFields } from './ReportCardsFields';
 import { AnalyticsFields, SlotBindings, useSlotColumns } from './AnalyticsInspector';
 import { componentLabelKey } from './labels';
 import type { DraftIssue, PanelBinding } from './studioApi';
@@ -162,6 +163,8 @@ function GeneralTab({ component, sectionId, bindings }: { component: Component; 
             {localizedField('title', t('st.prop.title'))}
           </>
         ) : null}
+        {component.type === 'hero' ? <HeroFields component={component} sectionId={sectionId} locale={locale} labels={{ eyebrow: t('st.hero.eyebrow'), title: t('st.prop.title'), body: t('st.prop.body'), centered: t('st.hero.centered'), brand: t('st.hero.brand') }} /> : null}
+        {component.type === 'report_cards' ? <ReportCardsFields key={`${component.id}:${epoch}`} component={component} sectionId={sectionId} locale={locale} /> : null}
         {component.type === 'rich_text' ? <RichTextFields key={`${component.id}:${epoch}`} component={component} sectionId={sectionId} locale={locale} /> : null}
         {component.type === 'list' ? <ListFields key={`${component.id}:${epoch}`} component={component} sectionId={sectionId} locale={locale} /> : null}
         {component.type === 'table' ? <TableFields key={`${component.id}:${epoch}`} component={component} sectionId={sectionId} /> : null}
