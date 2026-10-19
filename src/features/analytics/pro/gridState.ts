@@ -13,6 +13,8 @@ export type GridColumn = {
   barTone?: string;
   /** Discrete intensity background proportional to the column maximum on the current page. */
   heat?: boolean;
+  /** Show 0 as a dash (pivot cells with nothing in them). */
+  zeroDash?: boolean;
 };
 
 export type GridView = { order: string[]; hidden: string[]; widths: Record<string, number> };
@@ -35,6 +37,7 @@ export function parseColumns(value: unknown, label: (raw: unknown) => string): G
       ...(column.hidden === true ? { hidden: true } : {}),
       ...(typeof column.barTone === 'string' ? { barTone: column.barTone } : {}),
       ...(column.heat === true ? { heat: true } : {}),
+      ...(column.zeroDash === true ? { zeroDash: true } : {}),
     }];
   });
 }

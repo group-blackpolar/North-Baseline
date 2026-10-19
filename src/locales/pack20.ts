@@ -4,6 +4,7 @@ export const pack20Es = {
   'st.rc.category': 'Reporte (categoría)', 'st.rc.categoryHelp': 'Identificador (slug) de la categoría del reporte en esta organización. La tarjeta se abre solo si el lector tiene acceso.',
   'st.rc.icon': 'Icono', 'st.rc.tone': 'Color', 'st.rc.image': 'Imagen', 'st.rc.noImage': 'Sin imagen',
   'st.rc.up': 'Subir tarjeta', 'st.rc.down': 'Bajar tarjeta', 'st.rc.remove': 'Quitar tarjeta', 'st.rc.add': 'Añadir tarjeta', 'st.rc.newReport': 'Nuevo reporte',
+  'st.cmp.title_bar': 'Barra de título', 'st.cmp.title_bar.hint': 'Banda a todo el ancho con el color principal de la organización y texto blanco.', 'grid.grandTotal': 'Total general',
   'st.hero.eyebrow': 'Texto superior', 'st.hero.centered': 'Cabecera centrada', 'st.hero.brand': 'Mostrar el logo',
 } as const;
 export type Pack20Dictionary = Record<keyof typeof pack20Es, string>;
@@ -12,5 +13,6 @@ export const pack20En: Pack20Dictionary = {
   'st.rc.category': 'Report (category)', 'st.rc.categoryHelp': 'Identifier (slug) of the report category in this organization. The card opens only if the reader has access.',
   'st.rc.icon': 'Icon', 'st.rc.tone': 'Color', 'st.rc.image': 'Image', 'st.rc.noImage': 'No image',
   'st.rc.up': 'Move card up', 'st.rc.down': 'Move card down', 'st.rc.remove': 'Remove card', 'st.rc.add': 'Add card', 'st.rc.newReport': 'New report',
+  'st.cmp.title_bar': 'Title bar', 'st.cmp.title_bar.hint': 'Full-width band in the organization primary colour with white text.', 'grid.grandTotal': 'Grand total',
   'st.hero.eyebrow': 'Top text', 'st.hero.centered': 'Centered header', 'st.hero.brand': 'Show the logo',
 };
