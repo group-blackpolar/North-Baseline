@@ -328,3 +328,8 @@ a.np-card:active, button.np-card:active, .np-card[role="button"]:active { transf
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Organization Home: a deep-ocean branded surface (always dark, independent of the theme) with a short staggered card entrance. */
+.oh-root { background: radial-gradient(1200px 520px at 80% -10%, rgba(47, 111, 237, 0.16), transparent 60%), radial-gradient(900px 480px at -10% 30%, rgba(34, 211, 238, 0.08), transparent 55%), #061321; color: #e6edf5; }
+@keyframes oh-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.oh-rise { animation: oh-rise 420ms var(--ease-standard, ease-out) both; animation-delay: calc(var(--i, 0) * 55ms); }

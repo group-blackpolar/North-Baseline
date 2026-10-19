@@ -5,6 +5,8 @@ import type { Tab } from '@/context/TabsContext';
 import { EmptyState } from '@/components/ui/empty-state';
 import { adminSectionOf } from '@/features/admin-center/sections';
 import { PersonalView } from '@/features/personal/PersonalView';
+import { OrganizationHome } from '@/features/home/OrganizationHome';
+import { PERSONAL_ORG_ID } from '@/lib/demo/store';
 import { AnalyticsBarChart, AnalyticsDataGrid, AnalyticsDonutChart, AnalyticsKpi, AnalyticsLineAreaChart } from '@/features/analytics/AnalyticsVisuals';
 import type { AnalyticsColumn, AnalyticsResult, AnalyticsValue } from '@/features/analytics/types';
 import type { DatasetQueryFilter } from '@/features/analytics/datasetQuery';
@@ -553,6 +555,8 @@ export function ViewRenderer({ user, tab }: { user: SessionUser; tab: Tab | null
       </Suspense>
     );
   }
+  // The system Home is implementation-backed (it has no stored document): an organization renders its own Home for it.
+  if (activeOrganization && activeOrganization.id !== PERSONAL_ORG_ID && category?.slug === 'home') return <OrganizationHome user={user} />;
   if (tab.publishedPanel) return <PanelNavigationBridge><PublishedPanel key={tab.publishedPanel.id} title={tab.publishedPanel.title} document={tab.publishedPanel.document} locales={tab.publishedPanel.localeOrder} organizationId={activeOrganization?.id} panelId={tab.publishedPanel.id} /></PanelNavigationBridge>;
   if (PERSONAL_CATEGORIES.has(tab.route.categoryId)) return <PersonalView route={tab.route} user={user} />;
   return <div className="p-6"><EmptyState icon={Barricade} title={t('panel.underConstruction')} body={t('panel.underConstructionBody', { name: tab.route.categoryId })} className="max-w-md" /></div>;
