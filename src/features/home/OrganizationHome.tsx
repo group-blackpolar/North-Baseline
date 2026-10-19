@@ -84,34 +84,29 @@ export function OrganizationHome({ user }: { user: SessionUser }) {
   const subtitle = new Intl.NumberFormat(locale);
 
   return (
-    <div className="oh-root @container min-h-full w-full">
+    <div className="@container min-h-full w-full bg-background text-text">
       <div className="mx-auto w-full max-w-[1280px] space-y-8 p-4 @[40rem]:p-6 @[64rem]:p-8">
-        <header className="relative isolate overflow-hidden rounded-3xl border border-white/10 bg-[#0B1D30]">
+        <header className="relative isolate overflow-hidden rounded-3xl border border-border bg-surface">
           <img src="/brand/shark-port-hero.webp" alt="" aria-hidden="true" decoding="async" fetchPriority="low" onError={(event) => { event.currentTarget.style.display = 'none'; }}
-            className="absolute inset-0 -z-20 size-full object-cover object-[70%_55%] opacity-50" />
-          <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[linear-gradient(100deg,#061321_8%,rgba(6,19,33,0.86)_46%,rgba(11,29,48,0.4)_100%)]" />
-          <div aria-hidden="true" className="absolute inset-x-0 bottom-0 -z-10 h-24 bg-gradient-to-t from-[#061321] to-transparent" />
-          <div className="flex flex-col gap-6 p-6 @[48rem]:flex-row @[48rem]:items-center @[48rem]:justify-between @[48rem]:p-10">
-            <div className="max-w-2xl space-y-4">
-              <div className="flex items-center gap-3">
-                {curated ? (
-                  <span className="grid h-14 w-12 shrink-0 place-items-center rounded-xl bg-white p-1.5 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)]">
-                    <img src="/brand/shark-logo.png" alt={`${productName} logo`} className="size-full object-contain" />
-                  </span>
-                ) : (
-                  <OrganizationAvatar name={organizationName} organizationId={activeOrganization?.id} iconAssetId={(activeOrganization as { iconAssetId?: string | null } | null)?.iconAssetId} iconData={(activeOrganization as { iconData?: string | null } | null)?.iconData} className="size-14" />
-                )}
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#7DD3FC]">{t('oh.eyebrow')}</p>
-                  {firstName ? <p className="text-sm text-slate-300">{t('oh.greeting', { name: firstName })}</p> : null}
-                </div>
-              </div>
-              <h1 className="font-display text-3xl font-bold leading-tight tracking-tight text-white @[48rem]:text-4xl">{t('oh.title', { name: productName })}</h1>
-              <p className="max-w-xl text-base leading-relaxed text-slate-300">{t('oh.tagline')}</p>
+            className="absolute inset-0 -z-20 size-full object-cover object-[70%_55%] opacity-35" />
+          <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,color-mix(in_srgb,var(--color-surface)_92%,transparent)_30%,color-mix(in_srgb,var(--color-surface)_60%,transparent)_100%)]" />
+          <div aria-hidden="true" className="absolute inset-x-0 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-accent to-transparent" />
+          <div className="flex flex-col items-center gap-6 px-6 py-8 text-center @[48rem]:py-12">
+            {curated ? (
+              <span className="grid h-36 w-32 shrink-0 place-items-center rounded-2xl bg-white p-3 shadow-pop @[48rem]:h-44 @[48rem]:w-40">
+                <img src="/brand/shark-logo.png" alt={`${productName} logo`} className="size-full object-contain" />
+              </span>
+            ) : (
+              <OrganizationAvatar name={organizationName} organizationId={activeOrganization?.id} iconAssetId={(activeOrganization as { iconAssetId?: string | null } | null)?.iconAssetId} iconData={(activeOrganization as { iconData?: string | null } | null)?.iconData} className="size-28 rounded-2xl text-3xl" />
+            )}
+            <div className="max-w-2xl space-y-3">
+              {firstName ? <p className="text-sm text-text-secondary">{t('oh.greeting', { name: firstName })}</p> : null}
+              <h1 className="font-display text-3xl font-bold leading-tight tracking-tight text-text @[48rem]:text-4xl">{t('oh.title', { name: productName })}</h1>
+              <p className="text-base leading-relaxed text-text-secondary">{t('oh.tagline')}</p>
             </div>
-            <dl className="flex shrink-0 flex-wrap gap-3 text-sm @[48rem]:flex-col @[48rem]:items-stretch">
-              <div className="rounded-xl border border-white/10 bg-[#061321]/70 px-4 py-2.5"><dt className="text-[11px] uppercase tracking-wide text-slate-400">{t('oh.org')}</dt><dd className="font-medium text-white">{organizationName}</dd></div>
-              {!loading && entries.length > 0 && (!curated || access.status === 'ready') ? <div className="rounded-xl border border-white/10 bg-[#061321]/70 px-4 py-2.5"><dt className="text-[11px] uppercase tracking-wide text-slate-400">{t('oh.available')}</dt><dd className="font-medium text-white tabular-nums">{t('oh.availableValue', { allowed: subtitle.format(allowed), total: subtitle.format(entries.length) })}</dd></div> : null}
+            <dl className="flex flex-wrap justify-center gap-3 text-sm">
+              <div className="rounded-xl border border-border bg-surface px-4 py-2.5"><dt className="text-[11px] uppercase tracking-wide text-text-muted">{t('oh.org')}</dt><dd className="font-medium text-text">{organizationName}</dd></div>
+              {!loading && entries.length > 0 && (!curated || access.status === 'ready') ? <div className="rounded-xl border border-border bg-surface px-4 py-2.5"><dt className="text-[11px] uppercase tracking-wide text-text-muted">{t('oh.available')}</dt><dd className="font-medium text-text tabular-nums">{t('oh.availableValue', { allowed: subtitle.format(allowed), total: subtitle.format(entries.length) })}</dd></div> : null}
             </dl>
           </div>
         </header>
@@ -119,19 +114,19 @@ export function OrganizationHome({ user }: { user: SessionUser }) {
         <section aria-labelledby="oh-reports" className="space-y-4">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h2 id="oh-reports" className="font-display text-2xl font-semibold text-white">{t('oh.reports')}</h2>
-              <p className="mt-1 text-sm text-slate-400">{t('oh.reportsHint')}</p>
+              <h2 id="oh-reports" className="font-display text-2xl font-semibold text-text">{t('oh.reports')}</h2>
+              <p className="mt-1 text-sm text-text-secondary">{t('oh.reportsHint')}</p>
             </div>
           </div>
           {curated && access.status === 'error' ? (
-            <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-300/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+            <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-text">
               <WarningCircle size={18} aria-hidden="true" /><span className="min-w-0 flex-1">{t('oh.permError')}</span>
               <Button size="sm" variant="secondary" onClick={retry}><ArrowsClockwise className="size-3.5" />{t('oh.retry')}</Button>
             </div>
           ) : null}
-          {openError ? <p role="alert" className="rounded-xl border border-rose-300/30 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">{t('oh.openError')}</p> : null}
+          {openError ? <p role="alert" className="rounded-xl border border-error/40 bg-error/10 px-4 py-3 text-sm text-text">{t('oh.openError')}</p> : null}
           {entries.length === 0 && !loading ? (
-            <p className="rounded-2xl border border-dashed border-white/15 px-6 py-10 text-center text-sm text-slate-300">{t('oh.empty')}</p>
+            <p className="rounded-2xl border border-dashed border-border-strong px-6 py-10 text-center text-sm text-text-secondary">{t('oh.empty')}</p>
           ) : (
             <ul className="grid grid-cols-1 gap-4 @[34rem]:grid-cols-2 @[62rem]:grid-cols-3">
               {(entries.length ? entries : Array.from({ length: 6 }, (_, index): Entry => ({ key: String(index), name: '…', icon: Package, accent: GENERIC_ACCENTS[index]!, crop: GENERIC_CROPS[index]!, state: 'loading', target: null }))).map((entry, index) => (

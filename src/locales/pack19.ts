@@ -1,6 +1,6 @@
 /** Organization Home strings (SHARK Home and the generic organization Home). Spanish is the source of the key set; English must define every key. */
 export const pack19Es = {
-  'oh.eyebrow': 'Group Black Polar', 'oh.greeting': 'Hola, {name}', 'oh.title': 'Bienvenido a {name}',
+  'oh.greeting': 'Hola, {name}', 'oh.title': 'Bienvenido a {name}',
   'oh.tagline': 'Tu centro de información y análisis para explorar datos, consultar indicadores y tomar decisiones con mayor precisión.',
   'oh.org': 'Organización', 'oh.available': 'Reportes disponibles', 'oh.availableValue': '{allowed} de {total}',
   'oh.reports': 'Reportes', 'oh.reportsHint': 'Accede rápidamente a los reportes disponibles según tus permisos.',
@@ -24,7 +24,7 @@ export const pack19Es = {
 export type Pack19Dictionary = Record<keyof typeof pack19Es, string>;
 
 export const pack19En: Pack19Dictionary = {
-  'oh.eyebrow': 'Group Black Polar', 'oh.greeting': 'Hello, {name}', 'oh.title': 'Welcome to {name}',
+  'oh.greeting': 'Hello, {name}', 'oh.title': 'Welcome to {name}',
   'oh.tagline': 'Your information and analysis hub to explore data, review indicators and make decisions with greater precision.',
   'oh.org': 'Organization', 'oh.available': 'Available reports', 'oh.availableValue': '{allowed} of {total}',
   'oh.reports': 'Reports', 'oh.reportsHint': 'Quickly open the reports available to you, based on your permissions.',
