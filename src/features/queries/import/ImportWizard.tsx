@@ -105,15 +105,19 @@ export function ImportWizard({ organizationId, open, onOpenChange, initialDatase
       setJob(prepared.import);
       if (large) {
         // A replayed job that can no longer take bytes (cancelled, rejected, already processed) is dead: move to a fresh key once.
-        let state;
+        let state: Awaited<ReturnType<typeof startMultipart>> | null = null;
         try { state = await startMultipart(organizationId, datasetId, prepared.import.id); } catch (reason) {
-          if (!(reason instanceof ApiError) || reason.code !== 'IMPORT_UPLOAD_NOT_AVAILABLE') throw reason;
-          bumpAttempt(checksum);
-          prepared = await prepareImport(organizationId, datasetId, file, checksum, resumableKey(datasetId, checksum));
-          setJob(prepared.import);
-          state = await startMultipart(organizationId, datasetId, prepared.import.id);
+          if (reason instanceof ApiError && reason.code === 'IMPORT_UPLOAD_NOT_AVAILABLE') {
+            bumpAttempt(checksum);
+            prepared = await prepareImport(organizationId, datasetId, file, checksum, resumableKey(datasetId, checksum));
+            setJob(prepared.import);
+            try { state = await startMultipart(organizationId, datasetId, prepared.import.id); } catch { state = null; }
+          }
+          // Any other failure to START the resumable upload (storage policy, server error) is not the person's problem: the signed single upload
+          // that `prepare` already returned still works for every size CORECROW accepts.
         }
-        await uploadParts(organizationId, datasetId, prepared.import.id, file, state, (fraction, done, total) => { setUploadFraction(fraction); setPartInfo({ done, total }); }, controller.signal);
+        if (state) await uploadParts(organizationId, datasetId, prepared.import.id, file, state, (fraction, done, total) => { setUploadFraction(fraction); setPartInfo({ done, total }); }, controller.signal);
+        else await uploadToSignedUrl(prepared.upload, file, setUploadFraction, controller.signal);
       } else await uploadToSignedUrl(prepared.upload, file, setUploadFraction, controller.signal);
       setUploadFraction(1);
       setJob(await confirmImport(organizationId, datasetId, prepared.import.id));
