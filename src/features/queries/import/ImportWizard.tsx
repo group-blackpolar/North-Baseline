@@ -101,7 +101,17 @@ export function ImportWizard({ organizationId, open, onOpenChange, initialDatase
       if (file.size > MAX_BYTES) throw new Error(t('imp.tooLarge', { mb: MAX_BYTES / 1024 / 1024 }));
       const checksum = await sha256Hex(file);
       const large = file.size > MULTIPART_THRESHOLD;
-      let prepared = await prepareImport(organizationId, datasetId, file, checksum, large ? resumableKey(datasetId, checksum) : newIdempotencyKey());
+      // The resumable key replays the same job for the same file. A job that is cancelled, rejected or already processed answers 409
+      // IMPORT_UPLOAD_NOT_AVAILABLE: that attempt is dead, so move to a fresh key (a new job) instead of failing.
+      const prepareFor = async () => {
+        for (let tries = 0; ; tries += 1) {
+          try { return await prepareImport(organizationId, datasetId, file, checksum, large ? resumableKey(datasetId, checksum) : newIdempotencyKey()); } catch (reason) {
+            if (!large || tries >= 2 || !(reason instanceof ApiError) || reason.code !== 'IMPORT_UPLOAD_NOT_AVAILABLE') throw reason;
+            bumpAttempt(checksum);
+          }
+        }
+      };
+      let prepared = await prepareFor();
       setJob(prepared.import);
       if (large) {
         // A replayed job that can no longer take bytes (cancelled, rejected, already processed) is dead: move to a fresh key once.
