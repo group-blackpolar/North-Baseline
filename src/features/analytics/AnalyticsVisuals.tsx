@@ -31,7 +31,8 @@ import type { AnalyticsColumn, AnalyticsData, AnalyticsFilter, AnalyticsResult, 
 const PALETTE = CHART_PALETTE;
 
 /** Date buckets arrive as ISO timestamps; chart axes and tooltips name them as "Aug 2026" (UTC, so no day shifts). */
-function categoryLabel(value: unknown, locale: string, unit?: 'month' | 'year'): string {
+function categoryLabel(value: unknown, locale: string, unit?: 'month' | 'year' | 'monthOfYear'): string {
+  if (unit === 'monthOfYear') { const month = Number(value); return Number.isInteger(month) && month >= 1 && month <= 12 ? new Intl.DateTimeFormat(locale === 'es' ? 'es-419' : locale, { timeZone: 'UTC', month: 'short' }).format(new Date(Date.UTC(2000, month - 1, 1))) : String(value ?? ''); }
   if (unit === 'year' && typeof value === 'string' && /^\d{4}-/.test(value)) return value.slice(0, 4);
   if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T00:00:00(\.000)?Z$/.test(value)) {
     const date = new Date(value);
@@ -168,7 +169,7 @@ function ChartState({ result, series, children }: { result: AnalyticsResult; ser
 /** Inside a fixed-matrix cell a chart fills the cell; otherwise it keeps its own configured height. */
 const sized = (fill: boolean, height: number) => (fill ? { height: '100%' } : { height });
 
-export function AnalyticsBarChart({ result, categoryKey, series, horizontal = false, stacked = false, height = 240, showValues = false, categoryFormat, onSelect, selected = [] }: { result: AnalyticsResult; categoryKey: string; series: AnalyticsSeries[]; horizontal?: boolean; stacked?: boolean; height?: number; showValues?: boolean; categoryFormat?: 'month' | 'year'; /** Cross-filter: the clicked category narrows the dashboard (only passed when the field is filterable). */ onSelect?: (category: string) => void; /** Categories currently selected by a cross-filter: they stay at full strength, the rest recede. */ selected?: string[] }) {
+export function AnalyticsBarChart({ result, categoryKey, series, horizontal = false, stacked = false, height = 240, showValues = false, categoryFormat, onSelect, selected = [] }: { result: AnalyticsResult; categoryKey: string; series: AnalyticsSeries[]; horizontal?: boolean; stacked?: boolean; height?: number; showValues?: boolean; categoryFormat?: 'month' | 'year' | 'monthOfYear'; /** Cross-filter: the clicked category narrows the dashboard (only passed when the field is filterable). */ onSelect?: (category: string) => void; /** Categories currently selected by a cross-filter: they stay at full strength, the rest recede. */ selected?: string[] }) {
   const labelWidth = useLabelAxisWidth();
   const fill = useCellFill();
   const [box, size] = useElementSize<HTMLDivElement>();
@@ -210,7 +211,7 @@ export function AnalyticsBarChart({ result, categoryKey, series, horizontal = fa
   return <ChartState result={result} series={series}>{(all) => { const rows = all.slice(0, room); return <div ref={box} style={sized(fill, height)}><ResponsiveContainer width="100%" height="100%"><BarChart data={rows} layout={horizontal ? 'vertical' : 'horizontal'} margin={{ top: 8, right: showValues && horizontal ? 44 : 8, left: horizontal ? 20 : -12, bottom: 0 }} barCategoryGap={horizontal ? '28%' : '20%'}><CartesianGrid {...GRID} vertical={!horizontal} horizontal={!horizontal ? true : false} />{horizontal ? <><XAxis type="number" hide /><YAxis type="category" dataKey={categoryKey} width={labelWidth} tick={AXIS_TICK} tickLine={false} axisLine={false} interval={0} tickFormatter={clip} /></> : <><XAxis dataKey={categoryKey} tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={(value) => categoryLabel(value, locale, categoryFormat)} /><YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} /></>}<Tooltip cursor={{ fill: 'var(--color-surface-hover)' }} content={<NorthChartTooltip labelFormat={(label) => categoryLabel(label, locale, categoryFormat)} />} />{series.map((item, index) => <Bar key={item.key} dataKey={item.key} name={item.label} stackId={stacked ? 'values' : undefined} fill={item.color ?? PALETTE[index % PALETTE.length]} radius={horizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]} maxBarSize={horizontal ? 14 : 36} isAnimationActive={false} cursor={onSelect ? 'pointer' : undefined} onClick={onSelect ? (entry: unknown) => { const value = (entry as Record<string, unknown> | null)?.[categoryKey]; if (typeof value === 'string' || typeof value === 'number') onSelect(String(value)); } : undefined}>{selected.length ? rows.map((row, index) => <Cell key={`${String(row[categoryKey])}-${index}`} fillOpacity={selected.includes(String(row[categoryKey])) ? 1 : 0.3} />) : null}{showValues ? <LabelList dataKey={item.key} position={horizontal ? 'right' : 'top'} formatter={valueLabel} style={{ fontSize: 10, fill: 'var(--color-text-secondary)' }} /> : null}</Bar>)}</BarChart></ResponsiveContainer></div>; }}</ChartState>;
 }
 
-export function AnalyticsLineAreaChart({ result, categoryKey, series, variant = 'line', height = 240, categoryFormat }: { result: AnalyticsResult; categoryKey: string; series: AnalyticsSeries[]; variant?: 'line' | 'area'; height?: number; categoryFormat?: 'month' | 'year' }) {
+export function AnalyticsLineAreaChart({ result, categoryKey, series, variant = 'line', height = 240, categoryFormat }: { result: AnalyticsResult; categoryKey: string; series: AnalyticsSeries[]; variant?: 'line' | 'area'; height?: number; categoryFormat?: 'month' | 'year' | 'monthOfYear' }) {
   const { locale } = useI18n();
   const fill = useCellFill();
   const tick = (value: unknown) => categoryLabel(value, locale, categoryFormat);

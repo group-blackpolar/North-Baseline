@@ -53,6 +53,8 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
   const columns = useMemo(() => parseColumns(props.columns, (raw) => localizedText(raw, locales)), [locales, props.columns]);
   const trend = useMemo(() => readTrend(props.trend), [props.trend]);
   const trendId = trend ? bindingIdOf(bindings, trend.binding) : null;
+  const totalsSpec = props.totals && typeof props.totals === 'object' && typeof (props.totals as { binding?: unknown }).binding === 'string' ? props.totals as { binding: string; label?: unknown } : null;
+  const totalsId = totalsSpec ? bindingIdOf(bindings, totalsSpec.binding) : null;
   const pageSizes = useMemo(() => (Array.isArray(props.pageSizes) ? props.pageSizes.filter((size): size is number => typeof size === 'number' && size >= 5 && size <= 200) : []), [props.pageSizes]);
   const sizes = pageSizes.length ? pageSizes : [10, 20, 50];
   const defaultSize = typeof props.defaultPageSize === 'number' && sizes.includes(props.defaultPageSize) ? props.defaultPageSize : sizes[0]!;
@@ -91,6 +93,9 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
   const request = useMemo(() => ({ ...(sort ? { sort } : {}), offset: (page - 1) * pageSize, limit: pageSize, ...(search ? { search } : {}) }), [page, pageSize, search, sort]);
   const data = useBindingResult(dataId, request);
   const rows = useMemo(() => (data.response ? analyticsRows(data.response) : []), [data.response]);
+  // Grand total: its own single-row binding, same filters as the table, so it is exact for the whole selection (not just this page).
+  const totalsData = useBindingResult(totalsId, {});
+  const totalsRow = useMemo(() => (totalsData.response ? analyticsRows(totalsData.response)[0] ?? null : null), [totalsData.response]);
   const total = data.response?.totalRows ?? rows.length;
   const pages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -193,6 +198,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
       );
     }
     if (column.kind === 'badge') return raw === null ? <span className="text-text-muted">—</span> : <span className="inline-flex max-w-full items-center rounded-md bg-surface-hover px-1.5 py-0.5 text-[0.72rem] font-medium text-text-secondary"><span className="truncate" title={String(raw)}>{String(raw)}</span></span>;
+    if (column.zeroDash && (raw === null || asNumber(raw) === 0)) return <span className="text-text-muted">-</span>;
     const format: ValueFormat = column.kind === 'number' ? 'number' : column.kind === 'decimal' ? 'decimal' : column.kind === 'date' ? 'date' : column.kind === 'month' ? 'month' : column.kind === 'year' ? 'year' : 'text';
     const text = formatValue(raw, format, locale);
     const value = asNumber(raw);
@@ -277,6 +283,18 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
                 );
               })}
             </tbody>
+            {totalsRow ? (
+              <tfoot className="sticky bottom-0 z-10">
+                <tr className="bg-[color-mix(in_srgb,var(--color-surface-hover)_85%,var(--color-surface))] font-semibold">
+                  {selectable ? <td className="border-t border-border px-2" /> : null}
+                  {shown.map((column, index) => (
+                    <td key={column.key} className={cn('border-t border-border text-text', dense ? 'h-7 px-1.5' : 'h-9 px-3', align(column) === 'right' && 'text-right tabular-nums')}>
+                      {index === 0 ? localizedText(totalsSpec?.label, locales) || t('grid.grandTotal') : column.kind !== 'number' && column.kind !== 'decimal' && column.kind !== 'bar' ? null : formatValue(totalsRow[column.key] ?? null, column.kind === 'decimal' ? 'decimal' : 'number', locale)}
+                    </td>
+                  ))}
+                </tr>
+              </tfoot>
+            ) : null}
           </table>
         )}
       </div>

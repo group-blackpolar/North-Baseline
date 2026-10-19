@@ -36,7 +36,7 @@ import { PresentationMode } from '@/features/presentation/PresentationMode';
 import { cn } from '@/lib/utils';
 import { CellFillProvider } from '@/features/analytics/cellFill';
 import { PanelGroup } from '@/features/analytics/pro/PanelGroup';
-import { DefinitionListBlock, HeroBlock, LinkCardsBlock, OrgBrand, PanelNavigationContext, usePanelNavigation } from '@/features/analytics/pro/InfoBlocks';
+import { DefinitionListBlock, HeroBlock, LinkCardsBlock, TitleBarBlock, OrgBrand, PanelNavigationContext, usePanelNavigation } from '@/features/analytics/pro/InfoBlocks';
 import { navigateToPublishedTarget } from '@/lib/publishedNavigation';
 import { useTabs } from '@/context/TabsContext';
 
@@ -108,7 +108,7 @@ const SELF_SCROLLING = new Set(['kpi_card', 'data_grid', 'geo_map', 'insights', 
 const EXPANDABLE = new Set(['bar_chart', 'line_chart', 'donut_chart', 'geo_map', 'data_grid', 'insights']);
 
 // These blocks draw their own cards: the cell adds no frame or padding.
-const isFrameless = (type: string) => type === 'hero' || type === 'link_cards' || type === 'definition_list' || type === 'report_cards';
+const isFrameless = (type: string) => type === 'hero' || type === 'link_cards' || type === 'definition_list' || type === 'report_cards' || type === 'title_bar';
 
 function PublishedGridItem({ component, breakpoint, matrix, title, rowOffset = 0, placed = true, children }: { component: PublishedPanelDocument['sections'][number]['components'][number]; breakpoint: Breakpoint; matrix: boolean; title: string; /** Rows taken by a band lifted above the matrix. */ rowOffset?: number; /** false: drawn inside a panel group, not at its own grid cell. */ placed?: boolean; children: ReactNode }) {
   const { t } = useI18n();
@@ -244,7 +244,7 @@ function PublishedAnalyticsContent({ component, locales }: { component: Publishe
     const config = publishedBarChartProps(component.props, availableKeys, locales);
     if (config) {
       const title = localized(component.props.title, locales);
-      const categoryFormat = component.props.categoryFormat === 'year' || component.props.categoryFormat === 'month' ? component.props.categoryFormat : undefined;
+      const categoryFormat = component.props.categoryFormat === 'year' || component.props.categoryFormat === 'month' || component.props.categoryFormat === 'monthOfYear' ? component.props.categoryFormat : undefined;
       if (drilled !== null && drillBinding && typeof drill?.categoryKey === 'string') {
         const drillKeys = new Set(drillState.response?.columns.map((column) => column.key) ?? []);
         const drillConfig = publishedBarChartProps({ ...component.props, categoryKey: drill.categoryKey }, new Set([...drillKeys, ...config.series.map((item) => item.key)]), locales);
@@ -272,7 +272,7 @@ function PublishedAnalyticsContent({ component, locales }: { component: Publishe
   }
   if (component.type === 'line_chart') {
     const config = publishedLineChartProps(component.props, availableKeys, locales);
-    const categoryFormat = component.props.categoryFormat === 'year' || component.props.categoryFormat === 'month' ? component.props.categoryFormat : undefined;
+    const categoryFormat = component.props.categoryFormat === 'year' || component.props.categoryFormat === 'month' || component.props.categoryFormat === 'monthOfYear' ? component.props.categoryFormat : undefined;
     if (config) return <div className={dim}>{withChartTitle(component.props, locales, <AnalyticsLineAreaChart result={result} {...config} categoryFormat={categoryFormat} />)}</div>;
   }
   if (component.type === 'donut_chart') {
@@ -296,6 +296,7 @@ export function SafeComponent({ type, props, locales }: { type: string; props: R
   }
   if (type === 'org_brand') return <OrgBrand props={props} />;
   if (type === 'hero') return <HeroBlock props={props} locales={locales} />;
+  if (type === 'title_bar') return <TitleBarBlock props={props} locales={locales} />;
   if (type === 'link_cards') return <LinkCardsBlock props={props} locales={locales} />;
   if (type === 'report_cards') return <ReportCardsBlock props={props} locales={locales} />;
   if (type === 'definition_list') return <DefinitionListBlock props={props} locales={locales} />;
@@ -476,6 +477,10 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
     const byId = new Map(ordered.map((component) => [component.id, component]));
     const grouped = groupedIds(section);
     const lifted = Boolean(matrix?.fit && matrix.band > 0);
+    // A title bar placed above the filter bar belongs to the lifted band: it is drawn right above the filters, outside the fixed matrix.
+    const filterTop = Math.min(...ordered.filter((component) => component.type === 'filter_bar').map((component) => component.layout[breakpoint].y), Infinity);
+    const bandBars = lifted ? ordered.filter((component) => component.type === 'title_bar' && component.layout[breakpoint].y < filterTop) : [];
+    const inBand = new Set(bandBars.map((component) => component.id));
     const contentOf = (component: (typeof ordered)[number]): ReactNode => {
       const binding = datasetBinding(component.bindings);
       if (component.type === 'panel_group') return <PanelGroup props={component.props} locales={locales} render={(id) => { const member = byId.get(id); const inner = member ? contentOf(member) : null; return member && inner !== null ? <PublishedGridItem component={member} breakpoint={breakpoint} matrix title={localized(member.props.title, locales)} placed={false}>{inner}</PublishedGridItem> : null; }} />;
@@ -492,8 +497,9 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
       ...(matrix.fit ? { minHeight: matrix.rows * matrix.rowHeight + (matrix.rows - 1) * GAP_PX[section.layout.gap] } : {}),
     } : undefined;
     return <Fragment key={section.id}>
+      {lifted && bandBars.length ? <div className="shrink-0 space-y-2">{bandBars.map((component) => <div key={component.id}>{SafeComponent({ type: component.type, props: component.props, locales })}</div>)}</div> : null}
       {lifted && !presenting ? <div className="shrink-0">{filterBar}</div> : null}
-      <section style={style} className={cn('grid grid-cols-12', !matrix && 'auto-rows-[minmax(2rem,auto)]', GAP[section.layout.gap], matrix?.fit && 'min-h-0 flex-1')}>{ordered.filter((component) => !grouped.has(component.id)).map((component) => {
+      <section style={style} className={cn('grid grid-cols-12', !matrix && 'auto-rows-[minmax(2rem,auto)]', GAP[section.layout.gap], matrix?.fit && 'min-h-0 flex-1')}>{ordered.filter((component) => !grouped.has(component.id) && !inBand.has(component.id)).map((component) => {
         // The filter bar placed by the author is live on the page and absent from presentation scenes (those use a frozen snapshot).
         if (component.type === 'filter_bar') return lifted || presenting ? null : <div key={component.id} className={cn('min-w-0', matrix && 'min-h-0')} style={gridStyle(component.layout[breakpoint])}>{filterBar}</div>;
         const content = contentOf(component);

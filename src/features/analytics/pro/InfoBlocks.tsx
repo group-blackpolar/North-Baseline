@@ -115,6 +115,12 @@ export function HeroBlock({ props, locales }: { props: Props; locales: string[] 
   );
 }
 
+/** Page title bar: the organization's primary colour (navy for SHARK) with white text, full width of its cell. */
+export function TitleBarBlock({ props, locales }: { props: Props; locales: string[] }) {
+  const align = props.align === 'center' ? 'justify-center text-center' : props.align === 'right' ? 'justify-end text-right' : 'justify-start text-left';
+  return <div className={cn('flex h-full min-h-9 items-center rounded-lg px-4 font-display text-[0.95rem] font-semibold tracking-wide text-white', align)} style={{ background: 'var(--brand-primary, #1B3A7A)' }}><h2 className="truncate">{localizedText(props.text, locales)}</h2></div>;
+}
+
 function BlockTitle({ props, locales }: { props: Props; locales: string[] }) {
   const title = localizedText(props.title, locales);
   if (!title) return null;

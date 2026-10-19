@@ -140,7 +140,7 @@ function GeneralTab({ component, sectionId, bindings }: { component: Component; 
     <>
       {analytics ? <AnalyticsFields component={component} columnsBySlot={columnsBySlot} /> : null}
       {analytics ? null : <Group title={t('st.group.content')}>
-        {component.type === 'heading' ? localizedField('text', t('st.prop.text')) : null}
+        {component.type === 'heading' || component.type === 'title_bar' ? localizedField('text', t('st.prop.text')) : null}
         {component.type === 'card' ? <>{localizedField('title', t('st.prop.title'))}{localizedField('body', t('st.prop.body'), 2000)}</> : null}
         {component.type === 'link' ? (
           <>
