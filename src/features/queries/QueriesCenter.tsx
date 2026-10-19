@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowsClockwise, Calculator, Database, FloppyDisk, Graph, Plugs, SquaresFour, TreeStructure, UploadSimple, Warning } from '@phosphor-icons/react';
+import { ArrowsClockwise, Calculator, Database, Stack, FloppyDisk, Graph, Plugs, SquaresFour, TreeStructure, UploadSimple, Warning } from '@phosphor-icons/react';
 import { DashboardCard } from '@/components/dashboard/primitives';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -16,8 +16,9 @@ import { flattenTree, localName, type TreeCategory } from '@/features/views/work
 import { buildDependencyReport, extractDatasetRefs, type DatasetRef, type DependencyReport } from './dependencies';
 import { QueryExplorer } from './QueryExplorer';
 import { ImportWizard } from './import/ImportWizard';
+import { GroupsTab } from './groups/GroupsTab';
 
-type Tab = 'overview' | 'sources' | 'datasets' | 'explorer' | 'saved' | 'calculated' | 'dependencies';
+type Tab = 'overview' | 'sources' | 'datasets' | 'groups' | 'explorer' | 'saved' | 'calculated' | 'dependencies';
 
 /**
  * Queries: the analytical resources Views can read. Backed today by CORECROW datasets (schema, fields, imports, active
@@ -38,6 +39,7 @@ export function QueriesCenter({ organizationId }: { organizationId: string }) {
           { id: 'overview', label: t('adm2.q.tab.overview'), icon: SquaresFour },
           { id: 'sources', label: t('adm2.q.tab.sources'), icon: Plugs },
           { id: 'datasets', label: t('adm2.q.tab.datasets'), icon: Database },
+          { id: 'groups', label: t('dg.tab'), icon: Stack },
           { id: 'explorer', label: t('adm2.q.tab.explorer'), icon: Graph },
           { id: 'saved', label: t('adm2.q.tab.saved'), icon: FloppyDisk },
           { id: 'calculated', label: t('adm2.q.tab.calculated'), icon: Calculator },
@@ -47,6 +49,7 @@ export function QueriesCenter({ organizationId }: { organizationId: string }) {
       {tab === 'overview' ? <OverviewTab organizationId={organizationId} onOpen={setTab} /> : null}
       {tab === 'sources' ? <Unavailable title={t('adm2.q.sources.title')} body={t('adm2.q.sources.body')} needs={t('adm2.q.sources.needs')} /> : null}
       {tab === 'datasets' ? <DatasetsTab organizationId={organizationId} onExplore={openInExplorer} /> : null}
+      {tab === 'groups' ? <GroupsTab organizationId={organizationId} /> : null}
       {tab === 'explorer' ? <QueryExplorer key={explorerDataset ?? 'none'} organizationId={organizationId} initialDatasetId={explorerDataset} /> : null}
       {tab === 'saved' ? <Unavailable title={t('adm2.q.saved.title')} body={t('adm2.q.saved.body')} needs={t('adm2.q.saved.needs')} /> : null}
       {tab === 'calculated' ? <Unavailable title={t('adm2.q.calculated.title')} body={t('adm2.q.calculated.body')} needs={t('adm2.q.calculated.needs')} /> : null}

@@ -10,13 +10,13 @@ import { ApiError } from '@/lib/api';
 import { listDatasets, type DatasetField, type DatasetSummary } from '@/features/admin-center/api';
 import { localName } from '@/features/views/workspace/resources';
 import {
-  activateImport, cancelImport, confirmImport, createDataset, createMapping, fieldsOf, newIdempotencyKey, prepareImport, readAnalysis, readImport, sha256Hex, uploadToSignedUrl,
+  MULTIPART_THRESHOLD, activateImport, bumpAttempt, cancelImport, confirmImport, createDataset, resumableKey, startMultipart, uploadParts, createMapping, fieldsOf, newIdempotencyKey, prepareImport, readAnalysis, readImport, sha256Hex, uploadToSignedUrl,
   type ImportAnalysis, type ImportJob,
 } from './importApi';
 import { FAILED_STATES, FIELD_TYPES, IMPORT_STAGES, slugFromName, stageIndex, suggestMapping, toMappingInput, validateDrafts, type ColumnDraft, type FieldType } from './mappingModel';
 
 type Step = 'dataset' | 'file' | 'mapping' | 'result';
-const MAX_BYTES = 50 * 1024 * 1024;
+const MAX_BYTES = 100 * 1024 * 1024; // CORECROW default; the server enforces its own (<=256 MiB) ceiling
 const delay = (milliseconds: number, signal: AbortSignal) => new Promise<void>((resolve, reject) => {
   const timer = window.setTimeout(resolve, milliseconds);
   signal.addEventListener('abort', () => { window.clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')); }, { once: true });
@@ -40,6 +40,12 @@ export function ImportWizard({ organizationId, open, onOpenChange, initialDatase
   const [analysis, setAnalysis] = useState<ImportAnalysis | null>(null);
   const [drafts, setDrafts] = useState<ColumnDraft[]>([]);
   const [duplicates, setDuplicates] = useState<'KEEP' | 'SKIP_EXACT'>('SKIP_EXACT');
+  // Never replace by default: adding a period keeps the history; replacing is an explicit, labelled choice.
+  const [mode, setMode] = useState<'APPEND' | 'REPLACE_DATASET'>('APPEND');
+  const [partInfo, setPartInfo] = useState<{ done: number; total: number } | null>(null);
+  const [periodStart, setPeriodStart] = useState('');
+  const [periodEnd, setPeriodEnd] = useState('');
+  const periodOk = mode === 'REPLACE_DATASET' || (periodStart !== '' && periodEnd !== '' && periodEnd >= periodStart);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<number | null>(null);
@@ -94,9 +100,21 @@ export function ImportWizard({ organizationId, open, onOpenChange, initialDatase
     try {
       if (file.size > MAX_BYTES) throw new Error(t('imp.tooLarge', { mb: MAX_BYTES / 1024 / 1024 }));
       const checksum = await sha256Hex(file);
-      const prepared = await prepareImport(organizationId, datasetId, file, checksum, newIdempotencyKey());
+      const large = file.size > MULTIPART_THRESHOLD;
+      let prepared = await prepareImport(organizationId, datasetId, file, checksum, large ? resumableKey(datasetId, checksum) : newIdempotencyKey());
       setJob(prepared.import);
-      await uploadToSignedUrl(prepared.upload, file, setUploadFraction, controller.signal);
+      if (large) {
+        // A replayed job that can no longer take bytes (cancelled, rejected, already processed) is dead: move to a fresh key once.
+        let state;
+        try { state = await startMultipart(organizationId, datasetId, prepared.import.id); } catch (reason) {
+          if (!(reason instanceof ApiError) || reason.code !== 'IMPORT_UPLOAD_NOT_AVAILABLE') throw reason;
+          bumpAttempt(checksum);
+          prepared = await prepareImport(organizationId, datasetId, file, checksum, resumableKey(datasetId, checksum));
+          setJob(prepared.import);
+          state = await startMultipart(organizationId, datasetId, prepared.import.id);
+        }
+        await uploadParts(organizationId, datasetId, prepared.import.id, file, state, (fraction, done, total) => { setUploadFraction(fraction); setPartInfo({ done, total }); }, controller.signal);
+      } else await uploadToSignedUrl(prepared.upload, file, setUploadFraction, controller.signal);
       setUploadFraction(1);
       setJob(await confirmImport(organizationId, datasetId, prepared.import.id));
       await follow(prepared.import.id, datasetId, (status) => status === 'AWAITING_MAPPING', controller.signal);
@@ -120,7 +138,7 @@ export function ImportWizard({ organizationId, open, onOpenChange, initialDatase
     setBusy(true); setError(null); setStep('result');
     try {
       const mapping = await createMapping(organizationId, job.datasetId, job.id, toMappingInput(analysis.workbook.sheets[0]!.ordinal, drafts, duplicates));
-      setJob(await activateImport(organizationId, job.datasetId, job.id, mapping.id));
+      setJob(await activateImport(organizationId, job.datasetId, job.id, mapping.id, mode === 'APPEND' ? { mode, periodStart, periodEnd } : { mode }));
       await follow(job.id, job.datasetId, (status) => status === 'SUCCEEDED', controller.signal);
       const count = await queryDataset(organizationId, job.datasetId, { mode: 'AGGREGATE', measures: [{ operation: 'COUNT', alias: 'rows' }] }).catch(() => null);
       const value = count?.rows[0]?.rows;
@@ -181,7 +199,7 @@ export function ImportWizard({ organizationId, open, onOpenChange, initialDatase
                   return (
                     <li key={stage} className="flex items-center gap-2">
                       {state === 'done' ? <CheckCircle className="size-4 text-success" weight="fill" aria-hidden="true" /> : state === 'active' ? <CircleNotch className="size-4 animate-spin text-accent" aria-hidden="true" /> : <span className="size-4 rounded-full border border-border" aria-hidden="true" />}
-                      <span className={cn(state === 'todo' && 'text-text-muted')}>{stageLabel(stage)}{stage === 'AWAITING_UPLOAD' && uploadFraction !== null && uploadFraction < 1 ? ` · ${Math.round(uploadFraction * 100)}%` : ''}</span>
+                      <span className={cn(state === 'todo' && 'text-text-muted')}>{stageLabel(stage)}{stage === 'AWAITING_UPLOAD' && uploadFraction !== null && uploadFraction < 1 ? ` · ${Math.round(uploadFraction * 100)}%${partInfo ? ` · ${t('imp.part', { done: partInfo.done, total: partInfo.total })}` : ''}` : ''}</span>
                     </li>
                   );
                 })}
@@ -221,7 +239,22 @@ export function ImportWizard({ organizationId, open, onOpenChange, initialDatase
               <input type="checkbox" checked={duplicates === 'SKIP_EXACT'} onChange={(event) => setDuplicates(event.target.checked ? 'SKIP_EXACT' : 'KEEP')} className="mt-0.5 size-4 accent-(--color-accent)" />
               <span><span className="block font-medium text-text">{t('imp.skipDuplicates')}</span><span className="text-text-muted">{t('imp.skipDuplicatesHint')}</span></span>
             </label>
-            <div className="flex justify-end gap-2"><Button variant="ghost" onClick={() => setStep('file')}>{t('imp.back')}</Button><Button variant="accent" disabled={issues.length > 0} onClick={() => void activate()}>{t('imp.import')}</Button></div>
+            <fieldset className="space-y-2 rounded-lg border border-border p-3 text-xs">
+              <legend className="px-1 font-medium text-text">{t('imp.strategy')}</legend>
+              {(['APPEND', 'REPLACE_DATASET'] as const).map((value) => (
+                <label key={value} className="flex items-start gap-2">
+                  <input type="radio" name="import-strategy" checked={mode === value} onChange={() => setMode(value)} className="mt-0.5 size-4 accent-(--color-accent)" />
+                  <span><span className="block font-medium text-text">{t(value === 'APPEND' ? 'imp.strategy.append' : 'imp.strategy.replace')}</span><span className="text-text-muted">{t(value === 'APPEND' ? 'imp.strategy.appendHint' : 'imp.strategy.replaceHint')}</span></span>
+                </label>
+              ))}
+              {mode === 'APPEND' ? (
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <label className="space-y-1"><span className="text-text-secondary">{t('dg.ds.start')}</span><input type="date" value={periodStart} onChange={(event) => setPeriodStart(event.target.value)} className="h-9 w-full rounded-md border border-border bg-surface px-2 text-base md:text-xs text-text" /></label>
+                  <label className="space-y-1"><span className="text-text-secondary">{t('dg.ds.end')}</span><input type="date" value={periodEnd} min={periodStart || undefined} onChange={(event) => setPeriodEnd(event.target.value)} className="h-9 w-full rounded-md border border-border bg-surface px-2 text-base md:text-xs text-text" /></label>
+                </div>
+              ) : null}
+            </fieldset>
+            <div className="flex justify-end gap-2"><Button variant="ghost" onClick={() => setStep('file')}>{t('imp.back')}</Button><Button variant="accent" disabled={issues.length > 0 || !periodOk} onClick={() => void activate()}>{t('imp.import')}</Button></div>
           </div>
         ) : null}
 

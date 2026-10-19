@@ -41,7 +41,7 @@ export const listAuditEntries = (organizationId: string, options: { limit?: numb
 
 export type DatasetSummary = {
   id: string; organizationId: string; name: Record<string, string>; description?: Record<string, string> | null; slug: string; status: 'ACTIVE' | 'ARCHIVED';
-  currentSchemaVersionId?: string | null; createdBy: string; createdAt: string; updatedAt: string;
+  currentSchemaVersionId?: string | null; groupId?: string | null; periodStart?: string | null; periodEnd?: string | null; periodLabel?: string | null; createdBy: string; createdAt: string; updatedAt: string;
 };
 export type DatasetFieldType = 'TEXT' | 'INTEGER' | 'DECIMAL' | 'BOOLEAN' | 'DATE' | 'DATETIME' | 'TIME';
 export type DatasetField = {

@@ -1,0 +1,46 @@
+/** Organization Home strings (SHARK Home and the generic organization Home). Spanish is the source of the key set; English must define every key. */
+export const pack19Es = {
+  'oh.greeting': 'Hola, {name}', 'oh.title': 'Bienvenido a {name}',
+  'oh.tagline': 'Tu centro de información y análisis para explorar datos, consultar indicadores y tomar decisiones con mayor precisión.',
+  'oh.org': 'Organización', 'oh.available': 'Reportes disponibles', 'oh.availableValue': '{allowed} de {total}',
+  'oh.reports': 'Reportes', 'oh.reportsHint': 'Accede rápidamente a los reportes disponibles según tus permisos.',
+  'oh.open': 'Abrir reporte', 'oh.retry': 'Reintentar',
+  'oh.state.allowed': 'Acceso permitido', 'oh.state.restricted': 'Acceso restringido', 'oh.state.unavailable': 'No disponible', 'oh.state.unknown': 'Permisos no disponibles',
+  'oh.restrictedBody': 'No tienes permiso para abrir este reporte. Solicita acceso a un administrador de tu organización.',
+  'oh.unavailableBody': 'Este reporte todavía no está configurado en tu organización.',
+  'oh.unknownBody': 'No pudimos comprobar tus permisos. Reintenta en unos segundos.',
+  'oh.permError': 'No se pudieron cargar tus permisos. Por seguridad no se muestra ningún reporte como disponible hasta poder comprobarlo.',
+  'oh.openError': 'No se pudo abrir el reporte. Actualiza la página e inténtalo de nuevo.',
+  'oh.empty': 'Aún no hay reportes publicados que puedas ver en esta organización.',
+  'oh.r.local-import.name': 'Local Import', 'oh.r.local-import.desc': 'Explora las importaciones locales y sus principales indicadores.',
+  'oh.r.local-export.name': 'Local Export', 'oh.r.local-export.desc': 'Consulta la actividad exportadora local y su evolución.',
+  'oh.r.import-ctr.name': 'Import CTR', 'oh.r.import-ctr.desc': 'Analiza la información de importaciones CTR y sus tendencias.',
+  'oh.r.master-house.name': 'Master House', 'oh.r.master-house.desc': 'Accede a la información consolidada y los indicadores de Master House.',
+  'oh.r.free-zone-import.name': 'Free Zone Import', 'oh.r.free-zone-import.desc': 'Explora las importaciones relacionadas con la zona franca.',
+  'oh.r.free-zone-export.name': 'Free Zone Export', 'oh.r.free-zone-export.desc': 'Consulta las exportaciones de zona franca y sus principales indicadores.',
+  'oh.r.maritime-export.name': 'Maritime Export', 'oh.r.maritime-export.desc': 'Analiza los datos de exportación marítima y sus tendencias.',
+} as const;
+
+export type Pack19Dictionary = Record<keyof typeof pack19Es, string>;
+
+export const pack19En: Pack19Dictionary = {
+  'oh.greeting': 'Hello, {name}', 'oh.title': 'Welcome to {name}',
+  'oh.tagline': 'Your information and analysis hub to explore data, review indicators and make decisions with greater precision.',
+  'oh.org': 'Organization', 'oh.available': 'Available reports', 'oh.availableValue': '{allowed} of {total}',
+  'oh.reports': 'Reports', 'oh.reportsHint': 'Quickly open the reports available to you, based on your permissions.',
+  'oh.open': 'Open report', 'oh.retry': 'Retry',
+  'oh.state.allowed': 'Access granted', 'oh.state.restricted': 'Restricted access', 'oh.state.unavailable': 'Not available', 'oh.state.unknown': 'Permissions unavailable',
+  'oh.restrictedBody': 'You do not have permission to open this report. Ask an administrator of your organization for access.',
+  'oh.unavailableBody': 'This report is not set up in your organization yet.',
+  'oh.unknownBody': 'We could not check your permissions. Try again in a few seconds.',
+  'oh.permError': 'Your permissions could not be loaded. For safety no report is shown as available until they can be checked.',
+  'oh.openError': 'The report could not be opened. Refresh the page and try again.',
+  'oh.empty': 'There are no published reports you can see in this organization yet.',
+  'oh.r.local-import.name': 'Local Import', 'oh.r.local-import.desc': 'Explore local imports and their main indicators.',
+  'oh.r.local-export.name': 'Local Export', 'oh.r.local-export.desc': 'Review local export activity and how it evolves.',
+  'oh.r.import-ctr.name': 'Import CTR', 'oh.r.import-ctr.desc': 'Analyze CTR import information and its trends.',
+  'oh.r.master-house.name': 'Master House', 'oh.r.master-house.desc': 'Access the consolidated information and indicators of Master House.',
+  'oh.r.free-zone-import.name': 'Free Zone Import', 'oh.r.free-zone-import.desc': 'Explore imports related to the free zone.',
+  'oh.r.free-zone-export.name': 'Free Zone Export', 'oh.r.free-zone-export.desc': 'Review free zone exports and their main indicators.',
+  'oh.r.maritime-export.name': 'Maritime Export', 'oh.r.maritime-export.desc': 'Analyze maritime export data and its trends.',
+};
