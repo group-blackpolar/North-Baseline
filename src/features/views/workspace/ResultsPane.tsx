@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent } from 'react';
+import { resolveIcon } from '@/lib/iconMap';
 import { ArrowDown, ArrowUp, CaretLeft, CaretRight, CaretUpDown, DotsThree, FileText, Folder, FolderSimple, LockSimple, MagnifyingGlass, SquaresFour, Rows, Table, TextAlignJustify } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -37,7 +38,7 @@ function StatusPill({ resource }: { resource: ViewResource }) {
   );
 }
 
-const kindIcon = (resource: ViewResource) => (resource.kind === 'PANEL' ? FileText : resource.kind === 'CATEGORY' ? Folder : FolderSimple);
+const kindIcon = (resource: ViewResource) => (resource.icon ? resolveIcon(resource.icon) : resource.kind === 'PANEL' ? FileText : resource.kind === 'CATEGORY' ? Folder : FolderSimple);
 
 export function ResultsPane({ matched, total, loading, error, onRetry, filters, onSort, mode, onMode, groupBy, onGroupBy, selectedId, onSelect, onActivate, menuFor, revisions, userName, locale: localeOverride, onClearFilters, hasFilters, narrow }: {
   /** Too little room for a table: it is replaced by the compact list (the stored preference is untouched). */

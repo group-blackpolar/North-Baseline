@@ -20,6 +20,8 @@ export interface CategoryModel {
   workspaceId: string | null;
   name: string;
   icon: string;
+  /** Optional identity colour (#rrggbb) set on the category; tints its icon. */
+  color?: string | null;
   /** Stable server taxonomy key. */
   slug?: string;
   requiredPermission?: string;

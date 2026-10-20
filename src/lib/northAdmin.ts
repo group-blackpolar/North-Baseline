@@ -9,6 +9,7 @@ export type TaxonomyCategory = {
   categoryClass: 'SYSTEM' | 'TEMPLATE' | 'CUSTOM';
   name: LocalizedText;
   slug: string;
+  icon?: string | null;
   status: 'ACTIVE' | 'ARCHIVED';
 };
 
@@ -19,6 +20,7 @@ export type TaxonomySubcategory = {
   resourceKind: 'SYSTEM' | 'CONTENT';
   name: LocalizedText;
   slug: string;
+  icon?: string | null;
   status: 'ACTIVE' | 'ARCHIVED';
 };
 
@@ -29,6 +31,7 @@ export type TaxonomyPanel = {
   resourceKind: 'SYSTEM' | 'CONTENT';
   name: LocalizedText;
   slug: string;
+  icon?: string | null;
   status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
   audienceType: 'ALL_MEMBERS' | 'ROLES' | 'GROUPS' | 'PERMISSIONS' | 'SPECIFIC_USERS';
   /** Revision pointers served by the management tree (null when never saved / never published). */
@@ -40,7 +43,7 @@ export type ManagementCategory = TaxonomyCategory & {
   subcategories: Array<TaxonomySubcategory & { panels: TaxonomyPanel[] }>;
 };
 
-export type MetadataInput = { name: LocalizedText; slug?: string };
+export type MetadataInput = { name: LocalizedText; slug?: string; icon?: string | null };
 export type PanelDocument = { schemaVersion: 1; defaultLocale: string; fallbackLocales: string[]; sections: Array<{ id: string; name?: LocalizedText; order: number; layout: { variant: 'grid'; gap: 'none' | 'sm' | 'md' | 'lg'; rowHeight?: number; fit?: boolean }; components: Array<{ id: string; type: ComponentType; schemaVersion: 1; props: Record<string, unknown>; bindings: Record<string, unknown>; layout: ResponsiveLayout; order: number }> }> };
 export type ComponentType = 'heading' | 'rich_text' | 'image' | 'video' | 'link' | 'file' | 'table' | 'card' | 'list' | 'metric' | 'divider' | 'embed' | 'bar_chart' | 'line_chart' | 'donut_chart' | 'document_workspace' | 'kpi_card' | 'data_grid' | 'geo_map' | 'insights' | 'filter_bar' | 'org_brand' | 'hero' | 'link_cards' | 'report_cards' | 'title_bar' | 'definition_list' | 'panel_group';
 export type ResponsiveLayout = { desktop: GridPosition; tablet: GridPosition; mobile: GridPosition };

@@ -136,7 +136,7 @@ export function CategoryRail({ children }: { children?: ReactNode }) {
               )}
               onClick={() => { if (!disabled) goToCategory(category); }}
             >
-              <Icon className="size-4 shrink-0" />
+              <Icon weight={active ? 'fill' : 'duotone'} className="size-5 shrink-0" style={category.color && !disabled ? { color: category.color } : undefined} />
               {expanded && <span className="text-xs font-medium truncate">{label}</span>}
             </button>
             </Tooltip>

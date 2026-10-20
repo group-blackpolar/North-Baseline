@@ -60,7 +60,7 @@ export function useViewActions(input: ViewActionsInput) {
     ...(resource.parentId ? { destinationParentId: resource.parentId } : {}),
   }));
 
-  const openRename = (resource: ViewResource) => setModal({ type: 'rename', resourceType: MODAL_TYPE[resource.kind], id: resource.id, currentName: localName(resource.name, locale), currentSlug: resource.slug });
+  const openRename = (resource: ViewResource) => setModal({ type: 'rename', resourceType: MODAL_TYPE[resource.kind], id: resource.id, currentName: localName(resource.name, locale), currentSlug: resource.slug, currentIcon: resource.icon });
 
   const requestArchive = (resource: ViewResource) => { setDialogError(null); setArchiving(resource); };
 

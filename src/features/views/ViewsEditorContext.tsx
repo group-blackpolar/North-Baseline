@@ -21,7 +21,7 @@ export type ModalState =
   | { type: 'create_category' }
   | { type: 'create_subcategory'; categoryId: string }
   | { type: 'create_view'; categoryId: string; subcategoryId: string }
-  | { type: 'rename'; resourceType: 'category' | 'subcategory' | 'panel'; id: string; currentName: string; currentSlug: string }
+  | { type: 'rename'; resourceType: 'category' | 'subcategory' | 'panel'; id: string; currentName: string; currentSlug: string; currentIcon: string | null }
   | { type: 'dev_json' }
   | null;
 
