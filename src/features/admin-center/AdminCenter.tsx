@@ -7,6 +7,7 @@ import { IntegrationsScreen } from './IntegrationsScreen';
 import { MembersScreen } from './MembersScreen';
 import { OrgSettingsScreen } from './OrgSettingsScreen';
 import { OverviewScreen } from './OverviewScreen';
+import { SecurityCenter } from '@/features/security-access/SecurityCenter';
 
 /**
  * Organization Administration. One screen per capability; the section comes from the catalog subcategory the person
@@ -22,6 +23,7 @@ export function AdminCenter({ section, organizationId, currentUserId }: { sectio
     case 'queries': return <QueriesCenter key={key} organizationId={organizationId} />;
     case 'integrations': return <IntegrationsScreen key={key} organizationId={organizationId} />;
     case 'audit': return <AuditCenter key={key} organizationId={organizationId} />;
+    case 'security': return <SecurityCenter key={key} organizationId={organizationId} />;
     case 'billing': return <BillingScreen key={key} organizationId={organizationId} />;
     case 'settings': return <OrgSettingsScreen key={key} organizationId={organizationId} />;
   }
