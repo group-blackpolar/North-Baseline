@@ -17,6 +17,8 @@ export interface SessionUser {
   passwordChangeRequired: boolean
   termsAcceptedAt: string | null
   termsVersion: string | null
+  /** Set for accounts created by an organization: no real mailbox, no Personal Workspace (CORECROW enforces it). */
+  createdByOrganizationId?: string | null
   createdAt?: string
 }
 
@@ -60,6 +62,7 @@ function parseUser(data: Record<string, unknown>): SessionUser {
     passwordChangeRequired: data.passwordChangeRequired !== false,
     termsAcceptedAt: typeof data.termsAcceptedAt === 'string' ? data.termsAcceptedAt : null,
     termsVersion: typeof data.termsVersion === 'string' ? data.termsVersion : null,
+    createdByOrganizationId: typeof data.createdByOrganizationId === 'string' ? data.createdByOrganizationId : null,
     createdAt: typeof data.createdAt === 'string' ? data.createdAt : undefined,
   }
 }
