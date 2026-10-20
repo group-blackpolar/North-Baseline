@@ -340,7 +340,6 @@ function PolicyForm({ organizationId, policy, canManage, onSaved }: { organizati
 }
 
 function NotificationsForm({ organizationId }: { organizationId: string }) {
-  const { t } = useI18n();
   const resource = useResource(() => api.getNotifications(organizationId), [organizationId]);
   return <Gate resource={resource}>{(data) => <NotificationsFields key={data.alertEmailRecipients.join()} organizationId={organizationId} initial={data} />}</Gate>;
 }
