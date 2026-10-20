@@ -14,6 +14,7 @@ import {
 import { createDocumentFromTemplate, type ViewTemplateId } from './viewTemplates';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { IconPicker } from '@/components/ui/icon-picker';
 
 export function ViewsDialogs() {
   const { modal, setModal, organizationId, refreshTaxonomy, selectPanel } = useViewsEditor();
@@ -22,6 +23,8 @@ export function ViewsDialogs() {
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [template, setTemplate] = useState<ViewTemplateId>('blank');
+  // undefined = untouched (omitted on create, unchanged on edit); null = no icon.
+  const [icon, setIcon] = useState<string | null | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,6 +33,7 @@ export function ViewsDialogs() {
   const handleClose = () => {
     setName('');
     setSlug('');
+    setIcon(undefined);
     setError(null);
     setLoading(false);
     setModal(null);
@@ -44,6 +48,7 @@ export function ViewsDialogs() {
       await createCategory(organizationId, {
         name: { es: name.trim(), en: name.trim() },
         ...(slug.trim() ? { slug: slug.trim() } : {}),
+        ...(icon !== undefined ? { icon } : {}),
       });
       await refreshTaxonomy();
       handleClose();
@@ -63,6 +68,7 @@ export function ViewsDialogs() {
       await createSubcategory(organizationId, modal.categoryId, {
         name: { es: name.trim(), en: name.trim() },
         ...(slug.trim() ? { slug: slug.trim() } : {}),
+        ...(icon !== undefined ? { icon } : {}),
       });
       await refreshTaxonomy();
       handleClose();
@@ -82,6 +88,7 @@ export function ViewsDialogs() {
       const created = await createPanel(organizationId, modal.subcategoryId, {
         name: { es: name.trim(), en: name.trim() },
         ...(slug.trim() ? { slug: slug.trim() } : {}),
+        ...(icon !== undefined ? { icon } : {}),
       });
       const initialDoc = createDocumentFromTemplate(template, name.trim());
       await saveDraft(organizationId, created.id, initialDoc);
@@ -97,13 +104,15 @@ export function ViewsDialogs() {
 
   const handleRename = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || modal?.type !== 'rename') return;
+    if (modal?.type !== 'rename') return;
     setLoading(true);
     setError(null);
     try {
+      const finalName = name.trim() || modal.currentName;
       const input = {
-        name: { es: name.trim(), en: name.trim() },
-        ...(slug.trim() ? { slug: slug.trim() } : {}),
+        name: { es: finalName, en: finalName },
+        ...(slug.trim() && slug.trim() !== modal.currentSlug ? { slug: slug.trim() } : {}),
+        ...(icon !== undefined ? { icon } : {}),
       };
       if (modal.resourceType === 'category') {
         await updateCategory(organizationId, modal.id, input);
@@ -138,6 +147,7 @@ export function ViewsDialogs() {
                 <Input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))} placeholder={t('views.dialog.slugPlaceholder.category')} className="mt-1" />
                 <span className="mt-1 block text-[11px] text-text-muted">{t('views.slugHint')}</span>
               </label>
+              <IconPicker label={t('icon.label')} value={icon} onChange={setIcon} />
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" size="sm" onClick={handleClose} disabled={loading}>{t('views.cancel')}</Button>
@@ -159,6 +169,7 @@ export function ViewsDialogs() {
                 <Input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))} placeholder={t('views.dialog.slugPlaceholder.subcategory')} className="mt-1" />
                 <span className="mt-1 block text-[11px] text-text-muted">{t('views.slugHint')}</span>
               </label>
+              <IconPicker label={t('icon.label')} value={icon} onChange={setIcon} />
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" size="sm" onClick={handleClose} disabled={loading}>{t('views.cancel')}</Button>
@@ -180,6 +191,7 @@ export function ViewsDialogs() {
                 <Input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))} placeholder={t('views.dialog.slugPlaceholder.panel')} className="mt-1" />
                 <span className="mt-1 block text-[11px] text-text-muted">{t('views.slugHint')}</span>
               </label>
+              <IconPicker label={t('icon.label')} value={icon} onChange={setIcon} />
               <div>
                 <span className="block text-xs font-medium text-text-secondary mb-1.5">{t('views.templateLabel')}</span>
                 <div className="grid grid-cols-1 gap-1 max-h-52 overflow-y-auto pr-1">
@@ -228,6 +240,7 @@ export function ViewsDialogs() {
                 <Input defaultValue={modal.currentSlug} onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))} className="mt-1" />
                 <span className="mt-1 block text-[11px] text-text-muted">{t('views.slugHint')}</span>
               </label>
+              <IconPicker label={t('icon.label')} value={icon === undefined ? modal.currentIcon : icon} onChange={setIcon} />
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" size="sm" onClick={handleClose} disabled={loading}>{t('views.cancel')}</Button>

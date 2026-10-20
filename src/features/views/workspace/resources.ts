@@ -9,16 +9,16 @@ export type ViewStatus = 'ACTIVE' | 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 
 export interface TreePanel {
   id: string; name: LocalizedText; description?: LocalizedText | null; slug: string; status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
-  resourceKind: 'SYSTEM' | 'CONTENT'; audienceType?: string; createdAt?: string; updatedAt?: string;
+  resourceKind: 'SYSTEM' | 'CONTENT'; icon?: string | null; audienceType?: string; createdAt?: string; updatedAt?: string;
   publishedRevisionId?: string | null; draftRevisionId?: string | null; subcategoryId: string; navigationHidden?: boolean; accessPolicyMode?: string;
 }
 export interface TreeSubcategory {
-  id: string; name: LocalizedText; description?: LocalizedText | null; slug: string; status: 'ACTIVE' | 'ARCHIVED'; resourceKind: 'SYSTEM' | 'CONTENT';
+  id: string; name: LocalizedText; description?: LocalizedText | null; slug: string; status: 'ACTIVE' | 'ARCHIVED'; resourceKind: 'SYSTEM' | 'CONTENT'; icon?: string | null;
   createdAt?: string; updatedAt?: string; categoryId: string; panels: TreePanel[];
 }
 export interface TreeCategory {
   id: string; name: LocalizedText; description?: LocalizedText | null; slug: string; status: 'ACTIVE' | 'ARCHIVED'; resourceKind: 'SYSTEM' | 'CONTENT';
-  categoryClass?: 'SYSTEM' | 'TEMPLATE' | 'CUSTOM'; createdAt?: string; updatedAt?: string; subcategories: TreeSubcategory[];
+  categoryClass?: 'SYSTEM' | 'TEMPLATE' | 'CUSTOM'; icon?: string | null; createdAt?: string; updatedAt?: string; subcategories: TreeSubcategory[];
 }
 
 export interface ViewResource {
@@ -27,6 +27,7 @@ export interface ViewResource {
   name: LocalizedText;
   description: LocalizedText | null;
   slug: string;
+  icon: string | null;
   status: ViewStatus;
   resourceKind: 'SYSTEM' | 'CONTENT';
   categoryId: string;
@@ -49,21 +50,21 @@ export function flattenTree(tree: TreeCategory[]): ViewResource[] {
   const out: ViewResource[] = [];
   for (const category of tree) {
     out.push({
-      id: category.id, kind: 'CATEGORY', name: category.name, description: category.description ?? null, slug: category.slug, status: category.status,
+      id: category.id, kind: 'CATEGORY', name: category.name, description: category.description ?? null, slug: category.slug, icon: category.icon ?? null, status: category.status,
       resourceKind: category.resourceKind, categoryId: category.id, categoryName: category.name, subcategoryId: null, subcategoryName: null, parentId: null,
       audienceType: null, createdAt: category.createdAt ?? null, updatedAt: category.updatedAt ?? null, publishedRevisionId: null, draftRevisionId: null,
       hasUnpublishedChanges: false, childCount: category.subcategories.length,
     });
     for (const subcategory of category.subcategories) {
       out.push({
-        id: subcategory.id, kind: 'SUBCATEGORY', name: subcategory.name, description: subcategory.description ?? null, slug: subcategory.slug, status: subcategory.status,
+        id: subcategory.id, kind: 'SUBCATEGORY', name: subcategory.name, description: subcategory.description ?? null, slug: subcategory.slug, icon: subcategory.icon ?? null, status: subcategory.status,
         resourceKind: subcategory.resourceKind, categoryId: category.id, categoryName: category.name, subcategoryId: subcategory.id, subcategoryName: subcategory.name,
         parentId: category.id, audienceType: null, createdAt: subcategory.createdAt ?? null, updatedAt: subcategory.updatedAt ?? null, publishedRevisionId: null,
         draftRevisionId: null, hasUnpublishedChanges: false, childCount: subcategory.panels.length,
       });
       for (const panel of subcategory.panels) {
         out.push({
-          id: panel.id, kind: 'PANEL', name: panel.name, description: panel.description ?? null, slug: panel.slug, status: panel.status, resourceKind: panel.resourceKind,
+          id: panel.id, kind: 'PANEL', name: panel.name, description: panel.description ?? null, slug: panel.slug, icon: panel.icon ?? null, status: panel.status, resourceKind: panel.resourceKind,
           categoryId: category.id, categoryName: category.name, subcategoryId: subcategory.id, subcategoryName: subcategory.name, parentId: subcategory.id,
           audienceType: panel.audienceType ?? null, createdAt: panel.createdAt ?? null, updatedAt: panel.updatedAt ?? null,
           publishedRevisionId: panel.publishedRevisionId ?? null, draftRevisionId: panel.draftRevisionId ?? null,

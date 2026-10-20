@@ -138,6 +138,7 @@ function navigationToCatalog(navigation: NavigationCategory[]): CategoryModel[] 
     workspaceId: null,
     name: localizedName(category.name),
     icon: category.icon ?? 'Folder',
+    color: category.color,
     slug: category.slug,
     order: 0,
     subcategories: withAdminSections(category, category.subcategories.map((subcategory, index): SubcategoryModel => ({

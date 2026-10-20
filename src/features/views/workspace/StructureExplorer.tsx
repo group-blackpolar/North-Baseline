@@ -5,6 +5,7 @@ import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useI18n } from '@/lib/i18n';
+import { resolveIcon } from '@/lib/iconMap';
 import { cn } from '@/lib/utils';
 import { ContextMenu, type MenuItem } from './ContextMenu';
 import { localName, matchesQuery, type ViewResource } from './resources';
@@ -116,7 +117,7 @@ export function StructureExplorer({ organizationId, resources, loading, selected
     }
   };
 
-  const iconFor = (row: Row) => row.resource.kind === 'PANEL' ? FileText : row.resource.kind === 'CATEGORY' ? (row.expanded ? FolderOpen : Folder) : FolderSimple;
+  const iconFor = (row: Row) => row.resource.icon ? resolveIcon(row.resource.icon) : row.resource.kind === 'PANEL' ? FileText : row.resource.kind === 'CATEGORY' ? (row.expanded ? FolderOpen : Folder) : FolderSimple;
 
   return (
     <div className={cn('flex min-h-0 flex-col', className)}>
@@ -173,7 +174,7 @@ export function StructureExplorer({ organizationId, resources, loading, selected
                         {row.expanded ? <CaretDown className="size-3" /> : <CaretRight className="size-3" />}
                       </button>
                     ) : <span className="size-5 shrink-0" />}
-                    <Icon icon={iconFor(row)} size="sm" weight={resource.kind === 'PANEL' ? 'regular' : 'duotone'} className={cn(archived && 'opacity-50')} />
+                    <Icon icon={iconFor(row)} size="sm" weight={resource.kind === 'PANEL' && !resource.icon ? 'regular' : 'duotone'} className={cn(archived && 'opacity-50')} />
                     <span className={cn('min-w-0 flex-1 truncate', archived && 'text-text-muted line-through')}>{localName(resource.name, locale)}</span>
                     {resource.resourceKind === 'SYSTEM' ? <LockSimple className="size-3 shrink-0 text-text-muted" aria-label={t('adm2.views.system')} /> : null}
                     {resource.kind === 'PANEL' ? (

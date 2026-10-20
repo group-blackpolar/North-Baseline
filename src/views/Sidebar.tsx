@@ -157,7 +157,7 @@ export function ContextSidebar({ user }: { user: SessionUser }) {
                           : 'text-text-secondary hover:bg-surface-hover hover:text-text'
                       )}
                     >
-                      <SubIcon className="w-3.5 h-3.5 shrink-0" />
+                      <SubIcon weight={active ? 'fill' : 'duotone'} className="w-4 h-4 shrink-0" />
                       <span className="truncate">{sub.labelKey ? t(sub.labelKey as never) : sub.name}</span>
                     </button>
                   );
