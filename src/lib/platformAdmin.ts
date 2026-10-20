@@ -25,6 +25,7 @@ export type PlatformUser = {
   passwordChangeRequired: boolean
   termsAcceptedAt: string | null
   termsVersion: string | null
+  createdByOrganizationId?: string | null
   createdAt: string
 }
 
@@ -173,8 +174,8 @@ export function getPlatformSummary() {
   return apiRequest<PlatformSummary>('/v1/platform/summary')
 }
 
-export function listPlatformUsers(params: { q?: string; limit?: number; cursor?: string } = {}) {
-  return apiRequest<Page<PlatformUser>>(`/v1/platform/users${query({ limit: 25, ...params })}`)
+export function listPlatformUsers(params: { q?: string; limit?: number; cursor?: string; organizationManaged?: boolean } = {}) {
+  return apiRequest<Page<PlatformUser>>(`/v1/platform/users${query({ limit: 25, ...params, organizationManaged: params.organizationManaged ? 'true' : undefined })}`)
 }
 
 /** Superadmin only (CORECROW enforces it): account created already verified, with the password the caller chose. */
