@@ -26,6 +26,7 @@ export function UsersScreen({ canManage = false }: { canManage?: boolean }) {
   const [verifying, setVerifying] = useState(false);
   const [draft, setDraft] = useState('');
   const [query, setQuery] = useState('');
+  const [managed, setManaged] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [statusTarget, setStatusTarget] = useState<PlatformUserDetail | null>(null);
   const [reason, setReason] = useState('');
@@ -35,8 +36,8 @@ export function UsersScreen({ canManage = false }: { canManage?: boolean }) {
   const [deleting, setDeleting] = useState(false);
 
   const users = useCursorList<PlatformUser>(
-    (cursor) => listPlatformUsers({ q: query || undefined, cursor: cursor ?? undefined }),
-    [query]
+    (cursor) => listPlatformUsers({ q: query || undefined, cursor: cursor ?? undefined, organizationManaged: managed || undefined }),
+    [query, managed]
   );
   const detail = useResource<PlatformUserDetail | null>(
     async () => (selectedId ? getPlatformUser(selectedId) : null),
@@ -139,6 +140,18 @@ export function UsersScreen({ canManage = false }: { canManage?: boolean }) {
         <button type="submit" className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover pointer-coarse:min-h-(--touch-min)">
           {t('pa.users.search')}
         </button>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={managed}
+          onClick={() => { setManaged((value) => !value); setSelectedId(null); }}
+          className="inline-flex items-center gap-2 rounded-md border border-border px-2 py-1.5 text-xs text-text-secondary hover:bg-surface-hover pointer-coarse:min-h-(--touch-min)"
+        >
+          <span className={`relative h-4 w-7 rounded-full transition-colors ${managed ? 'bg-accent' : 'bg-border'}`}>
+            <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all ${managed ? 'left-3.5' : 'left-0.5'}`} />
+          </span>
+          {t('pa.users.orgUsers')}
+        </button>
         {canManage && (
           <IconButton label={t('pa.create.open')} variant="accent" icon={<Plus size={18} weight="bold" />} className="md:ml-auto" onClick={() => setCreateOpen(true)} />
         )}
@@ -239,7 +252,7 @@ export function UsersScreen({ canManage = false }: { canManage?: boolean }) {
       <CreateAccountDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={() => users.reload()} />
 
       <PlatformTable
-        label={t('pa.users.title')}
+        label={managed ? t('pa.users.orgUsers') : t('pa.users.title')}
         columns={columns}
         rows={users.items}
         getRowKey={(row) => row.id}
