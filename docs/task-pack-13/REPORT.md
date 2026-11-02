@@ -1,6 +1,6 @@
 # Task Pack 13 — Engineering report
 
-Repos: NORTH (`north-task-pack-12` worktree) and CORECROW (`corecrow-task-pack-12` worktree), branch `feature/task-pack-12`.
+Repos: NORTH (task-pack-12 worktree) and CORECROW (`corecrow-task-pack-12` worktree), branch `feature/task-pack-12`.
 Everything below was verified by reading code/contracts and by `tsc`, lint, build and unit tests. **No authenticated
 browser walkthrough was possible** (no credentials in the session): items marked *unverified in browser* need a manual pass.
 
