@@ -1,7 +1,7 @@
 // Credential helpers of the "create user" dialog (kept free of React so they can be tested).
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
 
-/** `SHARK-PASS-8nHFG31zTL`: organization prefix + 10 random characters from the browser's CSPRNG. */
+/** `ACME-PASS-8nHFG31zTL`: organization prefix + 10 random characters from the browser's CSPRNG. */
 export function generatePassword(slug: string) {
   const prefix = slug.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16) || 'ORG';
   const bytes = crypto.getRandomValues(new Uint8Array(10));
