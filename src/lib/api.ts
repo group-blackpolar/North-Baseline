@@ -1,5 +1,6 @@
 import { authHeaders } from '@/lib/auth'
 import { getInspection, inspectionHeadersFor } from '@/lib/inspection'
+import { askReason, getReason, reasonHeaders, REASON_REQUIRED_CODE } from '@/lib/platformReason'
 import { apiCache, tagsForPath, tagsInvalidatedByWrite, type CachePolicy } from '@/lib/apiCache'
 
 export const API_BASE = import.meta.env.DEV
@@ -19,8 +20,8 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
+async function send(path: string, init?: RequestInit) {
+  return fetch(`${API_BASE}${path}`, {
     credentials: 'include',
     ...init,
     headers: {
@@ -28,9 +29,20 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
       ...(init?.body === undefined || init?.body === null ? {} : { 'Content-Type': 'application/json' }),
       ...authHeaders(),
       ...inspectionHeadersFor(path, init?.method),
+      ...(isWrite(init?.method) ? reasonHeaders() : {}),
       ...(init?.headers ?? {}),
     },
   })
+}
+
+const isWrite = (method?: string) => !['GET', 'HEAD', 'OPTIONS'].includes((method ?? 'GET').toUpperCase())
+
+export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  let response = await send(path, init)
+  // ADR-0002: an operator without membership must justify a write. Ask once, then retry (the refused request changed nothing).
+  if (response.status === 403 && isWrite(init?.method) && !getReason() && (await response.clone().json().catch(() => null))?.error?.code === REASON_REQUIRED_CODE && (await askReason())) {
+    response = await send(path, init)
+  }
 
   if (!response.ok) {
     let message = response.statusText

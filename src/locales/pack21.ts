@@ -31,6 +31,7 @@ export const pack21Es = {
   'sec.notif.title': 'Notificaciones por correo', 'sec.notif.enabled': 'Enviar alertas por correo', 'sec.notif.recipients': 'Destinatarios (separados por coma; vacío = propietarios con buzón real)',
   'sec.notif.save': 'Guardar notificaciones', 'sec.notif.saved': 'Notificaciones guardadas.',
   'sec.audit.more': 'Cargar más',
+  'reason.title': 'Motivo del cambio', 'reason.body': 'Vas a cambiar una organización de la que no eres miembro. El motivo queda en su registro de auditoría.', 'reason.placeholder': 'Al menos 10 caracteres', 'reason.confirm': 'Continuar',
 } as const;
 
 export type Pack21Dictionary = { [K in keyof typeof pack21Es]: string };
@@ -67,4 +68,5 @@ export const pack21En: Pack21Dictionary = {
   'sec.notif.title': 'E-mail notifications', 'sec.notif.enabled': 'Send alerts by e-mail', 'sec.notif.recipients': 'Recipients (comma separated; empty = owners with a real mailbox)',
   'sec.notif.save': 'Save notifications', 'sec.notif.saved': 'Notifications saved.',
   'sec.audit.more': 'Load more',
+  'reason.title': 'Reason for this change', 'reason.body': 'You are changing an organization you are not a member of. The reason is recorded in its audit log.', 'reason.placeholder': 'At least 10 characters', 'reason.confirm': 'Continue',
 };

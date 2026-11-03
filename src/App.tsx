@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { PlatformReasonDialog } from '@/components/PlatformReasonDialog'
 import { Buildings } from '@phosphor-icons/react';
 import { Login } from '@/views/Login';
 import { TemporaryPasswordChange } from '@/views/TemporaryPasswordChange';
@@ -515,6 +516,7 @@ export default function App() {
   return (
     <I18nProvider>
       <AppInner />
+      <PlatformReasonDialog />
     </I18nProvider>
   );
 }
