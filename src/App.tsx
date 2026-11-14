@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { PlatformReasonDialog } from '@/components/PlatformReasonDialog'
 import { Buildings } from '@phosphor-icons/react';
 import { Login } from '@/views/Login';
@@ -17,7 +17,6 @@ import { TabsProvider, useTabs } from '@/context/TabsContext';
 import { CatalogProvider, useCatalog } from '@/context/CatalogContext';
 import { PERSONAL_ORG_ID } from '@/lib/demo/store';
 import { PermissionProvider } from '@/context/PermissionContext';
-import { StudioWindow } from '@/features/views/StudioWindow';
 import { I18nProvider, useI18n } from '@/lib/i18n';
 import { SessionGuard } from '@/components/session/SessionGuard';
 import { ErrorProvider } from '@/context/ErrorContext';
@@ -51,13 +50,16 @@ import { GenericNotFound, OrganizationAccessGate } from '@/components/organizati
 import { InspectionBanner } from '@/components/organization/InspectionBanner';
 import { ConnectionProblem } from '@/components/errors/ConnectionProblem';
 import { useInspection } from '@/lib/inspection';
-import { InvitationLanding } from '@/features/invitations/InvitationLanding';
 import { isInvitationCredential, normalizeInvitationCredential } from '@/lib/invitationKey';
 import { ShowcaseView } from '@/features/showcase/ShowcaseView';
 import { navigateToPublishedTarget, publishedTabFromResolved } from '@/lib/publishedNavigation';
 import { navKey } from '@/lib/navState';
 import { apiCache } from '@/lib/apiCache';
 import { isAdminScreen } from '@/features/admin-center/sections';
+
+// RM-071: heavy, rarely used entry points load on demand.
+const StudioWindow = lazy(() => import('@/features/views/StudioWindow').then((module) => ({ default: module.StudioWindow })));
+const InvitationLanding = lazy(() => import('@/features/invitations/InvitationLanding').then((module) => ({ default: module.InvitationLanding })));
 
 const PENDING_ROUTE_INVITATION_KEY = 'north-pending-route-invitation-v1';
 type PendingRouteInvitation = { token: string; path: string; userId?: string };
@@ -440,7 +442,7 @@ function AppInner() {
   if (!user && bootUnreachable) return <ConnectionProblem onRetry={bootSession} className="fixed inset-0" />;
 
   if (invitationToken && !(invitationSignIn && !user) && !(user && (user.passwordChangeRequired || (!user.termsAcceptedAt && user.role !== 'SUPERADMIN')))) {
-    return <InvitationLanding token={invitationToken} user={user} onSignIn={() => setInvitationSignIn(true)} onLogout={handleLogout} />;
+    return <Suspense fallback={<ShellSkeleton />}><InvitationLanding token={invitationToken} user={user} onSignIn={() => setInvitationSignIn(true)} onLogout={handleLogout} /></Suspense>;
   }
 
   if (!user) {
@@ -691,7 +693,7 @@ function AuthenticatedRouter({ user, onAuthError, route, pendingInvitation, onIn
     const studioMember = organizations.find((organization) => organization.slug === route.organizationSlug);
     if (isLoading) return <ShellSkeleton />;
     if (!studioMember) return <GenericNotFound />;
-    return <StudioWindow organizationId={studioMember.id} organizationSlug={route.organizationSlug} panelId={route.panelId} />;
+    return <Suspense fallback={<ShellSkeleton />}><StudioWindow organizationId={studioMember.id} organizationSlug={route.organizationSlug} panelId={route.panelId} /></Suspense>;
   }
   if (route.kind === 'platform-admin') return <PlatformAdminEntry user={user} onAuthError={onAuthError} route={route} />;
   if (!isOrganizationRoute) return <AppShell user={user} onAuthError={onAuthError} route={route} />;

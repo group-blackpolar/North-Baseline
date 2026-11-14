@@ -4,7 +4,6 @@ import type { SessionUser } from '@/lib/auth';
 import type { Tab } from '@/context/TabsContext';
 import { EmptyState } from '@/components/ui/empty-state';
 import { adminSectionOf } from '@/features/admin-center/sections';
-import { PersonalView } from '@/features/personal/PersonalView';
 import { OrganizationHome } from '@/features/home/OrganizationHome';
 import { ReportCardsBlock } from '@/features/home/ReportCardsBlock';
 import { PERSONAL_ORG_ID } from '@/lib/demo/store';
@@ -20,7 +19,6 @@ import { useOrganization } from '@/context/OrganizationContext';
 import { useI18n } from '@/lib/i18n';
 import { intlTag } from '@/lib/intlTag';
 import { Skeleton } from '@/components/ui/skeleton';
-import { DocumentWorkspaceHost } from '@/features/documents/DocumentsWorkspace';
 import { useShowcaseSlug } from '@/features/showcase/ShowcaseContext';
 import { FilterBar, type FacetLoader, type FilterControl } from '@/features/filters/FilterBar';
 import { queryPanelFacet } from '@/features/filters/facetsApi';
@@ -32,7 +30,6 @@ import { queryShowcaseBinding } from '@/lib/showcase';
 import { consumePanelRequest, peekPanelRequest, subscribePanelRequests } from '@/features/assistant/panelBus';
 import { selectionsFromFilters } from '@/features/assistant/directives';
 import { chipsOf, filterModeOf, filtersForDefinitions, loadSelections, saveSelections, type FilterSelections } from '@/features/filters/filterModel';
-import { PresentationMode } from '@/features/presentation/PresentationMode';
 import { cn } from '@/lib/utils';
 import { CellFillProvider } from '@/features/analytics/cellFill';
 import { PanelGroup } from '@/features/analytics/pro/PanelGroup';
@@ -41,6 +38,9 @@ import { navigateToPublishedTarget } from '@/lib/publishedNavigation';
 import { useTabs } from '@/context/TabsContext';
 
 // Administration is the largest authenticated surface and most sessions never open it: load it on demand.
+const PersonalView = lazy(() => import('@/features/personal/PersonalView').then((module) => ({ default: module.PersonalView })));
+const DocumentWorkspaceHost = lazy(() => import('@/features/documents/DocumentsWorkspace').then((module) => ({ default: module.DocumentWorkspaceHost })));
+const PresentationMode = lazy(() => import('@/features/presentation/PresentationMode').then((module) => ({ default: module.PresentationMode })));
 const AdminCenter = lazy(() => import('@/features/admin-center/AdminCenter').then((module) => ({ default: module.AdminCenter })));
 
 const PERSONAL_CATEGORIES = new Set(['home', 'profile', 'billing', 'preferences', 'settings', 'platform-administration']);
@@ -492,7 +492,7 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
         : binding
         ? <PublishedAnalyticsContent component={component} locales={locales} />
         : component.type === 'document_workspace'
-          ? <DocumentWorkspaceHost organizationId={organizationId} props={component.props} />
+          ? <Suspense fallback={<Skeleton className="h-40 w-full rounded-xl" />}><DocumentWorkspaceHost organizationId={organizationId} props={component.props} /></Suspense>
           : SafeComponent({ type: component.type, props: component.props, locales });
     };
     const style = matrix ? {
@@ -529,13 +529,13 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
     </div>
     {hasFilterSlot ? null : filterBar}
     {presenting ? null : sections.map(renderSection)}
-    {presenting ? <PresentationMode
+    {presenting ? <Suspense fallback={null}><PresentationMode
       title={title}
       scenes={sections.map((section, index) => ({ id: section.id, title: sceneTitle(section, locales) || t('pres.scene', { n: index + 1 }), content: renderSection(section) }))}
       filterSummary={chipsOf(controls, presenting).map((chip) => chip.text)}
       updatedAt={updatedAt}
       onExit={() => setPresenting(null)}
-    /> : null}
+    /></Suspense> : null}
   </article></BindingSourceProvider>;
 }
 
@@ -573,6 +573,6 @@ export function ViewRenderer({ user, tab }: { user: SessionUser; tab: Tab | null
   // An edited Home (a published document) is rendered like any panel; the built-in Home is only the fallback while there is none.
   if (activeOrganization && activeOrganization.id !== PERSONAL_ORG_ID && category?.slug === 'home' && !tab.publishedPanel?.document) return <OrganizationHome user={user} />;
   if (tab.publishedPanel) return <PanelNavigationBridge><PublishedPanel key={tab.publishedPanel.id} title={tab.publishedPanel.title} document={tab.publishedPanel.document} locales={tab.publishedPanel.localeOrder} organizationId={activeOrganization?.id} panelId={tab.publishedPanel.id} /></PanelNavigationBridge>;
-  if (PERSONAL_CATEGORIES.has(tab.route.categoryId)) return <PersonalView route={tab.route} user={user} />;
+  if (PERSONAL_CATEGORIES.has(tab.route.categoryId)) return <Suspense fallback={<Skeleton className="m-4 h-40 rounded-xl" />}><PersonalView route={tab.route} user={user} /></Suspense>;
   return <div className="p-6"><EmptyState icon={Barricade} title={t('panel.underConstruction')} body={t('panel.underConstructionBody', { name: tab.route.categoryId })} className="max-w-md" /></div>;
 }

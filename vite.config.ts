@@ -15,6 +15,18 @@ export default defineConfig({
       '/api': { target: api, changeOrigin: true },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // RM-071: stable vendor chunks keep the app chunk small and cache across releases.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined
+          if (/node_modules[\/](react|react-dom|scheduler)[\/]/.test(id)) return 'vendor-react'
+          return undefined
+        },
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

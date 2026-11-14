@@ -1,0 +1,2 @@
+// Applies the saved theme before first paint. External file because the CSP does not allow inline scripts (BUG-005).
+try{const saved=localStorage.getItem('north-theme-v1');const legacy=localStorage.getItem('bp-theme');const theme=['light','dark','midnight'].includes(saved)?saved:(legacy==='dark'?'dark':'light');document.documentElement.dataset.theme=theme;document.documentElement.classList.toggle('dark',theme==='dark'||theme==='midnight');document.documentElement.style.colorScheme=theme==='light'?'light':'dark'}catch{document.documentElement.dataset.theme='light'}
