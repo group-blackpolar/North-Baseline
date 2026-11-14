@@ -1,6 +1,9 @@
 import { Check } from '@phosphor-icons/react';
-import { useTheme, type ThemeName } from '@/lib/theme';
-import { useI18n } from '@/lib/i18n';
+import { useTheme, type ThemeName, type ThemePreference } from '@/lib/theme';
+import { useDensity, useMotion, type DensityPreference, type MotionPreference } from '@/lib/density';
+import { useI18n, type Dictionary } from '@/lib/i18n';
+
+type Key = keyof Dictionary;
 import { DashboardCard } from '@/components/dashboard/primitives';
 import { cn } from '@/lib/utils';
 
@@ -18,13 +21,14 @@ const PALETTES: Record<ThemeName, PreviewPalette> = {
 };
 
 const THEMES = [
+  { id: 'system', nameKey: 'settings.theme.system', descKey: 'settings.theme.systemDesc' },
   { id: 'light', nameKey: 'settings.theme.light', descKey: 'settings.theme.lightDesc' },
   { id: 'dark', nameKey: 'settings.theme.dark', descKey: 'settings.theme.darkDesc' },
   { id: 'midnight', nameKey: 'settings.theme.midnight', descKey: 'settings.theme.midnightDesc' },
 ] as const;
 
-function Preview({ id }: { id: ThemeName }) {
-  const p = PALETTES[id];
+function Preview({ id }: { id: ThemePreference }) {
+  const p = PALETTES[id === 'system' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : id];
   return (
     <div className="h-20 rounded-lg border border-border p-2 flex flex-col gap-1.5" style={{ background: p.bg }}>
       <div className="h-4 rounded-md flex items-center px-1.5 gap-1" style={{ background: p.panel }}>
@@ -39,9 +43,39 @@ function Preview({ id }: { id: ThemeName }) {
   );
 }
 
+const DENSITIES: ReadonlyArray<{ id: DensityPreference; key: Key }> = [
+  { id: 'auto', key: 'settings.density.auto' }, { id: 'comfortable', key: 'settings.density.comfortable' },
+  { id: 'standard', key: 'settings.density.standard' }, { id: 'compact', key: 'settings.density.compact' },
+];
+const MOTIONS: ReadonlyArray<{ id: MotionPreference; key: Key }> = [
+  { id: 'system', key: 'settings.motion.system' }, { id: 'reduced', key: 'settings.motion.reduced' },
+];
+
+function Choice<T extends string>({ label, hint, value, options, onChange }: { label: string; hint: string; value: T; options: ReadonlyArray<{ id: T; key: Key }>; onChange: (next: T) => void }) {
+  const { t } = useI18n();
+  return (
+    <div className="space-y-2" role="group" aria-label={label}>
+      <div><p className="text-sm font-medium text-text">{label}</p><p className="text-xs text-text-secondary mt-0.5">{hint}</p></div>
+      <div className="flex flex-wrap gap-2">
+        {options.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            aria-pressed={value === option.id}
+            onClick={() => onChange(option.id)}
+            className={cn('h-(--control-h-md) rounded-md border px-3 text-sm transition-colors duration-(--duration-fast)', value === option.id ? 'border-accent bg-accent-soft text-text' : 'border-border text-text-secondary hover:border-border-strong hover:text-text')}
+          >{t(option.key)}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function AppearanceSection() {
   const { t } = useI18n();
   const { theme, setTheme } = useTheme();
+  const { density, setDensity } = useDensity();
+  const { motion, setMotion } = useMotion();
 
   return (
     <DashboardCard title={t('settings.appearance')} description={t('settings.appearanceDesc')}>
@@ -77,6 +111,10 @@ export function AppearanceSection() {
             </button>
           );
         })}
+      </div>
+      <div className="mt-5 grid gap-5 border-t border-border pt-5 sm:grid-cols-2">
+        <Choice label={t('settings.density')} hint={t('settings.densityDesc')} value={density} options={DENSITIES} onChange={setDensity} />
+        <Choice label={t('settings.motion')} hint={t('settings.motionDesc')} value={motion} options={MOTIONS} onChange={setMotion} />
       </div>
     </DashboardCard>
   );

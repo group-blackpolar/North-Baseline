@@ -8,7 +8,7 @@ const Card = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement> & { selec
 Card.displayName = 'Card';
 
 const CardHeader = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn('flex flex-col gap-1 p-5 pb-3', className)} {...props} />
+  <div ref={ref} className={cn('flex flex-col gap-1 p-(--card-pad) pb-3', className)} {...props} />
 ));
 CardHeader.displayName = 'CardHeader';
 
@@ -23,7 +23,7 @@ const CardDescription = forwardRef<HTMLParagraphElement, HTMLAttributes<HTMLPara
 CardDescription.displayName = 'CardDescription';
 
 const CardContent = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn('p-5 pt-2', className)} {...props} />
+  <div ref={ref} className={cn('p-(--card-pad) pt-2', className)} {...props} />
 ));
 CardContent.displayName = 'CardContent';
 

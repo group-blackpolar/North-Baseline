@@ -31,3 +31,18 @@ for (const [name, width, height] of [['1366x768', 1366, 768], ['1920x1080', 1920
     expect(overflow).toBeLessThanOrEqual(0);
   });
 }
+
+test('density and motion preferences are applied before first paint (UX-01b)', async ({ page }) => {
+  await page.addInitScript(() => { localStorage.setItem('north-density-v1', 'comfortable'); localStorage.setItem('north-motion-v1', 'reduced'); localStorage.setItem('north-theme-v1', 'system'); });
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.goto('/', { waitUntil: 'commit' });
+  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.density)).toBe('comfortable');
+  expect(await page.evaluate(() => document.documentElement.dataset.motion)).toBe('reduced');
+  expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('dark');
+});
+
+test('auto density is compact on a narrow window', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.goto('/', { waitUntil: 'commit' });
+  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.density)).toBe('compact');
+});
