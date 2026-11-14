@@ -5,6 +5,7 @@ import { useI18n } from '@/lib/i18n';
 import { useOrganization } from '@/context/OrganizationContext';
 import { OrganizationIcon } from '@/components/organization/OrganizationAvatar';
 import { identityOf, isBrandHex } from '@/lib/brand';
+import { ShellActions } from '@/components/shell/ShellActions';
 
 export function CurrentPath() {
   const { t } = useI18n();
@@ -20,7 +21,7 @@ export function CurrentPath() {
   const subcategory = getSubcategory(activeTab.route.categoryId, activeTab.route.subcategoryId);
 
   return (
-    <div className="relative shrink-0 flex items-center gap-1 px-3 border-b border-border/60 bg-surface-hover/30 text-xs text-text-muted" style={{ height: 'var(--shell-breadcrumb-height)' }}>
+    <div className="@container relative shrink-0 flex items-center gap-1 px-4 border-b border-border/60 bg-gradient-to-b from-surface to-surface-hover/40 text-xs text-text-muted" style={{ height: 'var(--shell-breadcrumb-height)' }}>
       {/* Organization identity stays visible in every tab: logo, name and the brand-colored edge. */}
       {branded && activeOrganization ? (
         <>
@@ -40,6 +41,7 @@ export function CurrentPath() {
           <span className="text-text">{subcategory.labelKey ? t(subcategory.labelKey as never) : subcategory.name}</span>
         </>
       )}
+      <ShellActions />
     </div>
   );
 }
