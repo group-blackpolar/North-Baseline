@@ -139,6 +139,12 @@ export function NavSidebar({ user }: { user: SessionUser }) {
   const go = (category: CategoryModel, sub: SubcategoryModel) => { setFlyout(null); goToCategory(category, sub); };
 
   const visible = useMemo(() => categories.filter((category) => !category.requiredPermission || canNavigate(category.requiredPermission)), [categories, canNavigate]);
+  // Content first; administration and configuration are system areas, set apart under their own labels.
+  const sectionOf = (category: CategoryModel): 'main' | 'administration' | 'configuration' =>
+    category.slug === 'admin' || category.id === 'platform-administration' ? 'administration' : category.id === 'settings' ? 'configuration' : 'main';
+  const sections = (['main', 'administration', 'configuration'] as const)
+    .map((section) => ({ section, items: visible.filter((category) => sectionOf(category) === section) }))
+    .filter((group) => group.items.length > 0);
 
   const toggleButton = (
     <button
@@ -236,7 +242,10 @@ export function NavSidebar({ user }: { user: SessionUser }) {
 
       <nav aria-label={t('shell.categories')} className="flex-1 space-y-1 overflow-y-auto p-2">
         {isLoading && <div className="space-y-2"><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-2/3" /></div>}
-        {!isLoading && visible.map((category) => {
+        {!isLoading && sections.map(({ section, items }) => (
+          <div key={section} className="space-y-1">
+            {section !== 'main' && !query ? <p className="ui-label mt-2 border-t border-border px-2 pb-0.5 pt-3 text-[10px]">{tr(`nav.section.${section}` as never)}</p> : null}
+            {items.map((category) => {
           const groups = groupsOf(category, query, subLabel);
           if (query && groups.length === 0) return null;
           const Icon = resolveIcon(category.icon);
@@ -270,6 +279,8 @@ export function NavSidebar({ user }: { user: SessionUser }) {
             </section>
           );
         })}
+          </div>
+        ))}
         {!isLoading && query && !visible.some((category) => groupsOf(category, query, subLabel).length) && (
           <p className="px-2 py-4 text-center text-xs text-text-muted">{t('sidebar.noResults')}</p>
         )}
