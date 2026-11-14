@@ -47,6 +47,10 @@ export const pack21Es = {
   'oh2.recents': 'Recientes', 'oh2.recentsEmpty': 'Los reportes que abras aparecerán aquí para volver a ellos.',
   'oh2.activity': 'Actividad', 'oh2.platform': 'Estado de la plataforma', 'oh2.platform.ok': 'Operativo', 'oh2.platform.degraded': 'Degradado',
   'oh2.platform.p95': 'Latencia p95', 'oh2.platform.requests': 'Solicitudes', 'oh2.platform.errors': 'Errores 5xx', 'oh2.platform.window': 'Últimas 24 horas',
+  'oh2.tagline': 'Centro de información y análisis', 'oh2.subtitle': 'Explora tus reportes, analiza datos y toma decisiones con información actualizada y precisa.',
+  'oh2.chip.reports': 'Reportes disponibles: {n}', 'oh2.chip.members': 'Miembros activos: {n}',
+  'oh2.views': '{n} vistas', 'oh2.createView': 'Crear vista', 'oh2.createViewBody': 'Diseña tu propio análisis en View Studio.',
+  'oh2.aiBody': 'Tu asistente inteligente en {name}.', 'oh2.aiOpen': 'Abrir asistente', 'oh2.usage': 'Uso de la organización', 'oh2.traffic': 'Tráfico de la plataforma',
 } as const;
 
 export type Pack21Dictionary = { [K in keyof typeof pack21Es]: string };
@@ -99,4 +103,8 @@ export const pack21En: Pack21Dictionary = {
   'oh2.recents': 'Recent', 'oh2.recentsEmpty': 'Reports you open will show up here so you can get back to them.',
   'oh2.activity': 'Activity', 'oh2.platform': 'Platform status', 'oh2.platform.ok': 'Operational', 'oh2.platform.degraded': 'Degraded',
   'oh2.platform.p95': 'p95 latency', 'oh2.platform.requests': 'Requests', 'oh2.platform.errors': '5xx errors', 'oh2.platform.window': 'Last 24 hours',
+  'oh2.tagline': 'Information and analysis center', 'oh2.subtitle': 'Explore your reports, analyze data and decide with up-to-date, accurate information.',
+  'oh2.chip.reports': 'Reports available: {n}', 'oh2.chip.members': 'Active members: {n}',
+  'oh2.views': '{n} views', 'oh2.createView': 'Create view', 'oh2.createViewBody': 'Design your own analysis in View Studio.',
+  'oh2.aiBody': 'Your intelligent assistant in {name}.', 'oh2.aiOpen': 'Open assistant', 'oh2.usage': 'Organization usage', 'oh2.traffic': 'Platform traffic',
 };

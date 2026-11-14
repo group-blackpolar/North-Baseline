@@ -10,7 +10,7 @@ Personal Workspace is not an organization. Client-side visibility, demo roles, f
 
 - Trace navigation through `src/App.tsx`, the provider hierarchy, catalog IDs, `TabsContext`, and `ViewsRenderer` before changing it.
 - Preserve the current organization-remount boundary (`key={activeOrganization.id}`) unless a Task explicitly redesigns state ownership; organization, workspace, catalog and tab state must not leak across tenants.
-- The shell is conceptually Organization Rail -> category/context sidebar -> subcategories -> tabs -> workspace content. Existing `CategoryRail` and `ContextSidebar` divide these responsibilities; do not silently merge or redesign them.
+- The shell is one navigation sidebar (`src/components/navigation/NavSidebar.tsx`, decision UX-01c in `GBP.docs/03-PRODUCTS/NORTH/UX-REDESIGN.md`) -> tabs -> workspace content. The sidebar holds the logo, the organization switcher (`OrganizationSwitcher`), the catalog tree (categories as groups, subcategories as rows) and the user; it is always dark (`.north-nav-dark`) whatever the theme. The old Organization Rail, `CategoryRail` and `ContextSidebar` no longer exist; do not bring them back without a new decision.
 - Category or subcategory changes must not create arbitrary new tabs. Use the established intentional tab/navigation flow and browser-like active/close behavior.
 - Keep feature screens under `src/features/<feature>` and reusable shell/UI under `src/components`. Reuse CSS tokens, shared primitives, Phosphor icons (`@/components/ui/icon`), `cn()`, `@/` imports and current light/dark/midnight themes.
 - Add both Spanish and English locale entries for user-facing shell text. Keep mock/demo behavior isolated and visibly non-authoritative.

@@ -53,6 +53,10 @@
   --color-accent-soft: rgba(15, 163, 150, 0.12);
   /* CoreCrow AI (violet) */
   --color-ai: #7C5CE0;
+  /* Polar palette (UX-01d): navy surfaces, polar blue for interaction, violet for CoreCrow AI */
+  --color-polar: #346BEB;
+  --color-navy: #15223B;
+  --color-ice: #EDF3FC;
   --color-success: #12B76A;
   --color-warning: #F79009;
   --color-error: #F04438;
@@ -240,6 +244,37 @@
 }
 
 @layer components {
+  /* Cold, always-dark navigation (UX-01c): its own palette, independent of the active theme. The scoped token overrides make
+     every component inside (rows, switcher, profile menu, flyouts) follow it without per-component dark variants. */
+  .north-nav-dark {
+    --color-surface: rgb(255 255 255 / 0.05);
+    --color-surface-hover: rgb(255 255 255 / 0.09);
+    --color-surface-active: var(--color-polar);
+    --color-border: rgb(255 255 255 / 0.10);
+    --color-border-strong: rgb(255 255 255 / 0.20);
+    --color-text: #EAF1FF;
+    --color-text-secondary: #B8C6E4;
+    --color-text-muted: #7E91B8;
+    --color-accent: #79C5FF;
+    --color-accent-soft: rgb(121 197 255 / 0.16);
+    position: relative;
+    color: var(--color-text);
+    color-scheme: dark;
+    background: linear-gradient(180deg, #172845 0%, #0E1A31 100%);
+  }
+  .north-nav-dark::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 132px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 120' preserveAspectRatio='none'%3E%3Cpath d='M0 120V78l38-32 26 20 44-48 40 42 30-22 42 38 34-26 46 34v36z' fill='%23ffffff' fill-opacity='0.07'/%3E%3Cpath d='M0 120V96l52-26 36 24 50-34 44 30 48-20 70 30v20z' fill='%23ffffff' fill-opacity='0.06'/%3E%3C/svg%3E") bottom / 100% 100% no-repeat;
+    pointer-events: none;
+  }
+  /* Content sits above the mountain; menus (fixed, z-popover) stay above the content. */
+  .north-nav-dark > nav, .north-nav-dark > footer { position: relative; z-index: 1; }
+  .north-nav-dark [role="menu"] { background: #1B2D4F; }
+
   /* Cards: depth from border + background + a soft shadow, lifted on hover only
      when the card is interactive. */
   .np-card {

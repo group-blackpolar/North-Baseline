@@ -8,7 +8,8 @@ import { Collapse } from '@/components/ui/collapse';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip } from '@/components/ui/tooltip';
 import { ProfileMenu } from '@/components/sidebar/ProfileMenu';
-import { NorthIcon } from '@/components/brand/NorthLogo';
+/** The navigation is always dark, so it uses the white mark regardless of theme. */
+const NavMark = ({ className }: { className?: string }) => <img src="/white512.png" alt="" aria-hidden="true" className={cn('shrink-0 object-contain', className)} />;
 import { OrganizationSwitcher } from '@/components/organization/OrganizationSwitcher';
 import { resolveIcon } from '@/lib/iconMap';
 import { useI18n } from '@/lib/i18n';
@@ -153,8 +154,8 @@ export function NavSidebar({ user }: { user: SessionUser }) {
 
   if (collapsed) {
     return (
-      <aside aria-label={t('shell.categories')} className="relative z-(--z-navigation) flex h-full shrink-0 flex-col items-center gap-1 border-r border-border bg-surface py-2" style={{ width: 'var(--shell-category-rail)' }}>
-        <NorthIcon className="size-8" />
+      <aside aria-label={t('shell.categories')} className="north-nav-dark relative z-(--z-navigation) flex h-full shrink-0 flex-col items-center gap-1 border-r border-border py-2" style={{ width: 'var(--shell-category-rail)' }}>
+        <NavMark className="size-8" />
         <OrganizationSwitcher collapsed />
         {toggleButton}
         <div className="my-0.5 h-px w-6 bg-border" />
@@ -207,10 +208,10 @@ export function NavSidebar({ user }: { user: SessionUser }) {
   }
 
   return (
-    <aside aria-label={t('shell.categories')} className="relative z-(--z-navigation) flex h-full shrink-0 flex-col overflow-hidden border-r border-border bg-surface" style={{ width: 'var(--shell-context-sidebar)' }}>
+    <aside aria-label={t('shell.categories')} className="north-nav-dark relative z-(--z-navigation) flex h-full shrink-0 flex-col overflow-hidden border-r border-border" style={{ width: 'var(--shell-context-sidebar)' }}>
       <header className="shrink-0 space-y-2.5 border-b border-border p-2.5">
         <div className="flex items-center gap-2 px-0.5">
-          <NorthIcon className="size-8" />
+          <NavMark className="size-8" />
           <span className="min-w-0 flex-1 leading-none">
             <span className="block text-[9px] font-semibold uppercase tracking-[0.16em] text-text-muted">Black Polar<sup>®</sup></span>
             <span className="block font-display text-lg font-bold tracking-[0.08em] text-text">NORTH</span>
@@ -252,7 +253,6 @@ export function NavSidebar({ user }: { user: SessionUser }) {
               >
                 <Icon weight={active ? 'fill' : 'duotone'} className="size-4 shrink-0" style={category.color ? { color: category.color } : undefined} />
                 <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{label}</span>
-                <span className="text-[11px] tabular-nums text-text-muted">{category.subcategories.length}</span>
                 {expanded ? <CaretDown className="size-3 shrink-0 text-text-muted" /> : <CaretRight className="size-3 shrink-0 text-text-muted" />}
               </button>
               <Collapse open={expanded}>
