@@ -17,7 +17,7 @@ const initialsOf = (org: OrganizationLike) => org.initials ?? (org.name ?? '?').
 function Avatar({ org, size }: { org: OrganizationLike; size: 'sm' | 'md' }) {
   const personal = org.id === PERSONAL_ORG_ID;
   return (
-    <span className={cn('flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-surface-active font-display font-semibold text-text', size === 'md' ? 'size-9 text-sm' : 'size-7 text-xs')} aria-hidden="true">
+    <span className={cn('flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-surface-hover font-display font-semibold text-text', size === 'md' ? 'size-9 text-sm' : 'size-7 text-xs')} aria-hidden="true">
       {personal
         ? <House className="size-4" />
         : <OrganizationIcon organizationId={org.id} iconAssetId={org.iconAssetId} iconData={org.avatarUrl ?? null} fallback={initialsOf(org)} />}

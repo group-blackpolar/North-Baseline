@@ -4,6 +4,7 @@ import { Buildings } from '@phosphor-icons/react';
 import { Login } from '@/views/Login';
 import { TemporaryPasswordChange } from '@/views/TemporaryPasswordChange';
 import { NavSidebar } from '@/components/navigation/NavSidebar';
+import { RecentsRecorder } from '@/features/home/RecentsRecorder';
 import { TabBar } from '@/components/tabs/TabBar';
 import { CurrentPath } from '@/components/tabs/CurrenPath';
 import { brandStyle, identityOf } from '@/lib/brand';
@@ -233,6 +234,7 @@ function WorkspaceGate({
         <TabsProvider persistKey={navKey(user.id, organizationId)}>
             <CatalogSync>
               <RestoredPanels />
+              <RecentsRecorder userId={user.id} organizationId={organizationId} />
               <PublishedRouteIntent route={route} />
               <PlatformAdminRouteIntent route={route} />
               {/* The organization rail and the shell frame live outside this keyed subtree (see AppShell), so

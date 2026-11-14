@@ -51,6 +51,12 @@
   --color-accent: #0FA396;
   --color-accent-hover: #0C8578;
   --color-accent-soft: rgba(15, 163, 150, 0.12);
+  /* CoreCrow AI (violet) */
+  --color-ai: #7C5CE0;
+  /* Polar palette (UX-01d): navy surfaces, polar blue for interaction, violet for CoreCrow AI */
+  --color-polar: #346BEB;
+  --color-navy: #15223B;
+  --color-ice: #EDF3FC;
   --color-success: #12B76A;
   --color-warning: #F79009;
   --color-error: #F04438;
@@ -135,6 +141,7 @@
     --color-accent: #3ECFBA;
     --color-accent-hover: #5EEAD4;
     --color-accent-soft: rgba(62, 207, 186, 0.14);
+    --color-ai: #9B82F0;
     --color-success: #34D399;
     --color-warning: #FBBF24;
     --color-error: #F87171;
@@ -200,6 +207,7 @@
     --color-accent: #3ecfba;
     --color-accent-hover: #5adcc8;
     --color-accent-soft: rgba(62, 207, 186, 0.14);
+    --color-ai: #9B82F0;
     --color-border-hover: #2e3f6b;
     --color-card-highlight: rgb(255 255 255 / 0.03);
     --shadow-overlay: 0 8px 12px -4px rgb(0 0 0 / 0.4), 0 24px 48px -12px rgb(0 0 0 / 0.6);
@@ -236,6 +244,37 @@
 }
 
 @layer components {
+  /* Cold, always-dark navigation (UX-01c): its own palette, independent of the active theme. The scoped token overrides make
+     every component inside (rows, switcher, profile menu, flyouts) follow it without per-component dark variants. */
+  .north-nav-dark {
+    --color-surface: rgb(255 255 255 / 0.05);
+    --color-surface-hover: rgb(255 255 255 / 0.09);
+    --color-surface-active: var(--color-polar);
+    --color-border: rgb(255 255 255 / 0.10);
+    --color-border-strong: rgb(255 255 255 / 0.20);
+    --color-text: #EAF1FF;
+    --color-text-secondary: #B8C6E4;
+    --color-text-muted: #7E91B8;
+    --color-accent: #79C5FF;
+    --color-accent-soft: rgb(121 197 255 / 0.16);
+    position: relative;
+    color: var(--color-text);
+    color-scheme: dark;
+    background: linear-gradient(180deg, #172845 0%, #0E1A31 100%);
+  }
+  .north-nav-dark::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 132px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 120' preserveAspectRatio='none'%3E%3Cpath d='M0 120V78l38-32 26 20 44-48 40 42 30-22 42 38 34-26 46 34v36z' fill='%23ffffff' fill-opacity='0.07'/%3E%3Cpath d='M0 120V96l52-26 36 24 50-34 44 30 48-20 70 30v20z' fill='%23ffffff' fill-opacity='0.06'/%3E%3C/svg%3E") bottom / 100% 100% no-repeat;
+    pointer-events: none;
+  }
+  /* Content sits above the mountain; menus (fixed, z-popover) stay above the content. */
+  .north-nav-dark > nav, .north-nav-dark > footer { position: relative; z-index: 1; }
+  .north-nav-dark [role="menu"] { background: #1B2D4F; }
+
   /* Cards: depth from border + background + a soft shadow, lifted on hover only
      when the card is interactive. */
   .np-card {
@@ -366,6 +405,22 @@ a.np-card:active, button.np-card:active, .np-card[role="button"]:active { transf
   animation-iteration-count: 1 !important;
   animation-delay: 0s !important;
   transition-duration: 0.01ms !important;
+}
+
+/* Organization Home surfaces (UX-01d): layered shadow + soft gradient, built from theme tokens so every theme keeps its own depth. */
+.oh-bg {
+  background:
+    radial-gradient(900px 480px at 80% -12%, color-mix(in srgb, var(--color-polar) 14%, transparent), transparent 62%),
+    radial-gradient(680px 460px at 6% 112%, color-mix(in srgb, var(--color-ai) 9%, transparent), transparent 62%),
+    var(--color-background);
+}
+.oh-card {
+  border-radius: 16px;
+  background: linear-gradient(180deg, var(--color-surface), color-mix(in srgb, var(--color-surface) 94%, var(--color-polar)));
+  box-shadow: 0 0 0 1px var(--color-border), 0 1px 2px rgb(16 32 66 / 0.06), 0 14px 30px -16px rgb(30 58 138 / 0.34);
+}
+:root[data-theme="dark"] .oh-card, :root[data-theme="midnight"] .oh-card {
+  box-shadow: 0 0 0 1px var(--color-border), 0 1px 2px rgb(0 0 0 / 0.4), 0 18px 36px -18px rgb(0 0 0 / 0.75);
 }
 
 /* Organization Home: short staggered card entrance (reduced motion is handled globally above). */

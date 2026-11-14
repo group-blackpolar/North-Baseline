@@ -9,6 +9,7 @@ import { useI18n } from '@/lib/i18n';
 import { useIsCompactShell } from '@/lib/responsive';
 import { cn } from '@/lib/utils';
 import { AssistantPanel } from './AssistantPanel';
+import { OPEN_ASSISTANT_EVENT } from './openEvent';
 import { RavenIcon } from './RavenIcon';
 
 /**
@@ -25,6 +26,11 @@ export function AssistantLauncher({ variant }: { variant: 'bar' | 'header' }) {
   const personal = !activeOrganization || activeOrganization.id === PERSONAL_ORG_ID;
 
   const close = () => { setOpen(false); button.current?.focus(); };
+  useEffect(() => {
+    const show = () => setOpen(true);
+    window.addEventListener(OPEN_ASSISTANT_EVENT, show);
+    return () => window.removeEventListener(OPEN_ASSISTANT_EVENT, show);
+  }, []);
   useEffect(() => {
     if (!open || compact) return;
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') close(); };
