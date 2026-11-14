@@ -407,6 +407,22 @@ a.np-card:active, button.np-card:active, .np-card[role="button"]:active { transf
   transition-duration: 0.01ms !important;
 }
 
+/* Organization Home surfaces (UX-01d): layered shadow + soft gradient, built from theme tokens so every theme keeps its own depth. */
+.oh-bg {
+  background:
+    radial-gradient(900px 480px at 80% -12%, color-mix(in srgb, var(--color-polar) 14%, transparent), transparent 62%),
+    radial-gradient(680px 460px at 6% 112%, color-mix(in srgb, var(--color-ai) 9%, transparent), transparent 62%),
+    var(--color-background);
+}
+.oh-card {
+  border-radius: 16px;
+  background: linear-gradient(180deg, var(--color-surface), color-mix(in srgb, var(--color-surface) 94%, var(--color-polar)));
+  box-shadow: 0 0 0 1px var(--color-border), 0 1px 2px rgb(16 32 66 / 0.06), 0 14px 30px -16px rgb(30 58 138 / 0.34);
+}
+:root[data-theme="dark"] .oh-card, :root[data-theme="midnight"] .oh-card {
+  box-shadow: 0 0 0 1px var(--color-border), 0 1px 2px rgb(0 0 0 / 0.4), 0 18px 36px -18px rgb(0 0 0 / 0.75);
+}
+
 /* Organization Home: short staggered card entrance (reduced motion is handled globally above). */
 @keyframes oh-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .oh-rise { animation: oh-rise 420ms var(--ease-standard, ease-out) both; animation-delay: calc(var(--i, 0) * 55ms); }
