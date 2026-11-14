@@ -48,9 +48,9 @@
   --color-text-secondary: #5A6472;
   --color-text-muted: #8A94A3;
 
-  --color-accent: #0FA396;
-  --color-accent-hover: #0C8578;
-  --color-accent-soft: rgba(15, 163, 150, 0.12);
+  --color-accent: #346BEB;
+  --color-accent-hover: #2557CC;
+  --color-accent-soft: rgba(52, 107, 235, 0.12);
   /* CoreCrow AI (violet) */
   --color-ai: #7C5CE0;
   /* Polar palette (UX-01d): navy surfaces, polar blue for interaction, violet for CoreCrow AI */
@@ -86,7 +86,7 @@
 
   /* Chart series colours (categorical). Consumed through components/charts/palette.ts */
   --chart-1: var(--color-accent);
-  --chart-2: #60A5FA;
+  --chart-2: #14B8A6;
   --chart-3: #FBBF24;
   --chart-4: #A78BFA;
   --chart-5: #F87171;
@@ -138,9 +138,9 @@
     --color-text: #EEF1F4;
     --color-text-secondary: #A6AFBA;
     --color-text-muted: #6E7885;
-    --color-accent: #3ECFBA;
-    --color-accent-hover: #5EEAD4;
-    --color-accent-soft: rgba(62, 207, 186, 0.14);
+    --color-accent: #6E96FF;
+    --color-accent-hover: #8FB0FF;
+    --color-accent-soft: rgba(110, 150, 255, 0.16);
     --color-ai: #9B82F0;
     --color-success: #34D399;
     --color-warning: #FBBF24;
@@ -204,9 +204,9 @@
     --color-text: #e2e8f8;
     --color-text-secondary: #a8b3d0;
     --color-text-muted: #6d7aa0;
-    --color-accent: #3ecfba;
-    --color-accent-hover: #5adcc8;
-    --color-accent-soft: rgba(62, 207, 186, 0.14);
+    --color-accent: #6E96FF;
+    --color-accent-hover: #8FB0FF;
+    --color-accent-soft: rgba(110, 150, 255, 0.16);
     --color-ai: #9B82F0;
     --color-border-hover: #2e3f6b;
     --color-card-highlight: rgb(255 255 255 / 0.03);

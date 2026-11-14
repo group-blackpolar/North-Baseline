@@ -51,6 +51,9 @@ export const pack21Es = {
   'oh2.chip.reports': 'Reportes disponibles: {n}', 'oh2.chip.members': 'Miembros activos: {n}',
   'oh2.views': '{n} vistas', 'oh2.createView': 'Crear vista', 'oh2.createViewBody': 'Diseña tu propio análisis en View Studio.',
   'oh2.aiBody': 'Tu asistente inteligente en {name}.', 'oh2.aiOpen': 'Abrir asistente', 'oh2.usage': 'Uso de la organización', 'oh2.traffic': 'Tráfico de la plataforma',
+  'nav.section.administration': 'Administración', 'nav.section.configuration': 'Configuración',
+  'home.addOrganizationHint': 'Crea una organización o únete con una invitación.', 'home.organizationsCount': '{n} organizaciones', 'home.lastUsed': 'Último uso {when}', 'home.neverUsed': 'Sin uso en este dispositivo',
+  'home.organizationsOne': '1 organización', 'home.open': 'Abrir',
 } as const;
 
 export type Pack21Dictionary = { [K in keyof typeof pack21Es]: string };
@@ -107,4 +110,7 @@ export const pack21En: Pack21Dictionary = {
   'oh2.chip.reports': 'Reports available: {n}', 'oh2.chip.members': 'Active members: {n}',
   'oh2.views': '{n} views', 'oh2.createView': 'Create view', 'oh2.createViewBody': 'Design your own analysis in View Studio.',
   'oh2.aiBody': 'Your intelligent assistant in {name}.', 'oh2.aiOpen': 'Open assistant', 'oh2.usage': 'Organization usage', 'oh2.traffic': 'Platform traffic',
+  'nav.section.administration': 'Administration', 'nav.section.configuration': 'Settings',
+  'home.addOrganizationHint': 'Create an organization or join with an invitation.', 'home.organizationsCount': '{n} organizations', 'home.lastUsed': 'Last used {when}', 'home.neverUsed': 'Not used on this device',
+  'home.organizationsOne': '1 organization', 'home.open': 'Open',
 };

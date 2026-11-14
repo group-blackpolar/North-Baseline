@@ -110,7 +110,7 @@ export function SettingsScreen({ organizationId }: { organizationId: string }) {
                 <div className="flex flex-wrap items-center gap-4">
                   {(['brandPrimary', 'brandAccent'] as const).map((key) => (
                     <label key={key} className="flex items-center gap-2 text-xs text-text-secondary">
-                      <input type="color" aria-label={t(key === 'brandPrimary' ? 'brand.primary' : 'brand.accent')} value={isBrandHex(form[key]) ? form[key] : '#0FA396'} onChange={(event) => setDraft({ ...form, [key]: event.target.value.toUpperCase() })} className="size-8 cursor-pointer rounded-md border border-border bg-transparent p-0.5" />
+                      <input type="color" aria-label={t(key === 'brandPrimary' ? 'brand.primary' : 'brand.accent')} value={isBrandHex(form[key]) ? form[key] : '#346BEB'} onChange={(event) => setDraft({ ...form, [key]: event.target.value.toUpperCase() })} className="size-8 cursor-pointer rounded-md border border-border bg-transparent p-0.5" />
                       <span>{t(key === 'brandPrimary' ? 'brand.primary' : 'brand.accent')}<span className="ml-1.5 font-mono text-text-muted">{form[key] || t('brand.default')}</span></span>
                       {form[key] ? <button type="button" className="text-[11px] font-medium text-accent hover:underline" onClick={() => setDraft({ ...form, [key]: '' })}>{t('brand.reset')}</button> : null}
                     </label>

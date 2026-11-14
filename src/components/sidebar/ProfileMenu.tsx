@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { CircleNotch, HandPointing, SignOut } from '@phosphor-icons/react';
+import { CircleNotch, DotsThree, HandPointing, SignOut } from '@phosphor-icons/react';
 import { useI18n } from '@/lib/i18n';
 import { useNotifications } from '@/context/NotificationContext';
 import { useLogout } from '@/hooks/useLogout';
@@ -50,6 +50,8 @@ export function ProfileMenu({ user }: { user: SessionUser }) {
     <div ref={ref} className="relative">
       <button
         type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left hover:bg-surface-hover transition-colors duration-(--duration-fast)"
       >
@@ -58,21 +60,23 @@ export function ProfileMenu({ user }: { user: SessionUser }) {
           <p className="text-xs font-medium text-text truncate">{displayName}</p>
           <p className="text-[10px] text-text-muted truncate">{user.email}</p>
         </div>
+        <DotsThree className="size-5 shrink-0 text-text-muted" weight="bold" aria-hidden="true" />
       </button>
 
       {open && (
-        <div className="absolute bottom-full left-0 right-0 mb-1 np-card p-1.5 space-y-0.5 shadow-pop z-(--z-popover)">
+        <div role="menu" className="absolute bottom-full left-0 right-0 mb-1 np-card p-1.5 space-y-0.5 shadow-pop z-(--z-popover)">
           <div className="px-2 py-2 border-b border-border">
             <p className="text-xs font-semibold text-text">{displayName}</p>
             <p className="text-[11px] text-text-muted mono-data truncate">{user.role}</p>
           </div>
           {organizationId ? (
-            <button type="button" onClick={() => { setOpen(false); setRequesting(true); }} className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-text hover:bg-surface-hover transition-colors duration-(--duration-fast)">
+            <button type="button" role="menuitem" onClick={() => { setOpen(false); setRequesting(true); }} className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-text hover:bg-surface-hover transition-colors duration-(--duration-fast)">
               <HandPointing className="w-4 h-4" aria-hidden="true" />{t('ar.menu')}
             </button>
           ) : null}
           <button
             type="button"
+            role="menuitem"
             disabled={isLoggingOut}
             onClick={() => void handleLogout()}
             className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-text hover:bg-error/10 hover:text-error transition-colors duration-(--duration-fast) disabled:opacity-60 disabled:cursor-not-allowed"

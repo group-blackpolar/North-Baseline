@@ -15,9 +15,9 @@ interface PreviewPalette {
 }
 
 const PALETTES: Record<ThemeName, PreviewPalette> = {
-  light: { bg: '#ffffff', panel: '#f1f5f9', text: '#0f172a', accent: '#0fa396' },
-  dark: { bg: '#101418', panel: '#1c232b', text: '#e6e8ea', accent: '#3ecfba' },
-  midnight: { bg: '#0a1020', panel: '#131c33', text: '#e2e8f8', accent: '#3ecfba' },
+  light: { bg: '#ffffff', panel: '#f1f5f9', text: '#0f172a', accent: '#346beb' },
+  dark: { bg: '#101418', panel: '#1c232b', text: '#e6e8ea', accent: '#6e96ff' },
+  midnight: { bg: '#0a1020', panel: '#131c33', text: '#e2e8f8', accent: '#6e96ff' },
 };
 
 const THEMES = [
