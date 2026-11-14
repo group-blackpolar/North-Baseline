@@ -4,8 +4,7 @@ import { Buildings } from '@phosphor-icons/react';
 import { Login } from '@/views/Login';
 import { TemporaryPasswordChange } from '@/views/TemporaryPasswordChange';
 import { OrganizationRail } from '@/components/organization/OrganizationRail';
-import { CategoryRail } from '@/components/organization/CategoryRail';
-import { ContextSidebar } from '@/views/Sidebar';
+import { NavSidebar } from '@/components/navigation/NavSidebar';
 import { TabBar } from '@/components/tabs/TabBar';
 import { CurrentPath } from '@/components/tabs/CurrenPath';
 import { brandStyle, identityOf } from '@/lib/brand';
@@ -105,9 +104,8 @@ function SwitchingShell() {
       <div className="north-app-shell flex bg-background text-text" aria-busy="true">
         {!compact && <OrganizationRail />}
         {!compact && (
-          <div className="flex h-full shrink-0 border-r border-border bg-surface" style={{ width: 'calc(var(--shell-category-rail) + var(--shell-context-sidebar))' }}>
-            <div className="w-(--shell-category-rail) space-y-2 p-2"><Skeleton className="size-9 rounded-lg" /><Skeleton className="size-9 rounded-lg" /></div>
-            <div className="flex-1 space-y-3 border-l border-border p-3"><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-2/3" /></div>
+          <div className="flex h-full shrink-0 border-r border-border bg-surface" style={{ width: 'var(--shell-context-sidebar)' }}>
+            <div className="flex-1 space-y-3 p-3"><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-2/3" /></div>
           </div>
         )}
         <div className="min-w-0 flex-1"><WorkspaceSkeleton /></div>
@@ -243,11 +241,7 @@ function WorkspaceGate({
                   switching organization keeps them on screen while the tenant-scoped state below remounts. */}
               <div className="flex min-w-0 flex-1">
                 {/* Conditional siblings keep the content column at a stable position, so a resize never remounts the workspace. */}
-                {!compact && (
-                  <CategoryRail>
-                    <ContextSidebar user={user} />
-                  </CategoryRail>
-                )}
+                {!compact && <NavSidebar user={user} />}
                 <div className="flex-1 flex flex-col min-w-0">
                   {compact ? <MobileHeader user={user} /> : <CurrentPath />}
                   {!compact && <TabBar />}
