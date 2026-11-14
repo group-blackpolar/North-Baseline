@@ -41,6 +41,7 @@ export const pack21Es = {
   'nav.personalInfo': 'Información personal', 'nav.account': 'Cuenta', 'nav.contact': 'Información de contacto', 'nav.security': 'Seguridad',
   'nav.appearance': 'Apariencia', 'nav.language': 'Idioma y región',
   'nav.group.general': 'General', 'nav.group.personal': 'Personal', 'nav.group.security': 'Seguridad', 'nav.group.localPrefs': 'Preferencias locales',
+  'org.active': 'Organización activa', 'org.personalActive': 'Espacio personal', 'org.list': 'Organizaciones',
 } as const;
 
 export type Pack21Dictionary = { [K in keyof typeof pack21Es]: string };
@@ -87,4 +88,5 @@ export const pack21En: Pack21Dictionary = {
   'nav.personalInfo': 'Personal information', 'nav.account': 'Account', 'nav.contact': 'Contact information', 'nav.security': 'Security',
   'nav.appearance': 'Appearance', 'nav.language': 'Language & Region',
   'nav.group.general': 'General', 'nav.group.personal': 'Personal', 'nav.group.security': 'Security', 'nav.group.localPrefs': 'Local preferences',
+  'org.active': 'Active organization', 'org.personalActive': 'Personal space', 'org.list': 'Organizations',
 };

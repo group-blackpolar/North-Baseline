@@ -299,7 +299,7 @@
 @media (max-width: 1440px) {
   :root {
     --shell-category-rail-open: 176px;
-    --shell-context-sidebar: 200px;
+    --shell-context-sidebar: 224px;
   }
 }
 

@@ -8,6 +8,8 @@ import { Collapse } from '@/components/ui/collapse';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip } from '@/components/ui/tooltip';
 import { ProfileMenu } from '@/components/sidebar/ProfileMenu';
+import { NorthIcon } from '@/components/brand/NorthLogo';
+import { OrganizationSwitcher } from '@/components/organization/OrganizationSwitcher';
 import { resolveIcon } from '@/lib/iconMap';
 import { useI18n } from '@/lib/i18n';
 import { useCategoryNavigation } from '@/lib/shellNavigation';
@@ -76,6 +78,7 @@ function Row({ sub, category, active, label, onGo, size }: { sub: SubcategoryMod
       type="button"
       disabled={disabled}
       aria-current={active ? 'page' : undefined}
+      title={label}
       onClick={() => onGo(category, sub)}
       className={cn(
         'np-press-flat flex h-(--nav-row-h) w-full items-center gap-2 rounded-md pr-2 text-[13px] transition-colors duration-(--shell-motion-fast)',
@@ -151,8 +154,11 @@ export function NavSidebar({ user }: { user: SessionUser }) {
   if (collapsed) {
     return (
       <aside aria-label={t('shell.categories')} className="relative z-(--z-navigation) flex h-full shrink-0 flex-col items-center gap-1 border-r border-border bg-surface py-2" style={{ width: 'var(--shell-category-rail)' }}>
+        <NorthIcon className="size-8" />
+        <OrganizationSwitcher collapsed />
         {toggleButton}
-        <nav className="mt-1 flex w-full flex-1 flex-col items-center gap-1 overflow-y-auto" aria-label={t('shell.categories')}>
+        <div className="my-0.5 h-px w-6 bg-border" />
+        <nav className="flex w-full flex-1 flex-col items-center gap-1 overflow-y-auto" aria-label={t('shell.categories')}>
           {isLoading && <Skeleton className="size-9 rounded-lg" />}
           {visible.map((category) => {
             const Icon = resolveIcon(category.icon);
@@ -202,7 +208,16 @@ export function NavSidebar({ user }: { user: SessionUser }) {
 
   return (
     <aside aria-label={t('shell.categories')} className="relative z-(--z-navigation) flex h-full shrink-0 flex-col overflow-hidden border-r border-border bg-surface" style={{ width: 'var(--shell-context-sidebar)' }}>
-      <header className="shrink-0 space-y-2 border-b border-border p-2.5">
+      <header className="shrink-0 space-y-2.5 border-b border-border p-2.5">
+        <div className="flex items-center gap-2 px-0.5">
+          <NorthIcon className="size-8" />
+          <span className="min-w-0 flex-1 leading-none">
+            <span className="block text-[9px] font-semibold uppercase tracking-[0.16em] text-text-muted">Black Polar<sup>®</sup></span>
+            <span className="block font-display text-lg font-bold tracking-[0.08em] text-text">NORTH</span>
+          </span>
+          {toggleButton}
+        </div>
+        <OrganizationSwitcher collapsed={false} />
         <div className="flex items-center gap-2">
           <div className="relative min-w-0 flex-1">
             <MagnifyingGlass className="absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-text-muted" />
@@ -215,7 +230,6 @@ export function NavSidebar({ user }: { user: SessionUser }) {
               className="h-8 w-full rounded-md border border-border bg-surface pl-7 pr-2 text-xs text-text outline-none transition-[border-color,box-shadow] duration-(--duration-fast) placeholder:text-text-muted focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/25"
             />
           </div>
-          {toggleButton}
         </div>
       </header>
 
