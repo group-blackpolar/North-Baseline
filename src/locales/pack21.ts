@@ -32,6 +32,11 @@ export const pack21Es = {
   'sec.notif.save': 'Guardar notificaciones', 'sec.notif.saved': 'Notificaciones guardadas.',
   'sec.audit.more': 'Cargar más',
   'reason.title': 'Motivo del cambio', 'reason.body': 'Vas a cambiar una organización de la que no eres miembro. El motivo queda en su registro de auditoría.', 'reason.placeholder': 'Al menos 10 caracteres', 'reason.confirm': 'Continuar',
+  'settings.theme.system': 'Sistema', 'settings.theme.systemDesc': 'Sigue el modo claro u oscuro de tu dispositivo.',
+  'settings.density': 'Densidad', 'settings.densityDesc': 'Cuánta información cabe en pantalla. Automática se ajusta al ancho de la ventana.',
+  'settings.density.auto': 'Automática', 'settings.density.comfortable': 'Cómoda', 'settings.density.standard': 'Estándar', 'settings.density.compact': 'Compacta',
+  'settings.motion': 'Animaciones', 'settings.motionDesc': 'Reduce las transiciones dentro de NORTH aunque tu sistema no lo pida.',
+  'settings.motion.system': 'Según el sistema', 'settings.motion.reduced': 'Reducidas',
 } as const;
 
 export type Pack21Dictionary = { [K in keyof typeof pack21Es]: string };
@@ -69,4 +74,9 @@ export const pack21En: Pack21Dictionary = {
   'sec.notif.save': 'Save notifications', 'sec.notif.saved': 'Notifications saved.',
   'sec.audit.more': 'Load more',
   'reason.title': 'Reason for this change', 'reason.body': 'You are changing an organization you are not a member of. The reason is recorded in its audit log.', 'reason.placeholder': 'At least 10 characters', 'reason.confirm': 'Continue',
+  'settings.theme.system': 'System', 'settings.theme.systemDesc': 'Follows your device light or dark mode.',
+  'settings.density': 'Density', 'settings.densityDesc': 'How much information fits on screen. Automatic adapts to the window width.',
+  'settings.density.auto': 'Automatic', 'settings.density.comfortable': 'Comfortable', 'settings.density.standard': 'Standard', 'settings.density.compact': 'Compact',
+  'settings.motion': 'Animations', 'settings.motionDesc': "Reduces transitions inside NORTH even if your system does not ask for it.",
+  'settings.motion.system': 'Follow system', 'settings.motion.reduced': 'Reduced',
 };

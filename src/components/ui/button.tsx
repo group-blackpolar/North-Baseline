@@ -17,9 +17,9 @@ const buttonVariants = cva(
         destructive: 'bg-error text-white hover:opacity-90',
       },
       size: {
-        sm: 'h-8 px-3 text-[13px] pointer-coarse:h-(--touch-min)',
-        md: 'h-9 px-4 pointer-coarse:h-(--touch-min)',
-        lg: 'h-10 px-5 pointer-coarse:h-(--touch-min)',
+        sm: 'h-(--control-h-sm) px-3 text-[13px] pointer-coarse:h-(--touch-min)',
+        md: 'h-(--control-h-md) px-4 pointer-coarse:h-(--touch-min)',
+        lg: 'h-(--control-h-lg) px-5 pointer-coarse:h-(--touch-min)',
         icon: 'size-8 pointer-coarse:size-(--touch-min)',
         'icon-sm': 'size-7 pointer-coarse:size-(--touch-min)',
       },

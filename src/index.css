@@ -206,6 +206,35 @@
   }
 }
 
+/* Density scale (UX-01b). `standard` reproduces the pre-redesign look exactly; html[data-density] is set by lib/density.ts
+   (and before first paint by public/theme-init.js). Values for compact/comfortable are a first proposal to validate with real use. */
+@layer base {
+  :root {
+    --control-h-sm: 32px;
+    --control-h-md: 36px;
+    --control-h-lg: 40px;
+    --card-pad: 20px;
+    --card-gap: 16px;
+    --nav-row-h: 32px;
+  }
+  :root[data-density="compact"] {
+    --control-h-sm: 28px;
+    --control-h-md: 32px;
+    --control-h-lg: 36px;
+    --card-pad: 12px;
+    --card-gap: 8px;
+    --nav-row-h: 28px;
+  }
+  :root[data-density="comfortable"] {
+    --control-h-sm: 36px;
+    --control-h-md: 40px;
+    --control-h-lg: 44px;
+    --card-pad: 24px;
+    --card-gap: 20px;
+    --nav-row-h: 36px;
+  }
+}
+
 @layer components {
   /* Cards: depth from border + background + a soft shadow, lifted on hover only
      when the card is interactive. */
@@ -327,6 +356,16 @@ a.np-card:active, button.np-card:active, .np-card[role="button"]:active { transf
     animation-delay: 0s !important;
     transition-duration: 0.01ms !important;
   }
+}
+/* The same, forced from NORTH's own preference (Settings > Appearance), independent of the OS setting. */
+:root[data-motion="reduced"] *,
+:root[data-motion="reduced"] *::before,
+:root[data-motion="reduced"] *::after {
+  scroll-behavior: auto !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  animation-delay: 0s !important;
+  transition-duration: 0.01ms !important;
 }
 
 /* Organization Home: short staggered card entrance (reduced motion is handled globally above). */
