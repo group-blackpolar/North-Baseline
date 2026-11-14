@@ -42,6 +42,11 @@ export const pack21Es = {
   'nav.appearance': 'Apariencia', 'nav.language': 'Idioma y región',
   'nav.group.general': 'General', 'nav.group.personal': 'Personal', 'nav.group.security': 'Seguridad', 'nav.group.localPrefs': 'Preferencias locales',
   'org.active': 'Organización activa', 'org.personalActive': 'Espacio personal', 'org.list': 'Organizaciones',
+  'oh2.title': 'Hola, {name}', 'oh2.ai': 'CoreCrow AI',
+  'oh2.kpi.reports': 'Reportes', 'oh2.kpi.datasets': 'Datasets', 'oh2.kpi.members': 'Miembros', 'oh2.kpi.storage': 'Almacenamiento', 'oh2.kpi.storageOf': 'de {limit} · {percent} %',
+  'oh2.recents': 'Recientes', 'oh2.recentsEmpty': 'Los reportes que abras aparecerán aquí para volver a ellos.',
+  'oh2.activity': 'Actividad', 'oh2.platform': 'Estado de la plataforma', 'oh2.platform.ok': 'Operativo', 'oh2.platform.degraded': 'Degradado',
+  'oh2.platform.p95': 'Latencia p95', 'oh2.platform.requests': 'Solicitudes', 'oh2.platform.errors': 'Errores 5xx', 'oh2.platform.window': 'Últimas 24 horas',
 } as const;
 
 export type Pack21Dictionary = { [K in keyof typeof pack21Es]: string };
@@ -89,4 +94,9 @@ export const pack21En: Pack21Dictionary = {
   'nav.appearance': 'Appearance', 'nav.language': 'Language & Region',
   'nav.group.general': 'General', 'nav.group.personal': 'Personal', 'nav.group.security': 'Security', 'nav.group.localPrefs': 'Local preferences',
   'org.active': 'Active organization', 'org.personalActive': 'Personal space', 'org.list': 'Organizations',
+  'oh2.title': 'Hello, {name}', 'oh2.ai': 'CoreCrow AI',
+  'oh2.kpi.reports': 'Reports', 'oh2.kpi.datasets': 'Datasets', 'oh2.kpi.members': 'Members', 'oh2.kpi.storage': 'Storage', 'oh2.kpi.storageOf': 'of {limit} · {percent}%',
+  'oh2.recents': 'Recent', 'oh2.recentsEmpty': 'Reports you open will show up here so you can get back to them.',
+  'oh2.activity': 'Activity', 'oh2.platform': 'Platform status', 'oh2.platform.ok': 'Operational', 'oh2.platform.degraded': 'Degraded',
+  'oh2.platform.p95': 'p95 latency', 'oh2.platform.requests': 'Requests', 'oh2.platform.errors': '5xx errors', 'oh2.platform.window': 'Last 24 hours',
 };

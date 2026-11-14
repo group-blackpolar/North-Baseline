@@ -51,6 +51,8 @@
   --color-accent: #0FA396;
   --color-accent-hover: #0C8578;
   --color-accent-soft: rgba(15, 163, 150, 0.12);
+  /* CoreCrow AI (violet) */
+  --color-ai: #7C5CE0;
   --color-success: #12B76A;
   --color-warning: #F79009;
   --color-error: #F04438;
@@ -135,6 +137,7 @@
     --color-accent: #3ECFBA;
     --color-accent-hover: #5EEAD4;
     --color-accent-soft: rgba(62, 207, 186, 0.14);
+    --color-ai: #9B82F0;
     --color-success: #34D399;
     --color-warning: #FBBF24;
     --color-error: #F87171;
@@ -200,6 +203,7 @@
     --color-accent: #3ecfba;
     --color-accent-hover: #5adcc8;
     --color-accent-soft: rgba(62, 207, 186, 0.14);
+    --color-ai: #9B82F0;
     --color-border-hover: #2e3f6b;
     --color-card-highlight: rgb(255 255 255 / 0.03);
     --shadow-overlay: 0 8px 12px -4px rgb(0 0 0 / 0.4), 0 24px 48px -12px rgb(0 0 0 / 0.6);
