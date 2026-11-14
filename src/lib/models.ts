@@ -7,6 +7,8 @@ export interface SubcategoryModel {
   icon: string;      // nombre de icono resuelto vía iconRegistry
   requiredPermission?: string;
   group?: string;    // agrupación visual dentro del sidebar
+  /** Locale key that overrides `group` for client-owned (non-server) entries. */
+  groupKey?: string;
   route: string;
   /** Stable server taxonomy key. Never derive routing or admin behavior from a label. */
   slug?: string;

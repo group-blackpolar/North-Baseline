@@ -37,6 +37,11 @@ export const pack21Es = {
   'settings.density.auto': 'Automática', 'settings.density.comfortable': 'Cómoda', 'settings.density.standard': 'Estándar', 'settings.density.compact': 'Compacta',
   'settings.motion': 'Animaciones', 'settings.motionDesc': 'Reduce las transiciones dentro de NORTH aunque tu sistema no lo pida.',
   'settings.motion.system': 'Según el sistema', 'settings.motion.reduced': 'Reducidas',
+  'nav.overview': 'Resumen', 'nav.recent': 'Actividad reciente', 'nav.quickActions': 'Acciones rápidas',
+  'nav.personalInfo': 'Información personal', 'nav.account': 'Cuenta', 'nav.contact': 'Información de contacto', 'nav.security': 'Seguridad',
+  'nav.appearance': 'Apariencia', 'nav.language': 'Idioma y región',
+  'nav.group.general': 'General', 'nav.group.personal': 'Personal', 'nav.group.security': 'Seguridad', 'nav.group.localPrefs': 'Preferencias locales',
+  'org.active': 'Organización activa', 'org.personalActive': 'Espacio personal', 'org.list': 'Organizaciones',
 } as const;
 
 export type Pack21Dictionary = { [K in keyof typeof pack21Es]: string };
@@ -79,4 +84,9 @@ export const pack21En: Pack21Dictionary = {
   'settings.density.auto': 'Automatic', 'settings.density.comfortable': 'Comfortable', 'settings.density.standard': 'Standard', 'settings.density.compact': 'Compact',
   'settings.motion': 'Animations', 'settings.motionDesc': "Reduces transitions inside NORTH even if your system does not ask for it.",
   'settings.motion.system': 'Follow system', 'settings.motion.reduced': 'Reduced',
+  'nav.overview': 'Overview', 'nav.recent': 'Recent activity', 'nav.quickActions': 'Quick actions',
+  'nav.personalInfo': 'Personal information', 'nav.account': 'Account', 'nav.contact': 'Contact information', 'nav.security': 'Security',
+  'nav.appearance': 'Appearance', 'nav.language': 'Language & Region',
+  'nav.group.general': 'General', 'nav.group.personal': 'Personal', 'nav.group.security': 'Security', 'nav.group.localPrefs': 'Local preferences',
+  'org.active': 'Active organization', 'org.personalActive': 'Personal space', 'org.list': 'Organizations',
 };

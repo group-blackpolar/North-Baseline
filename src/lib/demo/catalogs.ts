@@ -24,9 +24,9 @@ function personalCatalog(includePlatformAdministration = false, includeSuperadmi
       icon: 'layout',
       order: 0,
       subcategories: [
-        { id: 'overview', categoryId: 'home', name: 'Overview', icon: 'layout', group: 'General', route: '/home/overview', order: 0 },
-        { id: 'recent', categoryId: 'home', name: 'Recent activity', icon: 'note', group: 'General', route: '/home/recent', order: 1 },
-        { id: 'quick-actions', categoryId: 'home', name: 'Quick actions', icon: 'scroll', group: 'General', route: '/home/quick-actions', order: 2 },
+        { id: 'overview', categoryId: 'home', name: 'Overview', icon: 'layout', group: 'General', labelKey: 'nav.overview', groupKey: 'nav.group.general', route: '/home/overview', order: 0 },
+        { id: 'recent', categoryId: 'home', name: 'Recent activity', icon: 'note', group: 'General', labelKey: 'nav.recent', groupKey: 'nav.group.general', route: '/home/recent', order: 1 },
+        { id: 'quick-actions', categoryId: 'home', name: 'Quick actions', icon: 'scroll', group: 'General', labelKey: 'nav.quickActions', groupKey: 'nav.group.general', route: '/home/quick-actions', order: 2 },
       ],
     },
     {
@@ -36,10 +36,10 @@ function personalCatalog(includePlatformAdministration = false, includeSuperadmi
       icon: 'user',
       order: 1,
       subcategories: [
-        { id: 'personal-information', categoryId: 'profile', name: 'Personal information', icon: 'user', group: 'Personal', route: '/profile/personal-information', order: 0 },
-        { id: 'account', categoryId: 'profile', name: 'Account', icon: 'settings', group: 'Personal', route: '/profile/account', order: 1 },
-        { id: 'contact', categoryId: 'profile', name: 'Contact information', icon: 'note', group: 'Personal', route: '/profile/contact', order: 2 },
-        { id: 'security', categoryId: 'profile', name: 'Security', icon: 'shield', group: 'Security', route: '/profile/security', order: 3 },
+        { id: 'personal-information', categoryId: 'profile', name: 'Personal information', icon: 'user', group: 'Personal', labelKey: 'nav.personalInfo', groupKey: 'nav.group.personal', route: '/profile/personal-information', order: 0 },
+        { id: 'account', categoryId: 'profile', name: 'Account', icon: 'settings', group: 'Personal', labelKey: 'nav.account', groupKey: 'nav.group.personal', route: '/profile/account', order: 1 },
+        { id: 'contact', categoryId: 'profile', name: 'Contact information', icon: 'note', group: 'Personal', labelKey: 'nav.contact', groupKey: 'nav.group.personal', route: '/profile/contact', order: 2 },
+        { id: 'security', categoryId: 'profile', name: 'Security', icon: 'shield', group: 'Security', labelKey: 'nav.security', groupKey: 'nav.group.security', route: '/profile/security', order: 3 },
       ],
     },
    {
@@ -49,8 +49,8 @@ function personalCatalog(includePlatformAdministration = false, includeSuperadmi
       icon: 'settings',
       order: 3,
       subcategories: [
-        { id: 'appearance', categoryId: 'settings', name: 'Appearance', icon: 'palette', group: 'Local preferences', route: '/settings/appearance', order: 0 },
-        { id: 'language-region', categoryId: 'settings', name: 'Language & Region', icon: 'languages', group: 'Local preferences', route: '/settings/language-region', order: 1 },
+        { id: 'appearance', categoryId: 'settings', name: 'Appearance', icon: 'palette', group: 'Local preferences', labelKey: 'nav.appearance', groupKey: 'nav.group.localPrefs', route: '/settings/appearance', order: 0 },
+        { id: 'language-region', categoryId: 'settings', name: 'Language & Region', icon: 'languages', group: 'Local preferences', labelKey: 'nav.language', groupKey: 'nav.group.localPrefs', route: '/settings/language-region', order: 1 },
       ],
     },
   ];
