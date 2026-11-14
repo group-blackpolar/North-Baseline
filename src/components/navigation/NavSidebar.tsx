@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CaretDown, CaretRight, MagnifyingGlass, SidebarSimple } from '@phosphor-icons/react';
+import { CaretDown, CaretLeft, CaretRight, MagnifyingGlass } from '@phosphor-icons/react';
 import { useCatalog } from '@/context/CatalogContext';
 import { useOrganization } from '@/context/OrganizationContext';
 import { usePermissions } from '@/context/PermissionContext';
@@ -146,24 +146,31 @@ export function NavSidebar({ user }: { user: SessionUser }) {
     .map((section) => ({ section, items: visible.filter((category) => sectionOf(category) === section) }))
     .filter((group) => group.items.length > 0);
 
-  const toggleButton = (
+  // Content swaps after the width animation starts when collapsing, and at once when expanding.
+  const [visualCollapsed, setVisualCollapsed] = useState(collapsed);
+  useEffect(() => {
+    if (!collapsed) { setVisualCollapsed(false); return; }
+    const id = window.setTimeout(() => setVisualCollapsed(true), 140);
+    return () => window.clearTimeout(id);
+  }, [collapsed]);
+
+  /** One handle on the sidebar's edge: it rides the edge as the width animates, so it never jumps. */
+  const handle = (
     <button
       type="button"
       aria-label={collapsed ? t('sidebar.expand') : t('sidebar.collapse')}
       aria-pressed={collapsed}
       onClick={() => setCollapsedFlag(!collapsed)}
-      className="flex size-8 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors duration-(--shell-motion-fast) hover:bg-surface-hover hover:text-text"
+      className="absolute -right-3 top-[104px] z-30 grid size-6 place-items-center rounded-full bg-[#1B2D4F] text-[#B8C6E4] shadow-[0_0_0_1px_rgb(255_255_255/0.16),0_6px_14px_-4px_rgb(8_16_40/0.7)] transition-colors duration-(--shell-motion-fast) hover:bg-polar hover:text-white"
     >
-      <SidebarSimple className="size-4" />
+      <CaretLeft className={cn('size-3 transition-transform duration-200 ease-out', collapsed && 'rotate-180')} weight="bold" />
     </button>
   );
 
-  if (collapsed) {
-    return (
-      <aside aria-label={t('shell.categories')} className="north-nav-dark relative z-(--z-navigation) flex h-full shrink-0 flex-col items-center gap-1 border-r border-border py-2" style={{ width: 'var(--shell-category-rail)' }}>
+  const collapsedView = (
+      <aside aria-label={t('shell.categories')} className="north-nav-dark relative flex h-full shrink-0 flex-col items-center gap-1 border-r border-border py-2" style={{ width: 'var(--shell-category-rail)' }}>
         <NavMark className="size-8" />
         <OrganizationSwitcher collapsed />
-        {toggleButton}
         <div className="my-0.5 h-px w-6 bg-border" />
         <nav className="flex w-full flex-1 flex-col items-center gap-1 overflow-y-auto" aria-label={t('shell.categories')}>
           {isLoading && <Skeleton className="size-9 rounded-lg" />}
@@ -210,11 +217,10 @@ export function NavSidebar({ user }: { user: SessionUser }) {
           <span className="mb-1 flex size-8 items-center justify-center text-[9px] font-semibold tracking-wider text-text-muted" aria-label="Powered by Black Polar">BP</span>
         </Tooltip>
       </aside>
-    );
-  }
+  );
 
-  return (
-    <aside aria-label={t('shell.categories')} className="north-nav-dark relative z-(--z-navigation) flex h-full shrink-0 flex-col overflow-hidden border-r border-border" style={{ width: 'var(--shell-context-sidebar)' }}>
+  const expandedView = (
+    <aside aria-label={t('shell.categories')} className="north-nav-dark relative flex h-full shrink-0 flex-col overflow-hidden border-r border-border" style={{ width: 'var(--shell-context-sidebar)' }}>
       <header className="shrink-0 space-y-2.5 border-b border-border p-2.5">
         <div className="flex items-center gap-2 px-0.5">
           <NavMark className="size-8" />
@@ -222,7 +228,6 @@ export function NavSidebar({ user }: { user: SessionUser }) {
             <span className="block text-[9px] font-semibold uppercase tracking-[0.16em] text-text-muted">Black Polar<sup>®</sup></span>
             <span className="block font-display text-lg font-bold tracking-[0.08em] text-text">NORTH</span>
           </span>
-          {toggleButton}
         </div>
         <OrganizationSwitcher collapsed={false} />
         <div className="flex items-center gap-2">
@@ -291,5 +296,12 @@ export function NavSidebar({ user }: { user: SessionUser }) {
         <p className="px-2 pb-0.5 text-center text-[10px] tracking-wide text-text-muted">Powered by <span className="font-semibold text-text-secondary">Black Polar</span></p>
       </footer>
     </aside>
+  );
+
+  return (
+    <div className="relative z-(--z-navigation) h-full shrink-0 transition-[width] duration-200 ease-out motion-reduce:transition-none" style={{ width: collapsed ? 'var(--shell-category-rail)' : 'var(--shell-context-sidebar)' }}>
+      <div className="h-full overflow-hidden">{visualCollapsed ? collapsedView : expandedView}</div>
+      {handle}
+    </div>
   );
 }

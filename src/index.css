@@ -119,7 +119,7 @@
   --shell-category-rail-open: 188px;
   --shell-context-sidebar: 232px;
   --shell-context-sidebar-collapsed: 40px;
-  --shell-breadcrumb-height: 28px;
+  --shell-breadcrumb-height: 52px;
   --shell-tabs-height: 36px;
   --shell-layout-switcher: 40px;
   --shell-motion-fast: 160ms;
@@ -273,7 +273,8 @@
   }
   /* Content sits above the mountain; menus (fixed, z-popover) stay above the content. */
   .north-nav-dark > nav, .north-nav-dark > footer { position: relative; z-index: 1; }
-  .north-nav-dark [role="menu"] { background: #1B2D4F; }
+  /* !important: Tailwind utilities (bg-surface, in a later layer) would otherwise win and leave the menus translucent. */
+  .north-nav-dark [role="menu"] { background: #1B2D4F !important; }
 
   /* Cards: depth from border + background + a soft shadow, lifted on hover only
      when the card is interactive. */

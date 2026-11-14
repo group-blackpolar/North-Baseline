@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
-import { ArrowRight, Buildings, Clock, Gear, MagnifyingGlass, Plus, ShieldCheck, User } from '@phosphor-icons/react';
+import { useMemo, useState, type ComponentType } from 'react';
+import { ArrowRight, Buildings, Clock, Gear, Plus, ShieldCheck, User } from '@phosphor-icons/react';
 import { OrganizationAvatar } from '@/components/organization/OrganizationAvatar';
 import { OrganizationModal } from '@/components/organization/OrganizationModal';
 import { useOrganization } from '@/context/OrganizationContext';
@@ -29,24 +29,11 @@ export function PersonalHome({ user }: { user: SessionUser }) {
   const { organizations, switchOrganization } = useOrganization();
   const { categories } = useCatalog();
   const { tabs, activeTab, navigate, setActiveTab } = useTabs();
-  const [query, setQuery] = useState('');
   const [creating, setCreating] = useState(false);
-  const searchRef = useRef<HTMLInputElement>(null);
   const canAdministerPlatform = user.role === 'ADMIN' || user.role === 'SUPERADMIN';
   type OrgView = (typeof organizations)[number] & { iconAssetId?: string | null; iconData?: string | null; avatarUrl?: string | null; status?: string; description?: string | null; slug?: string };
   const orgs = organizations.filter((organization) => organization.id !== PERSONAL_ORG_ID) as OrgView[];
   const relative = useMemo(() => new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }), [locale]);
-
-  useEffect(() => {
-    const focusSearch = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        searchRef.current?.focus();
-      }
-    };
-    window.addEventListener('keydown', focusSearch);
-    return () => window.removeEventListener('keydown', focusSearch);
-  }, []);
 
   const openOrganization = (organization: { id: string; slug?: string }) => {
     switchOrganization(organization.id);
@@ -72,22 +59,6 @@ export function PersonalHome({ user }: { user: SessionUser }) {
     return items;
   }, [canAdministerPlatform, navigate, t]);
 
-  const searchResults = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase();
-    if (!normalized) return [];
-    const organizationResults: Destination[] = orgs.map((organization) => ({
-      id: `organization-${organization.id}`,
-      label: organization.name,
-      description: t('home.organizationResult'),
-      icon: Buildings,
-      action: () => openOrganization(organization),
-    }));
-    return [...actions, ...organizationResults]
-      .filter((item) => `${item.label} ${item.description}`.toLocaleLowerCase().includes(normalized))
-      .slice(0, 7);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [actions, orgs, query, t]);
-
   const openTabs = tabs.filter((tab) => tab.id !== activeTab?.id);
 
   return (
@@ -104,29 +75,6 @@ export function PersonalHome({ user }: { user: SessionUser }) {
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70">{t('personal.workspace.name')}</p>
               <h1 className="mt-1 font-display text-3xl font-extrabold tracking-tight drop-shadow-[0_2px_16px_rgb(0_0_0/0.35)]">{t('home.heading', { name: user.name?.split(' ')[0] ?? user.email })}</h1>
               <p className="mt-1 hidden text-sm text-white/80 [@media(min-height:820px)]:block">{t('home.subheading')}</p>
-            </div>
-            <div className="relative w-full max-w-md">
-              <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/60" />
-              <input
-                ref={searchRef}
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder={t('home.searchPlaceholder')}
-                aria-label={t('home.searchLabel')}
-                className="h-11 w-full rounded-xl border-0 bg-white/12 pl-10 pr-16 text-sm text-white shadow-[inset_0_0_0_1px_rgb(255_255_255/0.25),0_8px_18px_-8px_rgb(0_0_0/0.5)] outline-none backdrop-blur-sm placeholder:text-white/60 focus-visible:shadow-[inset_0_0_0_2px_rgb(255_255_255/0.6)]"
-              />
-              <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded bg-white/15 px-1.5 py-0.5 text-[10px] text-white/80 max-md:hidden">Ctrl K</kbd>
-              {query.trim() && (
-                <div role="listbox" className="absolute inset-x-0 top-[calc(100%+6px)] z-20 rounded-xl border border-border bg-surface p-1.5 text-text shadow-pop">
-                  {searchResults.length > 0 ? searchResults.map((item) => (
-                    <button key={item.id} type="button" className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-surface-hover" onClick={() => { item.action(); setQuery(''); }}>
-                      <item.icon className="size-4 shrink-0 text-text-muted" />
-                      <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-text">{item.label}</span><span className="block truncate text-xs text-text-secondary">{item.description}</span></span>
-                      <ArrowRight className="size-3.5 text-text-muted" />
-                    </button>
-                  )) : <p className="px-3 py-4 text-center text-xs text-text-muted">{t('home.noSearchResults')}</p>}
-                </div>
-              )}
             </div>
           </div>
         </header>

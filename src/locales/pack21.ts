@@ -54,6 +54,13 @@ export const pack21Es = {
   'nav.section.administration': 'Administración', 'nav.section.configuration': 'Configuración',
   'home.addOrganizationHint': 'Crea una organización o únete con una invitación.', 'home.organizationsCount': '{n} organizaciones', 'home.lastUsed': 'Último uso {when}', 'home.neverUsed': 'Sin uso en este dispositivo',
   'home.organizationsOne': '1 organización', 'home.open': 'Abrir',
+  'search.title': 'Buscar', 'search.placeholder': 'Buscar en {name}…',
+  'help.title': 'Ayuda', 'help.support': 'Contactar con soporte', 'help.shortcuts': 'Atajos de teclado', 'help.shortcut.search': 'Abrir la búsqueda', 'help.shortcut.close': 'Cerrar paneles',
+  'notifications.emptyHint': 'Aquí verás los avisos de NORTH.',
+  'oh2.welcome': 'Bienvenido, {name}', 'oh2.viewAll': 'Ver todo',
+  'oh2.chart': 'Actividad de la organización', 'oh2.chart.window': 'Últimos {n} días', 'oh2.chart.events': '{n} eventos', 'oh2.chart.requests': '{n} solicitudes', 'oh2.chart.empty': 'Aún no hay actividad que mostrar.',
+  'oh2.activityEmpty': 'Todavía no hay cambios en esta organización.', 'oh2.activityRestricted': 'La actividad es visible para quien tiene permiso de auditoría.',
+  'oh2.platformUnavailable': 'No se pudo consultar el estado ahora.', 'oh2.usageRestricted': 'El uso lo ven quienes administran la organización.',
 } as const;
 
 export type Pack21Dictionary = { [K in keyof typeof pack21Es]: string };
@@ -113,4 +120,11 @@ export const pack21En: Pack21Dictionary = {
   'nav.section.administration': 'Administration', 'nav.section.configuration': 'Settings',
   'home.addOrganizationHint': 'Create an organization or join with an invitation.', 'home.organizationsCount': '{n} organizations', 'home.lastUsed': 'Last used {when}', 'home.neverUsed': 'Not used on this device',
   'home.organizationsOne': '1 organization', 'home.open': 'Open',
+  'search.title': 'Search', 'search.placeholder': 'Search {name}…',
+  'help.title': 'Help', 'help.support': 'Contact support', 'help.shortcuts': 'Keyboard shortcuts', 'help.shortcut.search': 'Open search', 'help.shortcut.close': 'Close panels',
+  'notifications.emptyHint': 'NORTH notices will show up here.',
+  'oh2.welcome': 'Welcome, {name}', 'oh2.viewAll': 'View all',
+  'oh2.chart': 'Organization activity', 'oh2.chart.window': 'Last {n} days', 'oh2.chart.events': '{n} events', 'oh2.chart.requests': '{n} requests', 'oh2.chart.empty': 'No activity to show yet.',
+  'oh2.activityEmpty': 'There are no changes in this organization yet.', 'oh2.activityRestricted': 'Activity is visible to people with audit permission.',
+  'oh2.platformUnavailable': 'Status could not be checked right now.', 'oh2.usageRestricted': 'Usage is visible to people who administer the organization.',
 };
