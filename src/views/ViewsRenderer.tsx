@@ -25,7 +25,7 @@ import { queryPanelFacet } from '@/features/filters/facetsApi';
 import { analyticsRows, bindingIdOf, BindingSourceProvider, useBindingResult, useBindingSource, type BindingResponse, type BindingSource, type BindingState } from '@/features/analytics/pro/bindingSource';
 import { asNumber } from '@/features/analytics/pro/format';
 import { PRO_TYPES, ProComponent } from '@/features/analytics/pro/ProComponent';
-import { queryPanelAnalyticsBinding } from '@/features/analytics/panelBindingQuery';
+import { exportPanelAnalyticsBinding, queryPanelAnalyticsBinding } from '@/features/analytics/panelBindingQuery';
 import { queryShowcaseBinding } from '@/lib/showcase';
 import { consumePanelRequest, peekPanelRequest, subscribePanelRequests } from '@/features/assistant/panelBus';
 import { selectionsFromFilters } from '@/features/assistant/directives';
@@ -424,6 +424,7 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
         : await queryPanelAnalyticsBinding(organizationId, panelId, bindingId, filters, signal, live.current.version > 0 ? { ...options, fresh: true } : options);
       return response as BindingResponse;
     },
+    export: showcaseSlug || !organizationId ? undefined : (bindingId, request, signal) => exportPanelAnalyticsBinding(organizationId, panelId, bindingId, { ...request, filters: request.filters ?? live.current.filtersByBinding[bindingId] ?? [] }, signal),
     report: (bindingId, response) => {
       if (response.filterDefinitions) registerFilterDefinitions(bindingId, response.filterDefinitions);
       registerExecuted(bindingId, response.executedAt);
@@ -475,6 +476,8 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
   const hasFilterSlot = sections.some((section) => section.components.some((component) => component.type === 'filter_bar'));
   const filterBar = <FilterBar controls={controls} selections={selections} onChange={updateSelections} loadFacet={canFacet ? loadFacet : undefined} title={filterTitle} hiddenKeys={hiddenFields} compact={sections.some((section) => matrixOf(section) !== null)} />;
   const fitted = sections.some((section) => matrixOf(section)?.fit);
+  // A document that already carries its own title (title bar or hero) owns the page title: a second <h1> above it would repeat it.
+  const titledByDocument = sections.some((section) => section.components.some((component) => component.type === 'title_bar' || component.type === 'hero'));
   const renderSection = (section: (typeof sections)[number]) => {
     const matrix = matrixOf(section);
     const ordered = section.components.slice().sort((a, b) => a.order - b.order);
@@ -521,8 +524,8 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
   const toolbarButton = 'inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs font-medium text-text-secondary transition-colors duration-(--duration-fast) hover:bg-surface-hover hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 pointer-coarse:h-(--touch-min)';
 
   return <BindingSourceProvider source={bindingSource}><article ref={articleRef} style={{ zoom: REPORT_ZOOM }} className={cn('north-enter mx-auto w-full max-w-[1680px]', fitted ? 'flex h-full flex-col gap-2 p-2 lg:p-3' : 'space-y-5 p-4 lg:p-5', fullscreen && 'max-w-none overflow-auto bg-background')}>
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <h1 className={cn('font-display font-semibold', fitted ? 'text-lg' : 'text-2xl')}>{title}</h1>
+    <div className={cn('flex flex-wrap items-center gap-3', titledByDocument ? 'justify-end' : 'justify-between')}>
+      {titledByDocument ? null : <h1 className={cn('font-display font-semibold', fitted ? 'text-lg' : 'text-2xl')}>{title}</h1>}
       <div className="flex items-center gap-2">
         {updatedAt ? <span className="mr-1 hidden text-right text-[11px] leading-tight text-text-muted sm:block"><span className="block">{t('pres.updated')}</span><span className="block tabular-nums text-text-secondary">{new Intl.DateTimeFormat(intlTag(locale), { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(updatedAt))}</span></span> : null}
         <button type="button" className={toolbarButton} onClick={() => setVersion((value) => value + 1)}><ArrowsClockwise className="size-3.5" aria-hidden="true" />{t('panel.refresh')}</button>

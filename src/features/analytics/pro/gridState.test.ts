@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { defaultView, moveColumn, pageWindow, parseColumns, reconcileView, rowKeyOf, sparklineSeries, toCsv, toggleColumn, trendDirection, visibleColumns } from './gridState.ts';
+import { defaultView, moveColumn, pageWindow, parseColumns, reconcileView, rowKeyOf, sparklineSeries, toggleColumn, trendDirection, visibleColumns } from './gridState.ts';
 
 const label = (raw: unknown) => (typeof raw === 'object' && raw ? String((raw as Record<string, unknown>).es ?? '') : '');
 const columns = parseColumns([
@@ -50,9 +50,4 @@ test('sparklines are built per row key, ordered by category, from numeric values
   assert.equal(trendDirection([1, 2, 3]), 'up');
   assert.equal(trendDirection([3, 1]), 'down');
   assert.equal(trendDirection([4]), 'flat');
-});
-
-test('CSV escapes quotes, separators and spreadsheet formula prefixes', () => {
-  const csv = toCsv([{ key: 'a', label: 'Name' }, { key: 'n', label: 'Total' }], [{ a: 'ACME, "Inc"', n: 1.5 }, { a: '=SUM(A1)', n: null }, { a: '-5', n: 2 }]);
-  assert.equal(csv, 'Name,Total\r\n"ACME, ""Inc""",1.5\r\n\'=SUM(A1),\r\n-5,2');
 });

@@ -1,6 +1,6 @@
 // Pure helpers behind the data grid: column view state, paging maths, CSV and sparkline series. No React, so they are
 // unit-tested with `node --test`.
-import type { AnalyticsRow, AnalyticsValue } from '../types';
+import type { AnalyticsRow } from '../types';
 
 export type GridColumn = {
   key: string;
@@ -110,14 +110,3 @@ export const trendDirection = (values: number[]): 'up' | 'down' | 'flat' => {
   const first = values[0]!;
   return last > first ? 'up' : last < first ? 'down' : 'flat';
 };
-
-const csvCell = (value: AnalyticsValue | undefined) => {
-  const text = value === null || value === undefined ? '' : String(value);
-  // Leading = + - @ would be read as a formula by spreadsheet apps; prefix a quote (OWASP CSV injection guidance).
-  const safe = /^[=+\-@\t\r]/.test(text) && Number.isNaN(Number(text)) ? `'${text}` : text;
-  return /[",\n\r]/.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe;
-};
-
-export function toCsv(columns: Array<{ key: string; label: string }>, rows: AnalyticsRow[]): string {
-  return [columns.map((column) => csvCell(column.label)).join(','), ...rows.map((row) => columns.map((column) => csvCell(row[column.key])).join(','))].join('\r\n');
-}
