@@ -16,6 +16,7 @@ import { TabsProvider, useTabs } from '@/context/TabsContext';
 import { CatalogProvider, useCatalog } from '@/context/CatalogContext';
 import { PERSONAL_ORG_ID } from '@/lib/demo/store';
 import { canUsePersonalWorkspace } from '@/lib/workspaceAccess';
+import { resolveLanding } from '@/lib/landing';
 import { PermissionProvider } from '@/context/PermissionContext';
 import { I18nProvider, useI18n } from '@/lib/i18n';
 import { SessionGuard } from '@/components/session/SessionGuard';
@@ -138,20 +139,22 @@ function CatalogSync({ children }: { children: ReactNode }) {
   const { categories, isLoading } = useCatalog();
   const { activeTab, navigate } = useTabs();
   const { activeOrganization } = useOrganization();
+  const organizationId = activeOrganization?.id;
 
   useEffect(() => {
     // The authoritative organization navigation is not workspace-scoped.
     if (isLoading || categories.length === 0) return;
 
     let live = true;
-    const openCategory = (category: (typeof categories)[number]) => {
-      const subcategory = category.subcategories[0];
+    const openCategory = (category: (typeof categories)[number], target?: { subcategorySlug: string; panelSlug: string }) => {
+      const subcategory = (target && category.subcategories.find((item) => item.slug === target.subcategorySlug)) || category.subcategories[0];
       void navigateToPublishedTarget({
         organizationSlug: activeOrganization?.slug,
         category,
         subcategory,
         navigate,
         history: 'replace',
+        panelSlug: target?.panelSlug,
       }).catch(() => {
         if (live) navigate(category.id, subcategory?.id ?? null);
       });
@@ -160,7 +163,15 @@ function CatalogSync({ children }: { children: ReactNode }) {
     // Si no hay tab activa, navegar al primer panel publicado si existe.
     if (!activeTab) {
       const firstCategory = categories[0];
-      if (firstCategory) openCategory(firstCategory);
+      if (!firstCategory) return () => { live = false; };
+      // The landing is a stored policy resolved by CORECROW for this member (ADR 027); the first category is only the
+      // answer for "no landing page" and the fallback when the policy cannot be read.
+      if (!organizationId || organizationId === PERSONAL_ORG_ID) { openCategory(firstCategory); return () => { live = false; }; }
+      void resolveLanding(organizationId).then(({ target }) => {
+        if (!live) return;
+        const landed = target && categories.find((category) => category.slug === target.categorySlug);
+        if (landed) openCategory(landed, target); else openCategory(firstCategory);
+      }).catch(() => { if (live) openCategory(firstCategory); });
       return () => { live = false; };
     }
 
@@ -175,7 +186,7 @@ function CatalogSync({ children }: { children: ReactNode }) {
       openCategory(currentCategory);
     }
     return () => { live = false; };
-  }, [activeOrganization?.slug, categories, isLoading, activeTab, navigate]);
+  }, [organizationId, activeOrganization?.slug, categories, isLoading, activeTab, navigate]);
 
   return <>{children}</>;
 }
