@@ -103,7 +103,20 @@ function PublishedGridItem({ component, breakpoint, matrix, title, rowOffset = 0
   const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const tight = component.type === 'kpi_card';
-  if (!matrix) return <div className={cn('min-w-0', !isFrameless(component.type) && 'rounded-xl border border-border bg-surface shadow-xs', !isFrameless(component.type) && (tight ? 'p-3' : 'p-4'))} style={gridStyle(component.layout[breakpoint])}>{children}</div>;
+  const expandable = EXPANDABLE.has(component.type) && !isFrameless(component.type) && component.type !== 'heading';
+  if (!matrix) return (
+    <div className={cn('group/cell relative min-w-0', !isFrameless(component.type) && 'rounded-xl border border-border bg-surface shadow-xs', !isFrameless(component.type) && (tight ? 'p-3' : 'p-4'))} style={gridStyle(component.layout[breakpoint])}>
+      {children}
+      {expandable ? (
+        <>
+          <button type="button" onClick={() => setExpanded(true)} aria-label={`${t('panel.expand')}: ${title}`} title={t('panel.expand')} className="absolute right-1 top-1 z-10 inline-flex min-h-(--touch-min) min-w-(--touch-min) items-center justify-center rounded-md border border-border bg-surface/90 text-text-muted shadow-xs hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40">
+            <ArrowsOutSimple className="size-4" aria-hidden="true" />
+          </button>
+          {expanded ? <Dialog open onOpenChange={setExpanded} title={title || t('panel.expand')} size="xl"><div className="h-[68dvh] min-h-80"><CellFillProvider value><div className="flex h-full min-h-0 flex-col [&>*]:min-h-0">{children}</div></CellFillProvider></div></Dialog> : null}
+        </>
+      ) : null}
+    </div>
+  );
   // Fixed-matrix cell: the component fills the cell and scrolls or clips inside it; it never stretches the page.
   const bare = component.type === 'heading' || component.type === 'org_brand' || component.type === 'divider';
   // These blocks draw their own cards: the cell adds no frame or padding.
@@ -113,7 +126,7 @@ function PublishedGridItem({ component, breakpoint, matrix, title, rowOffset = 0
       <CellFillProvider value><div className="flex min-h-0 flex-1 flex-col [&>*]:min-h-0">{children}</div></CellFillProvider>
       {EXPANDABLE.has(component.type) && !bare ? (
         <>
-          <button type="button" onClick={() => setExpanded(true)} aria-label={`${t('panel.expand')}: ${title}`} title={t('panel.expand')} className="absolute right-1 top-1 z-10 inline-flex size-6 items-center justify-center rounded-md border border-border bg-surface/90 text-text-muted opacity-0 shadow-xs transition-opacity hover:text-text focus-visible:opacity-100 group-hover/cell:opacity-100">
+          <button type="button" onClick={() => setExpanded(true)} aria-label={`${t('panel.expand')}: ${title}`} title={t('panel.expand')} className="absolute right-1 top-1 z-10 inline-flex size-6 items-center justify-center rounded-md border border-border bg-surface/90 text-text-muted opacity-0 shadow-xs transition-opacity hover:text-text focus-visible:opacity-100 group-hover/cell:opacity-100 pointer-coarse:opacity-100">
             <ArrowsOutSimple className="size-3.5" aria-hidden="true" />
           </button>
           {expanded ? <Dialog open onOpenChange={setExpanded} title={title || t('panel.expand')} size="xl"><div className="h-[68dvh] min-h-80"><CellFillProvider value><div className="flex h-full min-h-0 flex-col [&>*]:min-h-0">{children}</div></CellFillProvider></div></Dialog> : null}
@@ -337,12 +350,14 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
   // A presentation works on a frozen snapshot of the filters; the dashboard's own selections are never touched by it.
   const [presenting, setPresenting] = useState<FilterSelections | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [phoneTab, setPhoneTab] = useState(0);
   const [version, setVersion] = useState(0);
   useEffect(() => {
     setDefinitionsByBinding({});
     setExecutedByBinding({});
     setSelections(loadSelections(panelId));
     setPresenting(null);
+    setPhoneTab(0);
   }, [panelId]);
   useEffect(() => {
     const sync = () => setFullscreen(window.document.fullscreenElement === articleEl);
@@ -466,6 +481,9 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
   const filterBar = <FilterBar controls={controls} selections={selections} onChange={updateSelections} loadFacet={canFacet ? loadFacet : undefined} title={filterTitle} hiddenKeys={hiddenFields} compact={sections.some((section) => matrixOf(section) !== null)} />;
   const fitted = sections.some((section) => matrixOf(section)?.fit);
   // A document that already carries its own title (title bar or hero) owns the page title: a second <h1> above it would repeat it.
+  // On a phone a report with several sections shows one at a time behind tabs (the filters stay above them), instead of one very long page.
+  const tabbed = mode === 'phone' && sections.length > 1 && !presenting;
+  const activeTab = Math.min(phoneTab, Math.max(0, sections.length - 1));
   const titledByDocument = sections.some((section) => section.components.some((component) => component.type === 'title_bar' || component.type === 'hero'));
   const renderSection = (section: (typeof sections)[number]) => {
     const matrix = matrixOf(section);
@@ -499,7 +517,7 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
       {lifted && !presenting ? <div className="shrink-0">{filterBar}</div> : null}
       <section style={style} className={cn('grid grid-cols-12', !matrix && 'auto-rows-[minmax(2rem,auto)]', GAP[section.layout.gap], matrix?.fit && 'min-h-0 flex-1')}>{ordered.filter((component) => !grouped.has(component.id) && !inBand.has(component.id)).map((component) => {
         // The filter bar placed by the author is live on the page and absent from presentation scenes (those use a frozen snapshot).
-        if (component.type === 'filter_bar') return lifted || presenting ? null : <div key={component.id} className={cn('min-w-0', matrix && 'min-h-0')} style={gridStyle(component.layout[breakpoint])}>{filterBar}</div>;
+        if (component.type === 'filter_bar') return lifted || presenting || tabbed ? null : <div key={component.id} className={cn('min-w-0', matrix && 'min-h-0')} style={gridStyle(component.layout[breakpoint])}>{filterBar}</div>;
         const content = contentOf(component);
         return content === null ? null : <PublishedGridItem key={component.id} component={component} breakpoint={breakpoint} matrix={matrix !== null} rowOffset={matrix?.band ?? 0} title={localized(component.props.title, locales)}>{content}</PublishedGridItem>;
       })}</section>
@@ -525,7 +543,11 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
       {mode === 'phone' ? null : actions}
     </div>
     {hasFilterSlot ? null : filterBar}
-    {presenting ? null : sections.map(renderSection)}
+    {tabbed && hasFilterSlot ? filterBar : null}
+    {tabbed ? <div role="tablist" className="flex shrink-0 gap-1 overflow-x-auto rounded-xl bg-surface-hover p-1">{sections.map((section, index) => (
+      <button key={section.id} type="button" role="tab" aria-selected={index === activeTab} onClick={() => setPhoneTab(index)} className={cn('min-h-(--touch-min) min-w-0 flex-1 whitespace-nowrap rounded-lg px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40', index === activeTab ? 'bg-surface text-accent shadow-xs' : 'text-text-secondary hover:text-text')}>{sceneTitle(section, locales) || t('pres.scene', { n: index + 1 })}</button>
+    ))}</div> : null}
+    {presenting ? null : tabbed ? renderSection(sections[activeTab]!) : sections.map(renderSection)}
     {presenting ? <Suspense fallback={null}><PresentationMode
       title={title}
       scenes={sections.map((section, index) => ({ id: section.id, title: sceneTitle(section, locales) || t('pres.scene', { n: index + 1 }), content: renderSection(section) }))}
