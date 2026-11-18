@@ -10,6 +10,8 @@ import { CurrentPath } from '@/components/tabs/CurrenPath';
 import { brandStyle, identityOf } from '@/lib/brand';
 import { WorkspaceContent } from '@/components/layout/WorkspaceContent';
 import { AssistantBar } from '@/components/layout/AssistantBar';
+import { AssistantProvider } from '@/features/assistant/AssistantContext';
+import { AssistantDock, AssistantSurfaces } from '@/features/assistant/AssistantSurfaces';
 import { OrganizationProvider, useOrganization } from '@/context/OrganizationContext';
 import { WorkspaceProvider, useWorkspace } from '@/context/WorkspaceContext';
 import { TabsProvider, useTabs } from '@/context/TabsContext';
@@ -244,6 +246,7 @@ function WorkspaceGate({
         organizationId={organizationId}
       >
         <TabsProvider persistKey={navKey(user.id, organizationId)}>
+            <AssistantProvider organizationId={organizationId}>
             <CatalogSync>
               <RestoredPanels />
               <RecentsRecorder userId={user.id} organizationId={organizationId} />
@@ -261,9 +264,12 @@ function WorkspaceGate({
                     <WorkspaceContent user={user} />
                   </div>
                 </div>
+                {!compact && <AssistantDock />}
                 {!compact && <AssistantBar />}
               </div>
+              <AssistantSurfaces />
             </CatalogSync>
+            </AssistantProvider>
         </TabsProvider>
       </PermissionProvider>
     </CatalogProvider>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
-import { ArrowUp, CheckCircle, CircleNotch, Plus, Stop, WarningCircle, X } from '@phosphor-icons/react';
+import { ArrowUp, ArrowsInSimple, ArrowsOutSimple, CheckCircle, CircleNotch, Plus, SidebarSimple, Stop, WarningCircle, X } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { useI18n, type Dictionary } from '@/lib/i18n';
@@ -8,7 +8,7 @@ import { RavenIcon } from './RavenIcon';
 import { errorKind, type ActionCard, type ChatMessage, type ToolStep } from './protocol.ts';
 import { useDirectiveRunner } from './useDirectiveRunner';
 import { parseBlocks, type Inline } from './richText.ts';
-import { useAssistant } from './useAssistant';
+import { useAssistantUi } from './AssistantContext';
 
 const MAX_CHARS = 8_000;
 const SUGGESTIONS = ['assistant.suggest.search', 'assistant.suggest.permissions', 'assistant.suggest.split'] as const;
@@ -26,6 +26,9 @@ const TOOL_TOPIC: Record<string, keyof Dictionary> = {
   'views.open_panel': 'assistant.what.dashboards',
   'views.category.create': 'assistant.what.structure',
   'views.subcategory.create': 'assistant.what.structure',
+  'evaluations.list': 'assistant.what.evaluations',
+  'evaluations.outline': 'assistant.what.evaluations',
+  'evaluations.draft_questions': 'assistant.what.evaluationDrafts',
 };
 
 function Inlines({ items }: { items: Inline[] }) {
@@ -80,6 +83,7 @@ function ActionCardView({ card, onDecide }: { card: ActionCard; onDecide: (id: s
 const TOOL_ACTION: Record<string, keyof Dictionary> = {
   'views.category.create': 'assistant.action.what.category',
   'views.subcategory.create': 'assistant.action.what.subcategory',
+  'evaluations.draft_questions': 'assistant.action.what.evaluationDrafts',
 };
 
 function Bubble({ message, tools, thinking }: { message: ChatMessage; tools: ToolStep[]; thinking: boolean }) {
@@ -100,9 +104,11 @@ function Bubble({ message, tools, thinking }: { message: ChatMessage; tools: Too
 }
 
 /** The Cuervo chat. It is mounted inside the keyed organization subtree, so a tenant switch discards everything. */
-export function AssistantPanel({ organizationId, onClose, autoFocus = true }: { organizationId: string; onClose?: () => void; autoFocus?: boolean }) {
+export function AssistantPanel({ variant = 'compact', onClose, autoFocus = true }: { variant?: 'compact' | 'side' | 'full'; onClose?: () => void; autoFocus?: boolean }) {
   const { t } = useI18n();
-  const { state, loading, loadError, load, send, cancel, startOver, decide } = useAssistant(organizationId);
+  const ui = useAssistantUi();
+  const { send } = ui;
+  const { state, loading, loadError, load, cancel, startOver, decide } = ui.chat;
   useDirectiveRunner(state.directives);
   const [draft, setDraft] = useState('');
   const log = useRef<HTMLDivElement>(null);
@@ -149,6 +155,9 @@ export function AssistantPanel({ organizationId, onClose, autoFocus = true }: { 
           <p className="text-[11px] leading-tight text-text-muted">{t('assistant.subtitle')}</p>
         </div>
         <IconButton label={t('assistant.new')} icon={<Plus />} size="icon-sm" disabled={busy || empty} onClick={() => { startOver(); setDraft(''); field.current?.focus(); }} />
+        {variant === 'compact' ? <IconButton label={t('assistant.mode.side')} icon={<SidebarSimple />} size="icon-sm" onClick={() => ui.setMode('side')} /> : null}
+        {variant !== 'full' ? <IconButton label={t('assistant.mode.full')} icon={<ArrowsOutSimple />} size="icon-sm" onClick={() => ui.setMode('full')} /> : null}
+        {variant === 'side' ? <IconButton label={t('assistant.mode.compact')} icon={<ArrowsInSimple />} size="icon-sm" onClick={() => ui.setMode('compact')} /> : null}
         {onClose && <IconButton label={t('assistant.close')} icon={<X />} size="icon-sm" onClick={onClose} />}
       </header>
 
@@ -200,6 +209,12 @@ export function AssistantPanel({ organizationId, onClose, autoFocus = true }: { 
           )}
         </div>
         {draft.length > MAX_CHARS - 1_000 && <p role="status" className={cn('mt-1 text-[11px]', draft.length > MAX_CHARS ? 'text-error' : 'text-text-muted')}>{t('assistant.remaining', { n: MAX_CHARS - draft.length })}</p>}
+        {ui.pageLabel ? (
+          <label className="mt-2 flex cursor-pointer items-start gap-2 text-[12px] text-text-secondary">
+            <input type="checkbox" className="mt-0.5 size-4" checked={ui.share} onChange={(event) => ui.setShare(event.target.checked)} />
+            <span className="min-w-0"><span className="block font-medium text-text">{t('assistant.page.share')}</span><span className="block truncate text-text-muted">{ui.share ? t('assistant.page.sharing', { page: ui.pageLabel }) : t('assistant.page.off')}</span></span>
+          </label>
+        ) : null}
         <p className="mt-2 text-center text-[11px] leading-snug text-text-muted">{t('assistant.scope')}</p>
       </form>
     </div>

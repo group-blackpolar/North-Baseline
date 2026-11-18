@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Status } from '@/components/ui/status';
 import { useResource } from '@/features/admin-center/hooks';
 import { ApiError } from '@/lib/api';
+import { EVALUATIONS_CHANGED_EVENT, useAssistantPage } from '@/features/assistant/AssistantContext';
 import { useI18n } from '@/lib/i18n';
 import { listPermissionSubjects } from '@/lib/northAdmin';
 import { cn } from '@/lib/utils';
@@ -14,7 +15,7 @@ import { formatPoints, type AssignmentRow, type Issue, type Settings } from './m
 import { useDraft } from './useDraft';
 
 const field = 'w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text outline-none placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-60';
-const ISSUES = new Set(['EVALUATION_NO_QUESTIONS', 'EVALUATION_PROMPT_EMPTY', 'EVALUATION_OPTIONS_MIN', 'EVALUATION_OPTION_EMPTY', 'EVALUATION_CORRECT_OPTION_MISSING', 'EVALUATION_CORRECT_OPTION_INVALID', 'EVALUATION_POINTS_INVALID', 'EVALUATION_SECTION_UNKNOWN', 'EVALUATION_PASSAGE_UNKNOWN', 'EVALUATION_PASSAGE_EMPTY', 'EVALUATION_SECTION_TITLE_EMPTY', 'EVALUATION_DUPLICATE_ID', 'EVALUATION_REVIEW_DATE_REQUIRED', 'EVALUATION_SECTION_ORDER']);
+const ISSUES = new Set(['EVALUATION_NO_QUESTIONS', 'EVALUATION_PROMPT_EMPTY', 'EVALUATION_OPTIONS_MIN', 'EVALUATION_OPTION_EMPTY', 'EVALUATION_CORRECT_OPTION_MISSING', 'EVALUATION_CORRECT_OPTION_INVALID', 'EVALUATION_POINTS_INVALID', 'EVALUATION_SECTION_UNKNOWN', 'EVALUATION_PASSAGE_UNKNOWN', 'EVALUATION_PASSAGE_EMPTY', 'EVALUATION_SECTION_TITLE_EMPTY', 'EVALUATION_DUPLICATE_ID', 'EVALUATION_REVIEW_DATE_REQUIRED', 'EVALUATION_SECTION_ORDER', 'EVALUATION_AI_REVIEW_PENDING']);
 type Tab = 'content' | 'settings' | 'assignments' | 'publish';
 const TABS: Tab[] = ['content', 'settings', 'assignments', 'publish'];
 const toLocalInput = (iso: string | null) => (iso ? new Date(new Date(iso).getTime() - new Date(iso).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '');
@@ -26,6 +27,15 @@ export function EvaluationEditor({ organizationId, evaluationId, can, onBack }: 
   const draft = useDraft(organizationId, evaluationId, { conflict: t('ev.builder.conflict') });
   const [tab, setTab] = useState<Tab>('content');
   const view = draft.view;
+  // The assistant may be told which evaluation this is (identifiers only, and only if the person chooses to share the page).
+  useAssistantPage({ module: 'evaluations', label: view?.title ?? undefined, resource: { type: 'evaluation', id: evaluationId } });
+  // A confirmed assistant action changes the draft on the server: reload it (pending local edits are sent first).
+  const { commitAll, reload } = draft;
+  useEffect(() => {
+    const refresh = () => { void commitAll().then(() => reload()); };
+    window.addEventListener(EVALUATIONS_CHANGED_EVENT, refresh);
+    return () => window.removeEventListener(EVALUATIONS_CHANGED_EVENT, refresh);
+  }, [commitAll, reload]);
   if (draft.loadError) return <p role="alert" className="p-4 text-sm text-error">{draft.loadError}</p>;
   if (!view) return <Skeleton className="h-64 w-full rounded-xl" />;
   const archived = view.status === 'ARCHIVED';
