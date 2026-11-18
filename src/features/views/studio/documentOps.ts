@@ -197,6 +197,21 @@ export function setComponentProps(doc: PanelDocument, componentId: string, patch
   }));
 }
 
+/** D3: restrict a component to roles/groups (undefined clears it). CORECROW enforces it on published documents. */
+export function setComponentVisibility(doc: PanelDocument, componentId: string, visibility: { roles: string[]; groupIds: string[] } | undefined): PanelDocument {
+  const found = findComponent(doc, componentId);
+  if (!found) return doc;
+  const clean = visibility && { ...(visibility.roles.length ? { roles: visibility.roles } : {}), ...(visibility.groupIds.length ? { groupIds: visibility.groupIds } : {}) };
+  return mapSection(doc, found.section.id, (section) => ({
+    ...section,
+    components: section.components.map((component) => {
+      if (component.id !== componentId) return component;
+      const { visibility: _old, ...rest } = component;
+      return clean ? { ...rest, visibility: clean } : rest;
+    }),
+  }));
+}
+
 export function setComponentBinding(doc: PanelDocument, componentId: string, key: string, reference: Component['bindings'][string] | null): PanelDocument {
   const found = findComponent(doc, componentId);
   if (!found) return doc;

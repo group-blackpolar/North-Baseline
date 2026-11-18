@@ -45,6 +45,7 @@ export const studioEs = {
   'st.cmp.video': 'Video', 'st.cmp.video.hint': 'Requiere almacenamiento',
   'st.cmp.file': 'Archivo', 'st.cmp.file.hint': 'Requiere almacenamiento',
   'st.cmp.document_workspace': 'Documentos', 'st.cmp.document_workspace.hint': 'Espacio de documentos',
+  'st.cmp.evaluation_workspace': 'Evaluaciones', 'st.cmp.evaluation_workspace.hint': 'Constructor, respuesta y resultados de evaluaciones',
   // canvas
   'st.canvas.title': 'Lienzo', 'st.canvas.item': 'componente movible', 'st.canvas.selected': 'seleccionado',
   'st.canvas.dragHandle': 'Arrastrar para mover', 'st.canvas.duplicate': 'Duplicar', 'st.canvas.remove': 'Eliminar',
@@ -93,7 +94,7 @@ export const studioEs = {
   'st.op.COUNT': 'Contar filas', 'st.op.COUNT_DISTINCT': 'Contar distintos', 'st.op.SUM': 'Suma', 'st.op.AVG': 'Promedio', 'st.op.MIN': 'Mínimo', 'st.op.MAX': 'Máximo',
   // preview
   'st.preview.bound': 'Datos de «{name}»', 'st.preview.bindingMissing': 'La conexión de datos ya no existe.', 'st.preview.unbound': 'Conecta este gráfico a datos desde la pestaña Datos.',
-  'st.preview.fieldMissing': 'Los campos configurados no están en la conexión.', 'st.preview.documents': 'Espacio de documentos (se muestra al publicar).',
+  'st.preview.fieldMissing': 'Los campos configurados no están en la conexión.', 'st.preview.documents': 'Espacio de documentos (se muestra al publicar).', 'st.preview.evaluations': 'Espacio de evaluaciones (se muestra al publicar).',
   'st.preview.showing': 'Mostrando:', 'st.preview.draft': 'Borrador', 'st.preview.published': 'Versión publicada', 'st.preview.neverPublished': 'Esta vista aún no se ha publicado.',
   // publish
   'st.publish.title': 'Publicar vista', 'st.publish.description': 'CORECROW valida el borrador guardado antes de publicarlo.', 'st.publish.checking': 'Comprobando el borrador…',
@@ -161,6 +162,7 @@ export const studioEn: StudioDictionary = {
   'st.cmp.video': 'Video', 'st.cmp.video.hint': 'Needs storage',
   'st.cmp.file': 'File', 'st.cmp.file.hint': 'Needs storage',
   'st.cmp.document_workspace': 'Documents', 'st.cmp.document_workspace.hint': 'Document workspace',
+  'st.cmp.evaluation_workspace': 'Evaluations', 'st.cmp.evaluation_workspace.hint': 'Builder, taking and results of evaluations',
   'st.canvas.title': 'Canvas', 'st.canvas.item': 'movable component', 'st.canvas.selected': 'selected',
   'st.canvas.dragHandle': 'Drag to move', 'st.canvas.duplicate': 'Duplicate', 'st.canvas.remove': 'Delete',
   'st.canvas.emptyTitle': 'This view is empty', 'st.canvas.emptyBody': 'Add your first component from the library. Changes are saved as a draft.',
@@ -205,7 +207,7 @@ export const studioEn: StudioDictionary = {
   'st.data.noDatasets': 'There are no active datasets. Import data from Administration → Queries.',
   'st.op.COUNT': 'Count rows', 'st.op.COUNT_DISTINCT': 'Count distinct', 'st.op.SUM': 'Sum', 'st.op.AVG': 'Average', 'st.op.MIN': 'Minimum', 'st.op.MAX': 'Maximum',
   'st.preview.bound': 'Data from "{name}"', 'st.preview.bindingMissing': 'The data connection no longer exists.', 'st.preview.unbound': 'Connect this chart to data from the Data tab.',
-  'st.preview.fieldMissing': 'The configured fields are not in the connection.', 'st.preview.documents': 'Document workspace (shown once published).',
+  'st.preview.fieldMissing': 'The configured fields are not in the connection.', 'st.preview.documents': 'Document workspace (shown once published).', 'st.preview.evaluations': 'Evaluations workspace (shown once published).',
   'st.preview.showing': 'Showing:', 'st.preview.draft': 'Draft', 'st.preview.published': 'Published version', 'st.preview.neverPublished': 'This view has not been published yet.',
   'st.publish.title': 'Publish view', 'st.publish.description': 'CORECROW validates the saved draft before it goes live.', 'st.publish.checking': 'Checking the draft…',
   'st.publish.saveFirst': 'The draft could not be saved; resolve the editor warning and try again.',

@@ -26,6 +26,7 @@ export function defaultProps(type: ComponentType): Record<string, unknown> {
     case 'line_chart': return { title: localized('Gráfico de líneas'), categoryKey: 'category', series: [{ key: 'value', label: localized('Valor') }], height: 280, variant: 'line' };
     case 'donut_chart': return { title: localized('Distribución'), categoryKey: 'category', valueKey: 'value', height: 280, variant: 'donut' };
     case 'document_workspace': return { typeKey: 'form' };
+    case 'evaluation_workspace': return { views: ['builder', 'player', 'results'] };
     // Analytics components start unmapped; the Data tab maps their keys to the real columns of the attached binding.
     case 'kpi_card': return { label: localized('Indicador'), valueKey: 'value', format: 'number', icon: 'chart', tone: 'blue', variant: 'standard' };
     case 'data_grid': return { title: localized('Resultados'), columns: [{ key: 'value', label: localized('Valor'), kind: 'text' }], pageSizes: [10, 20, 50], defaultPageSize: 20, searchable: true, selectable: false, exportable: true };

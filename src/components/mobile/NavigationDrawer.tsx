@@ -42,9 +42,9 @@ export function NavigationDrawer({ open, onOpenChange, user }: { open: boolean; 
     <>
       <Sheet open={open} onOpenChange={(next) => { if (!next) go(() => {}); }} side="left" title={t('shell.navigation')} hideTitle footer={<ProfileMenu user={user} />}>
         <nav aria-label={t('shell.organizations')} className="space-y-0.5">
-          <button type="button" aria-current={activeOrganization?.id === PERSONAL_ORG_ID ? 'true' : undefined} className={cn(row, rowState(activeOrganization?.id === PERSONAL_ORG_ID))} onClick={() => go(() => goToOrganization({ id: PERSONAL_ORG_ID }))}>
+          {organizations.some((org) => org.id === PERSONAL_ORG_ID) && <button type="button" aria-current={activeOrganization?.id === PERSONAL_ORG_ID ? 'true' : undefined} className={cn(row, rowState(activeOrganization?.id === PERSONAL_ORG_ID))} onClick={() => go(() => goToOrganization({ id: PERSONAL_ORG_ID }))}>
             <Icon icon={House} size="md" />{t('personal.workspace.name')}
-          </button>
+          </button>}
           {!isLoading && orgs.map((org) => {
             const active = org.id === activeOrganization?.id;
             return (

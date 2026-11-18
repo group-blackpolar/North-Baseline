@@ -53,8 +53,22 @@ export function PermissionProvider({
         if (live) setIsLoading(false);
       });
 
+    // A role or grant can change while the tab stays open: re-discover when it becomes visible again (silent, throttled).
+    let last = Date.now();
+    const revalidate = () => {
+      if (document.visibilityState !== 'visible' || Date.now() - last < 10_000) return;
+      last = Date.now();
+      void fetchPermissions(organizationId, { force: true })
+        .then((result) => { if (live) { setPermissions(result.permissions); setDiscoveryFailed(false); } })
+        .catch(() => {});
+    };
+    document.addEventListener('visibilitychange', revalidate);
+    window.addEventListener('focus', revalidate);
+
     return () => {
       live = false;
+      document.removeEventListener('visibilitychange', revalidate);
+      window.removeEventListener('focus', revalidate);
     };
   }, [organizationId]);
 

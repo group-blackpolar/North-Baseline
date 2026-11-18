@@ -39,6 +39,7 @@ import { useTabs } from '@/context/TabsContext';
 
 // Administration is the largest authenticated surface and most sessions never open it: load it on demand.
 const PersonalView = lazy(() => import('@/features/personal/PersonalView').then((module) => ({ default: module.PersonalView })));
+const EvaluationsWorkspaceHost = lazy(() => import('@/features/evaluations/EvaluationsWorkspace').then((module) => ({ default: module.EvaluationsWorkspaceHost })));
 const DocumentWorkspaceHost = lazy(() => import('@/features/documents/DocumentsWorkspace').then((module) => ({ default: module.DocumentWorkspaceHost })));
 const PresentationMode = lazy(() => import('@/features/presentation/PresentationMode').then((module) => ({ default: module.PresentationMode })));
 const AdminCenter = lazy(() => import('@/features/admin-center/AdminCenter').then((module) => ({ default: module.AdminCenter })));
@@ -493,7 +494,9 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
         ? <PublishedAnalyticsContent component={component} locales={locales} />
         : component.type === 'document_workspace'
           ? <Suspense fallback={<Skeleton className="h-40 w-full rounded-xl" />}><DocumentWorkspaceHost organizationId={organizationId} props={component.props} /></Suspense>
-          : SafeComponent({ type: component.type, props: component.props, locales });
+          : component.type === 'evaluation_workspace'
+            ? <Suspense fallback={<Skeleton className="h-40 w-full rounded-xl" />}><EvaluationsWorkspaceHost organizationId={organizationId} props={component.props} /></Suspense>
+            : SafeComponent({ type: component.type, props: component.props, locales });
     };
     const style = matrix ? {
       gridTemplateRows: `repeat(${matrix.rows}, ${matrix.fit ? `minmax(${matrix.rowHeight}px, 1fr)` : `${matrix.rowHeight}px`})`,

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Gear, House, Info, Lock, Trash, WarningOctagon } from '@phosphor-icons/react';
 import { DashboardCard } from '@/components/dashboard/primitives';
 import { Button } from '@/components/ui/button';
@@ -6,17 +6,15 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { Status } from '@/components/ui/status';
 import { SettingsScreen } from '@/features/access-admin/SettingsScreen';
-import { useNotifications } from '@/context/NotificationContext';
 import { useOrganization } from '@/context/OrganizationContext';
 import { usePermissions } from '@/context/PermissionContext';
 import { useI18n } from '@/lib/i18n';
-import { listAuthorizedTaxonomy, setOrganizationHome } from '@/lib/northAdmin';
 import { PERM } from '@/lib/permission';
 import { pushPath } from '@/lib/routes';
-import { flattenTree, localName, type TreeCategory } from '@/features/views/workspace/resources';
 import { getOrganizationDetail, setOrganizationStatus } from './api';
 import { useResource } from './hooks';
-import { KeyValue, Loading, Notice, SectionTabs, Shell, Unavailable, errorText, invalidateOrganization, toneForStatus, selectClass } from './ui';
+import { LandingEditor } from './LandingEditor';
+import { KeyValue, Loading, Notice, SectionTabs, Shell, Unavailable, errorText, toneForStatus } from './ui';
 
 type Tab = 'general' | 'details' | 'preferences' | 'security' | 'retention' | 'danger';
 
@@ -81,40 +79,11 @@ function DetailsTab({ organizationId }: { organizationId: string }) {
 }
 
 function PreferencesTab({ organizationId }: { organizationId: string }) {
-  const { t, locale } = useI18n();
-  const { push } = useNotifications();
+  const { t } = useI18n();
   const { can } = usePermissions();
-  const organization = useResource(() => getOrganizationDetail(organizationId), [organizationId]);
-  const tree = useResource(() => listAuthorizedTaxonomy(organizationId), [organizationId]);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const panels = useMemo(() => flattenTree((tree.data ?? []) as unknown as TreeCategory[]).filter((resource) => resource.kind === 'PANEL' && resource.status === 'PUBLISHED' && resource.resourceKind === 'CONTENT'), [tree.data]);
-  const editable = can(PERM.organizationUpdate);
-
-  const choose = async (panelId: string) => {
-    setBusy(true); setError(null);
-    try {
-      await setOrganizationHome(organizationId, panelId || null);
-      invalidateOrganization(organizationId);
-      push({ type: 'success', title: t('adm.settings.saved') });
-      await organization.reload();
-    } catch (reason) { setError(errorText(reason)); } finally { setBusy(false); }
-  };
-
   return (
     <Shell title={t('adm2.settings.prefs.title')} hint={t('adm2.settings.prefs.hint')}>
-      <DashboardCard title={t('adm2.settings.prefs.home')} description={editable ? t('adm2.settings.prefs.homeHint') : t('access.readOnly')}>
-        {organization.status === 'loading' || tree.status === 'loading' ? <Loading /> : (
-          <div className="space-y-2">
-            <select aria-label={t('adm2.settings.prefs.home')} className={`${selectClass} w-full max-w-md`} disabled={!editable || busy || tree.status !== 'ready'} value={organization.data?.homePanelId ?? ''} onChange={(event) => void choose(event.target.value)}>
-              <option value="">{t('adm2.settings.prefs.noHome')}</option>
-              {panels.map((panel) => <option key={panel.id} value={panel.id}>{localName(panel.categoryName, locale)} / {localName(panel.name, locale)}</option>)}
-            </select>
-            {tree.status === 'forbidden' ? <p className="text-xs text-text-muted">{t('adm2.kpi.forbidden')}</p> : null}
-            <Notice error={error} />
-          </div>
-        )}
-      </DashboardCard>
+      <LandingEditor organizationId={organizationId} editable={can(PERM.organizationUpdate)} />
       <p className="text-xs text-text-muted">{t('adm2.settings.prefs.personal')}</p>
     </Shell>
   );

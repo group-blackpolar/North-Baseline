@@ -156,7 +156,7 @@ test('bindingModel: columns come from the declared query and drive compatibility
 });
 
 test('registry: assets are not addable and charts require a binding', () => {
-  assert.equal(addableDefinitions().some((definition) => ['image', 'video', 'file', 'document_workspace'].includes(definition.type)), false);
+  assert.equal(addableDefinitions().some((definition) => ['image', 'video', 'file', 'document_workspace', 'evaluation_workspace'].includes(definition.type)), false);
   assert.equal(definitionOf('bar_chart')?.binding, 'required');
   assert.equal(acceptsBinding('heading'), false);
   assert.equal(defaultSizes('metric').mobile.w, 12);

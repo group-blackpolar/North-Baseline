@@ -23,7 +23,7 @@ export const StudioLibrary = forwardRef<LibraryHandle, { onAdd: (type: string) =
   const q = query.trim().toLowerCase();
   const groups = useMemo(() => CATEGORY_ORDER.map((category) => ({
     category,
-    items: allDefinitions().filter((definition) => definition.category === category && definition.type !== 'document_workspace'
+    items: allDefinitions().filter((definition) => definition.category === category && definition.type !== 'document_workspace' && definition.type !== 'evaluation_workspace'
       && (!q || `${t(componentLabelKey(definition.type))} ${t(componentHintKey(definition.type))} ${definition.type}`.toLowerCase().includes(q))),
   })).filter((group) => group.items.length > 0), [q, t]);
 
