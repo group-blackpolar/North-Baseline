@@ -52,6 +52,7 @@ const DEFINITIONS: ComponentDefinition[] = [
   { type: 'image', category: 'content', iconKey: 'image', size: { w: 4, h: 3 }, binding: 'none', addable: false, appearance: [] },
   { type: 'video', category: 'content', iconKey: 'video', size: { w: 6, h: 4 }, binding: 'none', addable: false, appearance: [] },
   { type: 'file', category: 'content', iconKey: 'file', size: { w: 4, h: 1 }, binding: 'none', addable: false, appearance: [] },
+  { type: 'evaluation_workspace', category: 'advanced', iconKey: 'documents', size: { w: 12, h: 12 }, binding: 'none', addable: false, appearance: [] },
   { type: 'document_workspace', category: 'advanced', iconKey: 'documents', size: { w: 12, h: 8 }, binding: 'none', addable: false, appearance: [] },
 ];
 

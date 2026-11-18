@@ -172,7 +172,7 @@ function GeneralTab({ component, sectionId, bindings }: { component: Component; 
         {component.type === 'list' ? <ListFields key={`${component.id}:${epoch}`} component={component} sectionId={sectionId} locale={locale} /> : null}
         {component.type === 'table' ? <TableFields key={`${component.id}:${epoch}`} component={component} sectionId={sectionId} /> : null}
         {['divider'].includes(component.type) ? <p className="text-xs text-text-muted">{t('st.prop.noContent')}</p> : null}
-        {['image', 'video', 'file', 'document_workspace'].includes(component.type) ? <p className="rounded-lg bg-surface-hover/60 p-3 text-[11px] leading-4 text-text-muted">{t('views.props.assetNote')}</p> : null}
+        {['image', 'video', 'file', 'document_workspace', 'evaluation_workspace'].includes(component.type) ? <p className="rounded-lg bg-surface-hover/60 p-3 text-[11px] leading-4 text-text-muted">{t('views.props.assetNote')}</p> : null}
       </Group>}
       <Group title={t('st.group.position', { device: t(`st.device.${device}` as 'st.device.desktop') })}>
         <div className="grid grid-cols-2 gap-2">

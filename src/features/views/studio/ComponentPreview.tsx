@@ -113,6 +113,7 @@ export const ComponentPreview = memo(function ComponentPreview({ organizationId,
     const Glyph = ICONS[component.type as keyof typeof ICONS];
     return <Notice icon={Glyph}>{t('st.preview.unbound')}</Notice>;
   }
+  if (component.type === 'evaluation_workspace') return <Notice icon={Database}>{t('st.preview.evaluations')}</Notice>;
   if (component.type === 'document_workspace') return <Notice icon={Database}>{t('st.preview.documents')}</Notice>;
   if (component.type === 'report_cards') return <ReportCardsOrganizationContext.Provider value={organizationId}>{SafeComponent({ type: component.type, props: component.props, locales })}</ReportCardsOrganizationContext.Provider>;
   return <>{SafeComponent({ type: component.type, props: component.props, locales })}</>;
