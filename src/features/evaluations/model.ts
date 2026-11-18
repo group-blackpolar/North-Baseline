@@ -94,3 +94,25 @@ export function formatClock(totalSeconds: number) {
   const two = (value: number) => String(value).padStart(2, '0');
   return h > 0 ? `${h}:${two(m)}:${two(s)}` : `${two(m)}:${two(s)}`;
 }
+
+// Statistics (phase 6). Mirrors GET /evaluations/:id/stats and /evaluation-results/mine.
+export interface StatsVersionRow { id: string; version: number; publishedAt: string; questionCount: number; maxPoints: number; attempts: number; graded: number; meanPercent: number | null }
+export interface QuestionStat {
+  questionId: string; number: number; category: string | null; prompt: string; attempts: number; correct: number; incorrect: number; omitted: number; correctRate: number | null;
+  options: Array<{ id: string; label: string; picked: number; isCorrect: boolean }>;
+}
+export interface EvaluationStats {
+  attempts: { started: number; inProgress: number; submitted: number; expired: number; graded: number; completionRate: number | null; timedOutRate: number | null };
+  score: { meanPercent: number | null; medianPercent: number | null; minPercent: number | null; maxPercent: number | null; distribution: Array<{ from: number; to: number; count: number }> };
+  averageTimeSeconds: number | null;
+  questions: QuestionStat[]; hardest: string[];
+  categories: Array<{ category: string | null; correct: number; incorrect: number; unanswered: number; meanPercent: number }>;
+}
+export interface StatsResponse { evaluation: { id: string; title: string }; versions: StatsVersionRow[]; selectedVersionId: string | null; stats: EvaluationStats | null }
+export interface MyResultRow { attemptId: string; evaluationId: string; title: string; kind: EvaluationKind; attemptNumber: number; status: AttemptStatus; submittedAt: string | null; scorePoints: number; maxPoints: number; percent: number }
+
+/** Height of a histogram bar relative to the tallest one (at least a sliver for non-empty buckets). */
+export function barHeights(counts: readonly number[]): number[] {
+  const max = Math.max(0, ...counts);
+  return counts.map((count) => (max === 0 || count === 0 ? 0 : Math.max(4, Math.round((count / max) * 100))));
+}

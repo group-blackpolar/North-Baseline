@@ -6,10 +6,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Status } from '@/components/ui/status';
 import { useResource } from '@/features/admin-center/hooks';
 import { useI18n } from '@/lib/i18n';
-import { evaluationsApi } from './api';
+import { evaluationsApi, statsApi } from './api';
 import { ExamPlayer } from './ExamPlayer';
 import { ResultView } from './ResultView';
-import type { AttemptView, AvailableRow, EvaluationKind, ResultView as Result } from './model';
+import { formatPoints, type AttemptView, type AvailableRow, type EvaluationKind, type ResultView as Result } from './model';
 
 type Mode = { kind: 'list' } | { kind: 'loading' } | { kind: 'taking'; attempt: AttemptView } | { kind: 'result'; result: Result; title: string };
 
@@ -17,6 +17,7 @@ type Mode = { kind: 'list' } | { kind: 'loading' } | { kind: 'taking'; attempt: 
 export function PlayerPanel({ organizationId, kind }: { organizationId: string; kind?: EvaluationKind }) {
   const { t } = useI18n();
   const rows = useResource(() => evaluationsApi.available(organizationId), [organizationId]);
+  const history = useResource(() => statsApi.mine(organizationId), [organizationId]);
   const [mode, setMode] = useState<Mode>({ kind: 'list' });
   const [error, setError] = useState<string | null>(null);
 
@@ -29,7 +30,7 @@ export function PlayerPanel({ organizationId, kind }: { organizationId: string; 
   if (mode.kind === 'taking') {
     return <ExamPlayer organizationId={organizationId} attempt={mode.attempt}
       onExit={() => { setMode({ kind: 'list' }); void rows.reload(); }}
-      onFinished={(result) => { setMode({ kind: 'result', result, title: mode.attempt.evaluation.title }); void rows.reload(); }} />;
+      onFinished={(result) => { setMode({ kind: 'result', result, title: mode.attempt.evaluation.title }); void rows.reload(); void history.reload(); }} />;
   }
   if (mode.kind === 'result') return <ResultView result={mode.result} title={mode.title} onBack={() => setMode({ kind: 'list' })} />;
 
@@ -52,6 +53,20 @@ export function PlayerPanel({ organizationId, kind }: { organizationId: string; 
               <Button variant="accent" disabled={!row.canStart} onClick={() => void start(row)}><Play className="size-4" aria-hidden />{row.openAttemptId ? t('ev.player.resume') : t('ev.player.start')}</Button>
             </div>
           </li>))}</ul>}
+
+      {(history.data ?? []).filter((row) => !kind || row.kind === kind).length > 0 ? (
+        <section aria-label={t('ev.player.history')} className="space-y-2 pt-2">
+          <h3 className="ui-label">{t('ev.player.history')}</h3>
+          <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
+            {history.data!.filter((row) => !kind || row.kind === kind).map((row) => (
+              <li key={row.attemptId} className="flex flex-wrap items-center gap-x-3 gap-y-1 p-3 text-sm">
+                <span className="min-w-0 flex-1 basis-40 truncate font-medium text-text">{row.title} <span className="font-normal text-text-muted">#{row.attemptNumber}</span></span>
+                <span className="tabular-nums text-text-secondary">{formatPoints(row.scorePoints)}/{formatPoints(row.maxPoints)} · {row.percent}%</span>
+                <span className="text-xs text-text-muted">{row.submittedAt ? new Date(row.submittedAt).toLocaleDateString() : ''}</span>
+                <Button size="sm" variant="ghost" onClick={() => void evaluationsApi.result(organizationId, row.attemptId).then((result) => setMode({ kind: 'result', result, title: row.title })).catch((reason) => setError(reason instanceof Error ? reason.message : 'error'))}>{t('ev.results.open')}</Button>
+              </li>))}
+          </ul>
+        </section>) : null}
     </section>
   );
 }

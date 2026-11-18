@@ -95,3 +95,10 @@ test('small formatting helpers', () => {
   assert.equal(formatClock(65), '01:05');
   assert.equal(formatClock(3725), '1:02:05');
 });
+
+import { barHeights } from './model.ts';
+test('histogram bars scale to the tallest bucket and keep non-empty buckets visible', () => {
+  assert.deepEqual(barHeights([0, 0, 0]), [0, 0, 0]);
+  assert.deepEqual(barHeights([1, 50, 0]), [4, 100, 0]);
+  assert.deepEqual(barHeights([5, 10]), [50, 100]);
+});

@@ -49,3 +49,7 @@ export const evaluationsApi = {
   submit: (o: string, attemptId: string) => apiRequest<ResultView>(`${base(o)}/evaluation-attempts/${encodeURIComponent(attemptId)}/submit`, { method: 'POST' }),
   result: (o: string, attemptId: string) => apiRequest<ResultView>(`${base(o)}/evaluation-attempts/${encodeURIComponent(attemptId)}/result`),
 };
+export const statsApi = {
+  stats: (o: string, id: string, versionId?: string) => apiRequest<import('./model').StatsResponse>(`${ev(o, id)}/stats${versionId ? `?versionId=${encodeURIComponent(versionId)}` : ''}`),
+  mine: (o: string) => apiRequest<import('./model').MyResultRow[]>(`${base(o)}/evaluation-results/mine`),
+};
