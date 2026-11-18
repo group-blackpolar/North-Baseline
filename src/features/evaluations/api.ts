@@ -46,6 +46,8 @@ export const evaluationsApi = {
   startAttempt: (o: string, id: string) => apiRequest<AttemptView>(`${ev(o, id)}/attempts`, { method: 'POST' }),
   getAttempt: (o: string, attemptId: string) => apiRequest<AttemptView>(`${base(o)}/evaluation-attempts/${encodeURIComponent(attemptId)}`),
   saveAnswers: (o: string, attemptId: string, answers: Saved[]) => apiRequest<SaveResponse>(`${base(o)}/evaluation-attempts/${encodeURIComponent(attemptId)}/answers`, { method: 'PUT', body: json({ answers }) }),
+  /** Paced attempts: confirm the open question's answer (optionId null = close it without answering). The server clock decides whether it is on time. */
+  confirmAnswer: (o: string, attemptId: string, input: { questionId: string; optionId: string | null }) => apiRequest<{ accepted: boolean; reason: 'TIMEOUT' | 'ALREADY_CLOSED' | 'NOT_CURRENT' | 'ATTEMPT_CLOSED' | null; attempt: AttemptView }>(`${base(o)}/evaluation-attempts/${encodeURIComponent(attemptId)}/confirm`, { method: 'POST', body: json(input) }),
   submit: (o: string, attemptId: string) => apiRequest<ResultView>(`${base(o)}/evaluation-attempts/${encodeURIComponent(attemptId)}/submit`, { method: 'POST' }),
   result: (o: string, attemptId: string) => apiRequest<ResultView>(`${base(o)}/evaluation-attempts/${encodeURIComponent(attemptId)}/result`),
 };

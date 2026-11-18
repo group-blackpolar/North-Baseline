@@ -14,7 +14,7 @@ import { formatPoints, type AssignmentRow, type Issue, type Settings } from './m
 import { useDraft } from './useDraft';
 
 const field = 'w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text outline-none placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-60';
-const ISSUES = new Set(['EVALUATION_NO_QUESTIONS', 'EVALUATION_PROMPT_EMPTY', 'EVALUATION_OPTIONS_MIN', 'EVALUATION_OPTION_EMPTY', 'EVALUATION_CORRECT_OPTION_MISSING', 'EVALUATION_CORRECT_OPTION_INVALID', 'EVALUATION_POINTS_INVALID', 'EVALUATION_SECTION_UNKNOWN', 'EVALUATION_PASSAGE_UNKNOWN', 'EVALUATION_PASSAGE_EMPTY', 'EVALUATION_SECTION_TITLE_EMPTY', 'EVALUATION_DUPLICATE_ID', 'EVALUATION_REVIEW_DATE_REQUIRED']);
+const ISSUES = new Set(['EVALUATION_NO_QUESTIONS', 'EVALUATION_PROMPT_EMPTY', 'EVALUATION_OPTIONS_MIN', 'EVALUATION_OPTION_EMPTY', 'EVALUATION_CORRECT_OPTION_MISSING', 'EVALUATION_CORRECT_OPTION_INVALID', 'EVALUATION_POINTS_INVALID', 'EVALUATION_SECTION_UNKNOWN', 'EVALUATION_PASSAGE_UNKNOWN', 'EVALUATION_PASSAGE_EMPTY', 'EVALUATION_SECTION_TITLE_EMPTY', 'EVALUATION_DUPLICATE_ID', 'EVALUATION_REVIEW_DATE_REQUIRED', 'EVALUATION_SECTION_ORDER']);
 type Tab = 'content' | 'settings' | 'assignments' | 'publish';
 const TABS: Tab[] = ['content', 'settings', 'assignments', 'publish'];
 const toLocalInput = (iso: string | null) => (iso ? new Date(new Date(iso).getTime() - new Date(iso).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '');
@@ -89,6 +89,16 @@ function SettingsTab({ organizationId, evaluationId, draft, locked }: { organiza
           <input type="number" min={1} max={100} inputMode="numeric" className={field} placeholder={t('ev.settings.unlimited')} value={settings.maxAttempts ?? ''} disabled={locked} onChange={(event) => patch({ maxAttempts: num(event.target.value, null) })} />
           <span className="text-xs text-text-muted">{t('ev.settings.attemptsHint')}</span></label>
       </div>
+      <fieldset className="space-y-3 rounded-xl border border-border p-3"><legend className="ui-label px-1">{t('ev.settings.pacing')}</legend>
+        <select aria-label={t('ev.settings.pacing')} className={field} value={settings.pacing.navigation} disabled={locked} onChange={(event) => patch({ pacing: { ...settings.pacing, navigation: event.target.value as Settings['pacing']['navigation'] } })}>
+          {(['FREE', 'FORWARD_ONLY'] as const).map((mode) => <option key={mode} value={mode}>{t(`ev.settings.pacing.${mode}`)}</option>)}
+        </select>
+        {settings.pacing.navigation === 'FORWARD_ONLY' ? (
+          <label className="block space-y-1"><span className="text-sm text-text">{t('ev.settings.questionSeconds')}</span>
+            <input type="number" min={5} max={3600} inputMode="numeric" className={field} placeholder={t('ev.settings.unlimited')} value={settings.pacing.questionSeconds ?? ''} disabled={locked} onChange={(event) => patch({ pacing: { ...settings.pacing, questionSeconds: num(event.target.value, null) } })} />
+            <span className="text-xs text-text-muted">{t('ev.settings.questionSecondsHint')}</span></label>
+        ) : null}
+      </fieldset>
       <fieldset className="space-y-3 rounded-xl border border-border p-3"><legend className="ui-label px-1">{t('ev.settings.scoring')}</legend>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="space-y-1"><span className="text-sm text-text">{t('ev.settings.wrong')}</span><input type="number" min={0} max={100} className={field} value={settings.scoring.wrongPenaltyPercent} disabled={locked} onChange={(event) => patch({ scoring: { ...settings.scoring, wrongPenaltyPercent: num(event.target.value, 0) ?? 0 } })} /></label>

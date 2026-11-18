@@ -1,4 +1,4 @@
-import { CheckCircle, MinusCircle, XCircle } from '@phosphor-icons/react';
+import { CheckCircle, MinusCircle, Timer, XCircle } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -8,7 +8,8 @@ import { formatClock, formatPoints, type Group, type ResultView as Result, type 
 const OUTCOME = {
   correct: { icon: CheckCircle, tone: 'text-success', key: 'ev.outcome.correct' },
   incorrect: { icon: XCircle, tone: 'text-error', key: 'ev.outcome.incorrect' },
-  unanswered: { icon: MinusCircle, tone: 'text-text-muted', key: 'ev.outcome.unanswered' },
+  omitted: { icon: MinusCircle, tone: 'text-text-muted', key: 'ev.outcome.omitted' },
+  invalid_timeout: { icon: Timer, tone: 'text-warning', key: 'ev.outcome.invalid_timeout' },
 } as const;
 
 /** Score, counts, time, per-category / per-section breakdown and, only when CORECROW released it, the review with correct answers. */
@@ -37,10 +38,11 @@ export function ResultView({ result, title, onBack }: { result: Result; title?: 
         <p className="text-sm text-text-secondary">{t('ev.result.score', { score: formatPoints(result.scorePoints), max: formatPoints(result.maxPoints) })}</p>
         {result.status === 'EXPIRED' ? <p className="text-xs text-warning">{t('ev.result.expired')}</p> : null}
       </header>
-      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {stat(t('ev.result.correct'), String(result.correct))}
         {stat(t('ev.result.incorrect'), String(result.incorrect))}
         {stat(t('ev.result.unanswered'), String(result.unanswered))}
+        {stat(t('ev.result.timedOut'), String(result.timedOut))}
         {stat(t('ev.result.time'), formatClock(result.timeUsedSeconds))}
       </dl>
       {bars(result.breakdown.byCategory, t('ev.result.byCategory'))}

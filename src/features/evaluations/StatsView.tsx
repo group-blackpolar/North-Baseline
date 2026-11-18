@@ -67,7 +67,7 @@ export function StatsView({ organizationId, evaluationId }: { organizationId: st
                   <span className="h-2 w-24 shrink-0 overflow-hidden rounded-full bg-surface-hover" aria-hidden><span className="block h-full rounded-full bg-accent" style={{ width: `${q.correctRate ?? 0}%` }} /></span>
                 </summary>
                 <div className="space-y-2 border-t border-border p-3">
-                  <p className="text-xs text-text-muted">{t('ev.stats.questionMeta', { correct: q.correct, incorrect: q.incorrect, omitted: q.omitted })}{q.category ? ` · ${q.category}` : ''}</p>
+                  <p className="text-xs text-text-muted">{t('ev.stats.questionMeta', { correct: q.correct, incorrect: q.incorrect, omitted: q.omitted, timedOut: q.timedOut })}{q.category ? ` · ${q.category}` : ''}</p>
                   <ul className="space-y-1.5">{q.options.map((o) => (
                     <li key={o.id} className="flex items-center gap-2 text-sm">
                       <span className={cn('flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold', o.isCorrect ? 'border-success bg-success/15 text-success' : 'border-border-strong')}>{o.label}</span>

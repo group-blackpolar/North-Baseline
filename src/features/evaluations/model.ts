@@ -17,6 +17,8 @@ export interface Settings {
   scoring: { wrongPenaltyPercent: number; unansweredPenaltyPercent: number; floorAtZero: boolean };
   review: { mode: ReviewMode; revealAfter: string | null };
   ai: { allowedDuringAttempt: boolean };
+  /** FORWARD_ONLY: questions open one at a time, each answer is confirmed to the server, nothing closed can be reopened, each question has its own server-timed limit. */
+  pacing: { navigation: 'FREE' | 'FORWARD_ONLY'; questionSeconds: number | null };
 }
 export interface AuthorOption { id: string; text: string }
 export interface AuthorQuestion {
@@ -40,6 +42,7 @@ export interface AssignmentRow { role?: string; groupId?: string; userId?: strin
 
 export interface AvailableRow {
   id: string; kind: EvaluationKind; title: string; description: string | null; durationMinutes: number | null; questionCount: number; maxAttempts: number | null;
+  pacing: { navigation: 'FREE' | 'FORWARD_ONLY'; questionSeconds: number | null }; sectionCount: number;
   attemptsUsed: number; openAttemptId: string | null; opensAt: string | null; closesAt: string | null; canStart: boolean;
 }
 export interface PlayerOption { id: string; label: string; text: string }
@@ -49,10 +52,10 @@ export interface PlayerContent {
   sections: Section[]; passages: Passage[]; questions: PlayerQuestion[];
 }
 export interface SavedAnswer { questionId: string; optionId: string | null; seq: number }
-export interface Group { key: string | null; title: string | null; correct: number; incorrect: number; unanswered: number; scorePoints: number; maxPoints: number; percent: number }
-export interface ReviewItem { questionId: string; number: number; prompt: Block[]; options: PlayerOption[]; selectedOptionId: string | null; correctOptionId: string | null; outcome: 'correct' | 'incorrect' | 'unanswered'; explanation: Block[] }
+export interface Group { key: string | null; title: string | null; correct: number; incorrect: number; unanswered: number; timedOut: number; scorePoints: number; maxPoints: number; percent: number }
+export interface ReviewItem { questionId: string; number: number; prompt: Block[]; options: PlayerOption[]; selectedOptionId: string | null; correctOptionId: string | null; outcome: 'correct' | 'incorrect' | 'omitted' | 'invalid_timeout'; explanation: Block[] }
 export interface ResultView {
-  attemptId: string; evaluationId: string; status: AttemptStatus; submittedAt: string | null; correct: number; incorrect: number; unanswered: number;
+  attemptId: string; evaluationId: string; status: AttemptStatus; submittedAt: string | null; correct: number; incorrect: number; unanswered: number; timedOut: number;
   scorePoints: number; maxPoints: number; percent: number; timeUsedSeconds: number;
   breakdown: { byCategory: Group[]; bySection: Group[] };
   review: { available: boolean; policy: ReviewMode; availableAt: string | null; items: ReviewItem[] | null };
@@ -60,6 +63,10 @@ export interface ResultView {
 export interface AttemptView {
   id: string; evaluationId: string; status: AttemptStatus; attemptNumber: number; startedAt: string; deadlineAt: string | null; serverTime: string;
   evaluation: { title: string; description: string | null; kind: EvaluationKind }; remainingSeconds: number | null;
+  pacing: { navigation: 'FREE' | 'FORWARD_ONLY'; questionSeconds: number | null };
+  /** Paced attempts: closed count, the open question's position and the sessions with their progress. `content` then carries only the open question and its text. */
+  progress: { total: number; closed: number; index: number; sections: Array<{ id: string; title: string; description: string | null; total: number; closed: number }> } | null;
+  current: { questionId: string; openedAt: string; expiresAt: string | null; remainingSeconds: number | null } | null;
   content: PlayerContent | null; answers: SavedAnswer[]; result: ResultView | null;
 }
 export interface AttemptRow {
@@ -98,7 +105,7 @@ export function formatClock(totalSeconds: number) {
 // Statistics (phase 6). Mirrors GET /evaluations/:id/stats and /evaluation-results/mine.
 export interface StatsVersionRow { id: string; version: number; publishedAt: string; questionCount: number; maxPoints: number; attempts: number; graded: number; meanPercent: number | null }
 export interface QuestionStat {
-  questionId: string; number: number; category: string | null; prompt: string; attempts: number; correct: number; incorrect: number; omitted: number; correctRate: number | null;
+  questionId: string; number: number; category: string | null; prompt: string; attempts: number; correct: number; incorrect: number; omitted: number; timedOut: number; correctRate: number | null;
   options: Array<{ id: string; label: string; picked: number; isCorrect: boolean }>;
 }
 export interface EvaluationStats {
@@ -106,7 +113,7 @@ export interface EvaluationStats {
   score: { meanPercent: number | null; medianPercent: number | null; minPercent: number | null; maxPercent: number | null; distribution: Array<{ from: number; to: number; count: number }> };
   averageTimeSeconds: number | null;
   questions: QuestionStat[]; hardest: string[];
-  categories: Array<{ category: string | null; correct: number; incorrect: number; unanswered: number; meanPercent: number }>;
+  categories: Array<{ category: string | null; correct: number; incorrect: number; unanswered: number; timedOut: number; meanPercent: number }>;
 }
 export interface StatsResponse { evaluation: { id: string; title: string }; versions: StatsVersionRow[]; selectedVersionId: string | null; stats: EvaluationStats | null }
 export interface MyResultRow { attemptId: string; evaluationId: string; title: string; kind: EvaluationKind; attemptNumber: number; status: AttemptStatus; submittedAt: string | null; scorePoints: number; maxPoints: number; percent: number }

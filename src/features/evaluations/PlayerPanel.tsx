@@ -8,6 +8,8 @@ import { useResource } from '@/features/admin-center/hooks';
 import { useI18n } from '@/lib/i18n';
 import { evaluationsApi, statsApi } from './api';
 import { ExamPlayer } from './ExamPlayer';
+import { PacedIntro } from './PacedIntro';
+import { PacedPlayer } from './PacedPlayer';
 import { ResultView } from './ResultView';
 import { formatPoints, type AttemptView, type AvailableRow, type EvaluationKind, type ResultView as Result } from './model';
 
@@ -20,15 +22,17 @@ export function PlayerPanel({ organizationId, kind }: { organizationId: string; 
   const history = useResource(() => statsApi.mine(organizationId), [organizationId]);
   const [mode, setMode] = useState<Mode>({ kind: 'list' });
   const [error, setError] = useState<string | null>(null);
+  const [intro, setIntro] = useState<AvailableRow | null>(null);
 
   const start = useCallback(async (row: AvailableRow) => {
-    setError(null); setMode({ kind: 'loading' });
+    setError(null); setIntro(null); setMode({ kind: 'loading' });
     try { setMode({ kind: 'taking', attempt: await evaluationsApi.startAttempt(organizationId, row.id) }); }
     catch (reason) { setError(reason instanceof Error ? reason.message : t('ev.player.startFailed')); setMode({ kind: 'list' }); void rows.reload(); }
   }, [organizationId, rows, t]);
 
   if (mode.kind === 'taking') {
-    return <ExamPlayer organizationId={organizationId} attempt={mode.attempt}
+    const Player = mode.attempt.pacing.navigation === 'FORWARD_ONLY' ? PacedPlayer : ExamPlayer;
+    return <Player organizationId={organizationId} attempt={mode.attempt}
       onExit={() => { setMode({ kind: 'list' }); void rows.reload(); }}
       onFinished={(result) => { setMode({ kind: 'result', result, title: mode.attempt.evaluation.title }); void rows.reload(); void history.reload(); }} />;
   }
@@ -50,7 +54,7 @@ export function PlayerPanel({ organizationId, kind }: { organizationId: string; 
             </div>
             <div className="mt-auto flex items-center justify-between gap-2">
               {row.openAttemptId ? <Status tone="pending">{t('ev.player.inProgress')}</Status> : row.canStart ? <span /> : <Status tone="neutral">{row.opensAt && new Date(row.opensAt) > new Date() ? t('ev.player.opensAt', { date: new Date(row.opensAt).toLocaleString() }) : t('ev.player.unavailable')}</Status>}
-              <Button variant="accent" disabled={!row.canStart} onClick={() => void start(row)}><Play className="size-4" aria-hidden />{row.openAttemptId ? t('ev.player.resume') : t('ev.player.start')}</Button>
+              <Button variant="accent" disabled={!row.canStart} onClick={() => { if (row.pacing.navigation === 'FORWARD_ONLY' && !row.openAttemptId) setIntro(row); else void start(row); }}><Play className="size-4" aria-hidden />{row.openAttemptId ? t('ev.player.resume') : t('ev.player.start')}</Button>
             </div>
           </li>))}</ul>}
 
@@ -67,6 +71,7 @@ export function PlayerPanel({ organizationId, kind }: { organizationId: string; 
               </li>))}
           </ul>
         </section>) : null}
+      <PacedIntro row={intro} onCancel={() => setIntro(null)} onStart={(row) => void start(row)} />
     </section>
   );
 }
