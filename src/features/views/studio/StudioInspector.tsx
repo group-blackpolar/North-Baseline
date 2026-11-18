@@ -11,6 +11,8 @@ import { findComponent, setComponentBinding, setComponentCell, setComponentProps
 import { ColorField, Group, NumberField, SegmentedField, SelectField, SliderField, TextField, ToggleField } from './fields';
 import { ANALYTICS_TYPES, DATA_BINDING_KEY, definitionOf } from './registry';
 import { HeroFields, ReportCardsFields } from './ReportCardsFields';
+import { LinkCardsFields } from './LinkCardsFields';
+import { VisibilityFields } from './VisibilityFields';
 import { AnalyticsFields, SlotBindings, useSlotColumns } from './AnalyticsInspector';
 import { componentLabelKey } from './labels';
 import type { DraftIssue, PanelBinding } from './studioApi';
@@ -164,6 +166,7 @@ function GeneralTab({ component, sectionId, bindings }: { component: Component; 
           </>
         ) : null}
         {component.type === 'hero' ? <HeroFields component={component} sectionId={sectionId} locale={locale} labels={{ eyebrow: t('st.hero.eyebrow'), title: t('st.prop.title'), body: t('st.prop.body'), centered: t('st.hero.centered'), brand: t('st.hero.brand') }} /> : null}
+        {component.type === 'link_cards' ? <LinkCardsFields key={`${component.id}:${epoch}`} component={component} sectionId={sectionId} locale={locale} /> : null}
         {component.type === 'report_cards' ? <ReportCardsFields key={`${component.id}:${epoch}`} component={component} sectionId={sectionId} locale={locale} /> : null}
         {component.type === 'rich_text' ? <RichTextFields key={`${component.id}:${epoch}`} component={component} sectionId={sectionId} locale={locale} /> : null}
         {component.type === 'list' ? <ListFields key={`${component.id}:${epoch}`} component={component} sectionId={sectionId} locale={locale} /> : null}
@@ -267,6 +270,9 @@ function AdvancedTab({ component }: { component: Component }) {
             <dd className="min-w-0 truncate font-mono text-[11px] text-text" title={component.id}>{component.id}</dd></div>
         </dl>
         <Button size="sm" variant="ghost" onClick={() => { void navigator.clipboard?.writeText(component.id).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 1500); }).catch(() => {}); }}>{copied ? t('st.adv.copied') : t('st.adv.copyId')}</Button>
+      </Group>
+      <Group title={t('st.group.visibility')}>
+        <VisibilityFields component={component} />
       </Group>
       <Group title={t('st.group.actions')}>
         <div className="flex flex-wrap gap-2">
