@@ -17,8 +17,9 @@ export const listConversations = (organizationId: string) =>
 export const readConversation = (organizationId: string, conversationId: string) =>
   apiRequest<ConversationSummary & { messages: StoredMessage[] }>(`/v1/ai/conversations/${encodeURIComponent(conversationId)}?organizationId=${encodeURIComponent(organizationId)}`);
 
-export const createRun = (organizationId: string, conversationId: string, message: string) =>
-  post<{ runId: string }>('/v1/ai/runs', { organizationId, conversationId, application: 'north', message });
+/** `context` is optional and user-chosen: identifiers and a short label of the page; CORECROW re-authorizes the resource and never trusts the label. */
+export const createRun = (organizationId: string, conversationId: string, message: string, context?: { module: string; label?: string; resource?: { type: 'evaluation'; id: string } }) =>
+  post<{ runId: string }>('/v1/ai/runs', { organizationId, conversationId, application: 'north', message, ...(context ? { context } : {}) });
 
 /** Executes a pending action the user confirmed; CORECROW re-authorizes it, runs it once and audits it. */
 export const confirmAction = (actionId: string) => post<{ id: string; status: string; summary: string | null }>(`/v1/ai/actions/${encodeURIComponent(actionId)}/confirm`, undefined);
