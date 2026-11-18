@@ -16,10 +16,10 @@ function loadExpanded(organizationId: string): Set<string> {
   try { return new Set(JSON.parse(window.sessionStorage.getItem(expandedKey(organizationId)) ?? '[]') as string[]); } catch { return new Set(); }
 }
 
-interface Row { resource: ViewResource; depth: number; expandable: boolean; expanded: boolean }
+interface Row { resource: ViewResource; depth: number; /** The panel that is this subcategory's page (the one shown instead of a third level). */ page: ViewResource | null; expandable: boolean; expanded: boolean }
 
 /**
- * Resource explorer: the real Category → Subcategory → View structure from CORECROW. Selecting a node never opens a tab
+ * Resource explorer: the real Category → Subcategory structure from CORECROW (a subcategory is its page; its single panel is folded into its row). Selecting a node never opens a tab
  * or navigates the shell (that stays with the existing tab system); it only drives the inspector and the result scope.
  */
 export function StructureExplorer({ organizationId, resources, loading, selectedId, scopeIds, onSelect, onActivate, onCreateCategory, menuFor, canCreate, className }: {
@@ -73,9 +73,12 @@ export function StructureExplorer({ organizationId, resources, loading, selected
     const walk = (parent: string | null, depth: number) => {
       for (const resource of children.get(parent) ?? []) {
         if (keep && !keep.has(resource.id)) continue;
-        const kids = (children.get(resource.id) ?? []).filter((kid) => !keep || keep.has(kid.id));
-        const isOpen = searching ? kids.length > 0 : expanded.has(resource.id);
-        out.push({ resource, depth, expandable: (children.get(resource.id) ?? []).length > 0, expanded: isOpen });
+        const all = children.get(resource.id) ?? [];
+        // A subcategory IS its page: its single panel is never shown as a third level (only legacy subcategories with several still expand).
+        const page = resource.kind === 'SUBCATEGORY' && all.length === 1 ? all[0]! : null;
+        const kids = page ? [] : all.filter((kid) => !keep || keep.has(kid.id));
+        const isOpen = searching ? kids.length > 0 : !page && expanded.has(resource.id);
+        out.push({ resource, depth, page, expandable: !page && all.length > 0, expanded: isOpen });
         if (isOpen) walk(resource.id, depth + 1);
       }
     };
@@ -177,13 +180,13 @@ export function StructureExplorer({ organizationId, resources, loading, selected
                     <Icon icon={iconFor(row)} size="sm" weight={resource.kind === 'PANEL' && !resource.icon ? 'regular' : 'duotone'} className={cn(archived && 'opacity-50')} />
                     <span className={cn('min-w-0 flex-1 truncate', archived && 'text-text-muted line-through')}>{localName(resource.name, locale)}</span>
                     {resource.resourceKind === 'SYSTEM' ? <LockSimple className="size-3 shrink-0 text-text-muted" aria-label={t('adm2.views.system')} /> : null}
-                    {resource.kind === 'PANEL' ? (
+                    {resource.kind === 'PANEL' || row.page ? (() => { const state = row.page ?? resource; return (
                       <span
-                        title={resource.hasUnpublishedChanges ? t('adm2.views.status.unpublished') : t(`adm2.views.status.${resource.status}` as never)}
-                        aria-label={resource.hasUnpublishedChanges ? t('adm2.views.status.unpublished') : t(`adm2.views.status.${resource.status}` as never)}
-                        className={cn('size-2 shrink-0 rounded-full', resource.status === 'PUBLISHED' ? 'bg-success' : resource.status === 'DRAFT' ? 'bg-text-muted' : 'border border-text-muted', resource.hasUnpublishedChanges && 'ring-2 ring-warning/60')}
+                        title={state.hasUnpublishedChanges ? t('adm2.views.status.unpublished') : t(`adm2.views.status.${state.status}` as never)}
+                        aria-label={state.hasUnpublishedChanges ? t('adm2.views.status.unpublished') : t(`adm2.views.status.${state.status}` as never)}
+                        className={cn('size-2 shrink-0 rounded-full', state.status === 'PUBLISHED' ? 'bg-success' : state.status === 'DRAFT' ? 'bg-text-muted' : 'border border-text-muted', state.hasUnpublishedChanges && 'ring-2 ring-warning/60')}
                       />
-                    ) : <span className="shrink-0 rounded bg-surface-active px-1.5 text-[10px] tabular-nums text-text-muted">{resource.childCount}</span>}
+                    ); })() : resource.kind === 'SUBCATEGORY' && resource.childCount === 0 ? null : <span className="shrink-0 rounded bg-surface-active px-1.5 text-[10px] tabular-nums text-text-muted">{resource.childCount}</span>}
                     <button
                       type="button" tabIndex={-1} aria-label={t('adm2.views.actions')} aria-haspopup="menu"
                       onClick={(event) => { event.stopPropagation(); const box = event.currentTarget.getBoundingClientRect(); onSelect(resource); openMenuAt(resource, box.left, box.bottom + 2); }}

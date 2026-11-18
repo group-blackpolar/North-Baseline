@@ -5,7 +5,7 @@ import { useI18n } from '@/lib/i18n';
 import {
   createCategory,
   createSubcategory,
-  createPanel,
+  ensureSubcategoryPage,
   updateCategory,
   updateSubcategory,
   updatePanel,
@@ -79,21 +79,22 @@ export function ViewsDialogs() {
     }
   };
 
-  const handleCreateView = async (e: React.FormEvent) => {
+  /** A page is a subcategory: create it, ensure its page, seed the draft from the chosen template and select it. */
+  const handleCreatePage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || modal?.type !== 'create_view') return;
+    if (!name.trim() || modal?.type !== 'create_page') return;
     setLoading(true);
     setError(null);
     try {
-      const created = await createPanel(organizationId, modal.subcategoryId, {
+      const subcategory = await createSubcategory(organizationId, modal.categoryId, {
         name: { es: name.trim(), en: name.trim() },
         ...(slug.trim() ? { slug: slug.trim() } : {}),
         ...(icon !== undefined ? { icon } : {}),
       });
-      const initialDoc = createDocumentFromTemplate(template, name.trim());
-      await saveDraft(organizationId, created.id, initialDoc);
+      const page = await ensureSubcategoryPage(organizationId, subcategory.id);
+      await saveDraft(organizationId, page.id, createDocumentFromTemplate(template, name.trim()));
       await refreshTaxonomy();
-      selectPanel(modal.categoryId, modal.subcategoryId, created.id);
+      selectPanel(modal.categoryId, subcategory.id, page.id);
       handleClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error creating view');
@@ -177,9 +178,9 @@ export function ViewsDialogs() {
             </div>
           </form>
         )}
-        {modal.type === 'create_view' && (
-          <form onSubmit={handleCreateView} className="space-y-4">
-            <h2 className="text-base font-semibold text-text">{t('views.createViewTitle')}</h2>
+        {modal.type === 'create_page' && (
+          <form onSubmit={handleCreatePage} className="space-y-4">
+            <h2 className="text-base font-semibold text-text">{t('views.createPageTitle')}</h2>
             {error && <div className="rounded-lg bg-red-500/10 p-3 text-xs text-red-600 dark:text-red-400">{error}</div>}
             <div className="space-y-3">
               <label className="block text-xs font-medium text-text-secondary">

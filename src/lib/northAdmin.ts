@@ -79,6 +79,11 @@ export function createPanel(organizationId: string, subcategoryId: string, input
   });
 }
 
+/** The page of a subcategory (its single panel). CORECROW returns it, or creates it from the subcategory's own name and slug when it has none. */
+export function ensureSubcategoryPage(organizationId: string, subcategoryId: string) {
+  return apiRequest<TaxonomyPanel>(`/v1/organizations/${encodeURIComponent(organizationId)}/subcategories/${encodeURIComponent(subcategoryId)}/page`, { method: 'POST' });
+}
+
 const orgPath = (organizationId: string) => `/v1/organizations/${encodeURIComponent(organizationId)}`;
 export function updateCategory(organizationId: string, id: string, input: MetadataInput) { return apiRequest<TaxonomyCategory>(`${orgPath(organizationId)}/categories/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }); }
 export function updateSubcategory(organizationId: string, id: string, input: MetadataInput & { categoryId?: string }) { return apiRequest<TaxonomySubcategory>(`${orgPath(organizationId)}/subcategories/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }); }

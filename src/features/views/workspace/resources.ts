@@ -76,6 +76,17 @@ export function flattenTree(tree: TreeCategory[]): ViewResource[] {
   return out;
 }
 
+/**
+ * A subcategory IS its page: the panel that carries its document. With several (legacy) panels it is the one that shares the
+ * subcategory's slug, else the first; `null` when it has none yet (CORECROW creates it on first edit). A panel is its own page.
+ */
+export function pageOf(resources: ReadonlyArray<ViewResource>, resource: ViewResource): ViewResource | null {
+  if (resource.kind === 'PANEL') return resource;
+  if (resource.kind !== 'SUBCATEGORY') return null;
+  const panels = resources.filter((item) => item.kind === 'PANEL' && item.parentId === resource.id);
+  return panels.find((item) => item.slug === resource.slug) ?? panels[0] ?? null;
+}
+
 export type SortKey = 'name' | 'kind' | 'category' | 'status' | 'updatedAt' | 'createdAt';
 export interface ViewFilters {
   q: string;
