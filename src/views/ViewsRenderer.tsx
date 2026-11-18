@@ -1,4 +1,4 @@
-import { Fragment, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Fragment, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { ArrowsClockwise, ArrowsIn, ArrowsOut, ArrowsOutSimple, Barricade, CaretLeft, Presentation } from '@phosphor-icons/react';
 import type { SessionUser } from '@/lib/auth';
 import type { Tab } from '@/context/TabsContext';
@@ -25,7 +25,7 @@ import { queryPanelFacet } from '@/features/filters/facetsApi';
 import { analyticsRows, bindingIdOf, BindingSourceProvider, useBindingResult, useBindingSource, type BindingResponse, type BindingSource, type BindingState } from '@/features/analytics/pro/bindingSource';
 import { asNumber } from '@/features/analytics/pro/format';
 import { PRO_TYPES, ProComponent } from '@/features/analytics/pro/ProComponent';
-import { queryPanelAnalyticsBinding } from '@/features/analytics/panelBindingQuery';
+import { exportPanelAnalyticsBinding, queryPanelAnalyticsBinding } from '@/features/analytics/panelBindingQuery';
 import { queryShowcaseBinding } from '@/lib/showcase';
 import { consumePanelRequest, peekPanelRequest, subscribePanelRequests } from '@/features/assistant/panelBus';
 import { selectionsFromFilters } from '@/features/assistant/directives';
@@ -36,6 +36,7 @@ import { PanelGroup } from '@/features/analytics/pro/PanelGroup';
 import { DefinitionListBlock, HeroBlock, LinkCardsBlock, TitleBarBlock, OrgBrand, PanelNavigationContext, usePanelNavigation } from '@/features/analytics/pro/InfoBlocks';
 import { navigateToPublishedTarget } from '@/lib/publishedNavigation';
 import { useTabs } from '@/context/TabsContext';
+import { reportMode, reportScale, useReportSize, type ReportMode } from './reportScale';
 
 // Administration is the largest authenticated surface and most sessions never open it: load it on demand.
 const PersonalView = lazy(() => import('@/features/personal/PersonalView').then((module) => ({ default: module.PersonalView })));
@@ -82,21 +83,8 @@ function RichNode({ node }: { node: unknown }) {
 type Breakpoint = 'desktop' | 'tablet' | 'mobile';
 type GridPosition = PublishedPanelDocument['sections'][number]['components'][number]['layout'][Breakpoint];
 
-function currentBreakpoint(): Breakpoint {
-  if (typeof window === 'undefined') return 'desktop';
-  if (window.innerWidth < 640) return 'mobile';
-  return window.innerWidth < 1024 ? 'tablet' : 'desktop';
-}
-
-function usePublishedBreakpoint() {
-  const [breakpoint, setBreakpoint] = useState<Breakpoint>(currentBreakpoint);
-  useEffect(() => {
-    const update = () => setBreakpoint(currentBreakpoint());
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
-  }, []);
-  return breakpoint;
-}
+/** Which stored layout a report uses, from the report's own measured width (not the window's). */
+const BREAKPOINT_OF_MODE = { screen: 'desktop', tablet: 'tablet', phone: 'mobile' } as const satisfies Record<ReportMode, Breakpoint>;
 
 function gridStyle(position: GridPosition, rowOffset = 0) {
   const x = Math.max(0, Math.min(11, position.x));
@@ -109,16 +97,26 @@ const SELF_SCROLLING = new Set(['kpi_card', 'data_grid', 'geo_map', 'insights', 
 const EXPANDABLE = new Set(['bar_chart', 'line_chart', 'donut_chart', 'geo_map', 'data_grid', 'insights']);
 
 // These blocks draw their own cards: the cell adds no frame or padding.
-/** Reports are drawn at 80 % (CSS zoom: percentage widths/heights still fill the cell, so the page keeps fitting the viewport). The rest of the shell stays at 100 %. */
-const REPORT_ZOOM = 0.8;
-
 const isFrameless = (type: string) => type === 'hero' || type === 'link_cards' || type === 'definition_list' || type === 'report_cards' || type === 'title_bar';
 
 function PublishedGridItem({ component, breakpoint, matrix, title, rowOffset = 0, placed = true, children }: { component: PublishedPanelDocument['sections'][number]['components'][number]; breakpoint: Breakpoint; matrix: boolean; title: string; /** Rows taken by a band lifted above the matrix. */ rowOffset?: number; /** false: drawn inside a panel group, not at its own grid cell. */ placed?: boolean; children: ReactNode }) {
   const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const tight = component.type === 'kpi_card';
-  if (!matrix) return <div className={cn('min-w-0', !isFrameless(component.type) && 'rounded-xl border border-border bg-surface shadow-xs', !isFrameless(component.type) && (tight ? 'p-3' : 'p-4'))} style={gridStyle(component.layout[breakpoint])}>{children}</div>;
+  const expandable = EXPANDABLE.has(component.type) && !isFrameless(component.type) && component.type !== 'heading';
+  if (!matrix) return (
+    <div className={cn('group/cell relative min-w-0', !isFrameless(component.type) && 'rounded-xl border border-border bg-surface shadow-xs', !isFrameless(component.type) && (tight ? 'p-3' : 'p-4'))} style={gridStyle(component.layout[breakpoint])}>
+      {children}
+      {expandable ? (
+        <>
+          <button type="button" onClick={() => setExpanded(true)} aria-label={`${t('panel.expand')}: ${title}`} title={t('panel.expand')} className="absolute right-1 top-1 z-10 inline-flex min-h-(--touch-min) min-w-(--touch-min) items-center justify-center rounded-md border border-border bg-surface/90 text-text-muted shadow-xs hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40">
+            <ArrowsOutSimple className="size-4" aria-hidden="true" />
+          </button>
+          {expanded ? <Dialog open onOpenChange={setExpanded} title={title || t('panel.expand')} size="xl"><div className="h-[68dvh] min-h-80"><CellFillProvider value><div className="flex h-full min-h-0 flex-col [&>*]:min-h-0">{children}</div></CellFillProvider></div></Dialog> : null}
+        </>
+      ) : null}
+    </div>
+  );
   // Fixed-matrix cell: the component fills the cell and scrolls or clips inside it; it never stretches the page.
   const bare = component.type === 'heading' || component.type === 'org_brand' || component.type === 'divider';
   // These blocks draw their own cards: the cell adds no frame or padding.
@@ -128,7 +126,7 @@ function PublishedGridItem({ component, breakpoint, matrix, title, rowOffset = 0
       <CellFillProvider value><div className="flex min-h-0 flex-1 flex-col [&>*]:min-h-0">{children}</div></CellFillProvider>
       {EXPANDABLE.has(component.type) && !bare ? (
         <>
-          <button type="button" onClick={() => setExpanded(true)} aria-label={`${t('panel.expand')}: ${title}`} title={t('panel.expand')} className="absolute right-1 top-1 z-10 inline-flex size-6 items-center justify-center rounded-md border border-border bg-surface/90 text-text-muted opacity-0 shadow-xs transition-opacity hover:text-text focus-visible:opacity-100 group-hover/cell:opacity-100">
+          <button type="button" onClick={() => setExpanded(true)} aria-label={`${t('panel.expand')}: ${title}`} title={t('panel.expand')} className="absolute right-1 top-1 z-10 inline-flex size-6 items-center justify-center rounded-md border border-border bg-surface/90 text-text-muted opacity-0 shadow-xs transition-opacity hover:text-text focus-visible:opacity-100 group-hover/cell:opacity-100 pointer-coarse:opacity-100">
             <ArrowsOutSimple className="size-3.5" aria-hidden="true" />
           </button>
           {expanded ? <Dialog open onOpenChange={setExpanded} title={title || t('panel.expand')} size="xl"><div className="h-[68dvh] min-h-80"><CellFillProvider value><div className="flex h-full min-h-0 flex-col [&>*]:min-h-0">{children}</div></CellFillProvider></div></Dialog> : null}
@@ -196,7 +194,7 @@ function resultOf(state: BindingState): AnalyticsResult {
     const rows = analyticsRows(state.response);
     return rows.length ? { state: 'ready', data: { columns, rows } } : { state: 'empty' };
   }
-  if (state.status === 'error') return { state: 'error', message: state.error?.message };
+  if (state.status === 'error') return { state: 'error', message: state.error?.message, status: state.error?.status };
   return { state: 'loading' };
 }
 
@@ -256,7 +254,7 @@ function PublishedAnalyticsContent({ component, locales }: { component: Publishe
         return (
           <div className="flex h-full min-h-0 flex-col gap-1.5">
             <div className="flex shrink-0 items-center gap-2">
-              <button type="button" onClick={() => { source?.clearFilter?.(categoryKey, selected.find((value) => String(value) === drilled) ?? drilled); setDrilled(null); }} className="inline-flex h-6 shrink-0 items-center gap-1 rounded-md border border-border px-1.5 text-[11px] font-medium text-text-secondary hover:bg-surface-hover hover:text-text">
+              <button type="button" onClick={() => { source?.clearFilter?.(categoryKey, selected.find((value) => String(value) === drilled) ?? drilled); setDrilled(null); }} className="inline-flex h-6 shrink-0 items-center gap-1 rounded-md border border-border px-1.5 text-[length:calc(11px*var(--s,1))] font-medium text-text-secondary hover:bg-surface-hover hover:text-text">
                 <CaretLeft className="size-3" aria-hidden="true" />{t('panel.drillBack')}
               </button>
               <h3 className="min-w-0 truncate text-sm font-medium text-text" title={`${title} · ${drilled}`}>{drillTitle || title} · {drilled}</h3>
@@ -268,7 +266,7 @@ function PublishedAnalyticsContent({ component, locales }: { component: Publishe
       const canDrill = Boolean(drillBinding) && interactive;
       return (
         <div className="flex h-full min-h-0 flex-col gap-1.5">
-          {title ? <h3 className="shrink-0 truncate text-sm font-medium text-text" title={title}>{title}{canDrill ? <span className="ml-2 text-[11px] font-normal text-text-muted">{t('panel.drillHint')}</span> : null}</h3> : null}
+          {title ? <h3 className="shrink-0 truncate text-sm font-medium text-text" title={title}>{title}{canDrill ? <span className="ml-2 text-[length:calc(11px*var(--s,1))] font-normal text-text-muted">{t('panel.drillHint')}</span> : null}</h3> : null}
           <div className={cn('min-h-0 flex-1', dim)}><AnalyticsBarChart result={result} {...config} categoryFormat={categoryFormat} onSelect={select ? (value) => { const isSelected = selected.some((item) => String(item) === value); select(value); if (canDrill && !isSelected) setDrilled(value); } : undefined} selected={selected.map(String)} /></div>
         </div>
       );
@@ -338,25 +336,31 @@ function sceneTitle(section: PublishedPanelDocument['sections'][number], locales
 }
 
 export function PublishedPanel({ title, document, locales, organizationId, panelId }: { title: string; document: PublishedPanelDocument | null; locales: string[]; organizationId: string | null | undefined; panelId: string }) {
-  const breakpoint = usePublishedBreakpoint();
   const { t, locale } = useI18n();
   const showcaseSlug = useShowcaseSlug();
-  const articleRef = useRef<HTMLElement>(null);
+  // A report that fills the viewport (fixed matrix with `fit`) tracks its height too; a scrolling one only its width.
+  const documentFits = Boolean(document?.sections.some((section) => section.layout.rowHeight && section.layout.fit === true));
+  const [articleRef, size, articleEl] = useReportSize<HTMLElement>(documentFits);
+  const mode = reportMode(size.width);
+  const breakpoint = BREAKPOINT_OF_MODE[mode];
+  const scale = reportScale(size, documentFits && mode === 'screen');
   const [definitionsByBinding, setDefinitionsByBinding] = useState<Record<string, PanelBindingFilterDefinition[]>>({});
   const [selections, setSelections] = useState<FilterSelections>(() => loadSelections(panelId));
   const [executedByBinding, setExecutedByBinding] = useState<Record<string, string>>({});
   // A presentation works on a frozen snapshot of the filters; the dashboard's own selections are never touched by it.
   const [presenting, setPresenting] = useState<FilterSelections | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [phoneTab, setPhoneTab] = useState(0);
   const [version, setVersion] = useState(0);
   useEffect(() => {
     setDefinitionsByBinding({});
     setExecutedByBinding({});
     setSelections(loadSelections(panelId));
     setPresenting(null);
+    setPhoneTab(0);
   }, [panelId]);
   useEffect(() => {
-    const sync = () => setFullscreen(window.document.fullscreenElement === articleRef.current);
+    const sync = () => setFullscreen(window.document.fullscreenElement === articleEl);
     window.document.addEventListener('fullscreenchange', sync);
     return () => window.document.removeEventListener('fullscreenchange', sync);
   }, []);
@@ -424,6 +428,7 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
         : await queryPanelAnalyticsBinding(organizationId, panelId, bindingId, filters, signal, live.current.version > 0 ? { ...options, fresh: true } : options);
       return response as BindingResponse;
     },
+    export: showcaseSlug || !organizationId ? undefined : (bindingId, request, signal) => exportPanelAnalyticsBinding(organizationId, panelId, bindingId, { ...request, filters: request.filters ?? live.current.filtersByBinding[bindingId] ?? [] }, signal),
     report: (bindingId, response) => {
       if (response.filterDefinitions) registerFilterDefinitions(bindingId, response.filterDefinitions);
       registerExecuted(bindingId, response.executedAt);
@@ -475,6 +480,11 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
   const hasFilterSlot = sections.some((section) => section.components.some((component) => component.type === 'filter_bar'));
   const filterBar = <FilterBar controls={controls} selections={selections} onChange={updateSelections} loadFacet={canFacet ? loadFacet : undefined} title={filterTitle} hiddenKeys={hiddenFields} compact={sections.some((section) => matrixOf(section) !== null)} />;
   const fitted = sections.some((section) => matrixOf(section)?.fit);
+  // A document that already carries its own title (title bar or hero) owns the page title: a second <h1> above it would repeat it.
+  // On a phone a report with several sections shows one at a time behind tabs (the filters stay above them), instead of one very long page.
+  const tabbed = mode === 'phone' && sections.length > 1 && !presenting;
+  const activeTab = Math.min(phoneTab, Math.max(0, sections.length - 1));
+  const titledByDocument = sections.some((section) => section.components.some((component) => component.type === 'title_bar' || component.type === 'hero'));
   const renderSection = (section: (typeof sections)[number]) => {
     const matrix = matrixOf(section);
     const ordered = section.components.slice().sort((a, b) => a.order - b.order);
@@ -499,15 +509,15 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
             : SafeComponent({ type: component.type, props: component.props, locales });
     };
     const style = matrix ? {
-      gridTemplateRows: `repeat(${matrix.rows}, ${matrix.fit ? `minmax(${matrix.rowHeight}px, 1fr)` : `${matrix.rowHeight}px`})`,
-      ...(matrix.fit ? { minHeight: matrix.rows * matrix.rowHeight + (matrix.rows - 1) * GAP_PX[section.layout.gap] } : {}),
+      gridTemplateRows: `repeat(${matrix.rows}, ${matrix.fit ? `minmax(${Math.round(matrix.rowHeight * scale)}px, 1fr)` : `${Math.round(matrix.rowHeight * scale)}px`})`,
+      ...(matrix.fit ? { minHeight: matrix.rows * Math.round(matrix.rowHeight * scale) + (matrix.rows - 1) * Math.round(GAP_PX[section.layout.gap] * scale) } : {}),
     } : undefined;
     return <Fragment key={section.id}>
       {lifted && bandBars.length ? <div className="shrink-0 space-y-2">{bandBars.map((component) => <div key={component.id}>{SafeComponent({ type: component.type, props: component.props, locales })}</div>)}</div> : null}
       {lifted && !presenting ? <div className="shrink-0">{filterBar}</div> : null}
       <section style={style} className={cn('grid grid-cols-12', !matrix && 'auto-rows-[minmax(2rem,auto)]', GAP[section.layout.gap], matrix?.fit && 'min-h-0 flex-1')}>{ordered.filter((component) => !grouped.has(component.id) && !inBand.has(component.id)).map((component) => {
         // The filter bar placed by the author is live on the page and absent from presentation scenes (those use a frozen snapshot).
-        if (component.type === 'filter_bar') return lifted || presenting ? null : <div key={component.id} className={cn('min-w-0', matrix && 'min-h-0')} style={gridStyle(component.layout[breakpoint])}>{filterBar}</div>;
+        if (component.type === 'filter_bar') return lifted || presenting || tabbed ? null : <div key={component.id} className={cn('min-w-0', matrix && 'min-h-0')} style={gridStyle(component.layout[breakpoint])}>{filterBar}</div>;
         const content = contentOf(component);
         return content === null ? null : <PublishedGridItem key={component.id} component={component} breakpoint={breakpoint} matrix={matrix !== null} rowOffset={matrix?.band ?? 0} title={localized(component.props.title, locales)}>{content}</PublishedGridItem>;
       })}</section>
@@ -516,22 +526,28 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
   const updatedAt = Object.values(executedByBinding).sort().at(-1) ?? null;
   const toggleFullscreen = () => {
     if (window.document.fullscreenElement) void window.document.exitFullscreen().catch(() => {});
-    else void articleRef.current?.requestFullscreen().catch(() => {});
+    else void articleEl?.requestFullscreen().catch(() => {});
   };
   const toolbarButton = 'inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs font-medium text-text-secondary transition-colors duration-(--duration-fast) hover:bg-surface-hover hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 pointer-coarse:h-(--touch-min)';
 
-  return <BindingSourceProvider source={bindingSource}><article ref={articleRef} style={{ zoom: REPORT_ZOOM }} className={cn('north-enter mx-auto w-full max-w-[1680px]', fitted ? 'flex h-full flex-col gap-2 p-2 lg:p-3' : 'space-y-5 p-4 lg:p-5', fullscreen && 'max-w-none overflow-auto bg-background')}>
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <h1 className={cn('font-display font-semibold', fitted ? 'text-lg' : 'text-2xl')}>{title}</h1>
-      <div className="flex items-center gap-2">
-        {updatedAt ? <span className="mr-1 hidden text-right text-[11px] leading-tight text-text-muted sm:block"><span className="block">{t('pres.updated')}</span><span className="block tabular-nums text-text-secondary">{new Intl.DateTimeFormat(intlTag(locale), { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(updatedAt))}</span></span> : null}
+  const actions = <div className="flex items-center gap-2">
+        {updatedAt ? <span className="mr-1 hidden text-right text-[length:calc(11px*var(--s,1))] leading-tight text-text-muted sm:block"><span className="block">{t('pres.updated')}</span><span className="block tabular-nums text-text-secondary">{new Intl.DateTimeFormat(intlTag(locale), { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(updatedAt))}</span></span> : null}
         <button type="button" className={toolbarButton} onClick={() => setVersion((value) => value + 1)}><ArrowsClockwise className="size-3.5" aria-hidden="true" />{t('panel.refresh')}</button>
         {sections.length > 0 ? <button type="button" className={toolbarButton} onClick={() => setPresenting(selections)}><Presentation className="size-3.5" aria-hidden="true" />{t('pres.start')}</button> : null}
         {window.document.fullscreenEnabled ? <button type="button" className={toolbarButton} onClick={toggleFullscreen} aria-pressed={fullscreen}>{fullscreen ? <ArrowsIn className="size-3.5" aria-hidden="true" /> : <ArrowsOut className="size-3.5" aria-hidden="true" />}{fullscreen ? t('pres.exitFullscreen') : t('pres.fullscreen')}</button> : null}
-      </div>
+      </div>;
+
+  return <BindingSourceProvider source={bindingSource}><article ref={articleRef} style={{ '--s': scale } as CSSProperties} className={cn('report-scale north-enter mx-auto w-full max-w-[1680px]', fitted ? 'flex h-full flex-col gap-2 p-2 lg:p-3' : 'space-y-5 p-4 lg:p-5', fullscreen && 'max-w-none overflow-auto bg-background')}>
+    <div className={cn('flex flex-wrap items-center gap-3', titledByDocument ? 'justify-end' : 'justify-between')}>
+      {titledByDocument ? null : <h1 className={cn('font-display font-semibold', fitted ? 'text-lg' : 'text-2xl')}>{title}</h1>}
+      {mode === 'phone' ? null : actions}
     </div>
     {hasFilterSlot ? null : filterBar}
-    {presenting ? null : sections.map(renderSection)}
+    {tabbed && hasFilterSlot ? filterBar : null}
+    {tabbed ? <div role="tablist" className="flex shrink-0 gap-1 overflow-x-auto rounded-xl bg-surface-hover p-1">{sections.map((section, index) => (
+      <button key={section.id} type="button" role="tab" aria-selected={index === activeTab} onClick={() => setPhoneTab(index)} className={cn('min-h-(--touch-min) min-w-0 flex-1 whitespace-nowrap rounded-lg px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40', index === activeTab ? 'bg-surface text-accent shadow-xs' : 'text-text-secondary hover:text-text')}>{sceneTitle(section, locales) || t('pres.scene', { n: index + 1 })}</button>
+    ))}</div> : null}
+    {presenting ? null : tabbed ? renderSection(sections[activeTab]!) : sections.map(renderSection)}
     {presenting ? <Suspense fallback={null}><PresentationMode
       title={title}
       scenes={sections.map((section, index) => ({ id: section.id, title: sceneTitle(section, locales) || t('pres.scene', { n: index + 1 }), content: renderSection(section) }))}
@@ -539,6 +555,7 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
       updatedAt={updatedAt}
       onExit={() => setPresenting(null)}
     /></Suspense> : null}
+    {mode === 'phone' ? <div className="sticky bottom-0 z-(--z-sticky) -mx-4 -mb-4 mt-2 border-t border-border bg-surface/95 p-2 backdrop-blur [&>div]:justify-stretch [&>div>button]:flex-1 [&>div>button]:justify-center [&>div>span]:hidden">{actions}</div> : null}
   </article></BindingSourceProvider>;
 }
 

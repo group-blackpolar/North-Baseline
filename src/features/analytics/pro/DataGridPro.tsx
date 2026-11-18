@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, CaretDown, CaretLeft, CaretRight, CaretUpDown, Columns, DotsThreeVertical, DownloadSimple, Eye, EyeSlash, FunnelSimple, MagnifyingGlass, WarningCircle } from '@phosphor-icons/react';
+import { ArrowDown, ArrowUp, CaretDown, CaretLeft, CaretRight, CaretUpDown, Columns, DotsThreeVertical, DownloadSimple, Eye, EyeSlash, FunnelSimple, MagnifyingGlass } from '@phosphor-icons/react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { Popover } from '@/components/ui/popover';
 import { Sheet } from '@/components/ui/sheet';
@@ -10,15 +10,15 @@ import { useCellFill, useElementSize } from '../cellFill';
 import type { DatasetQueryFilter } from '../datasetQuery';
 import type { AnalyticsRow } from '../types';
 import { analyticsRows, bindingIdOf, useBindingResult, useBindingSource } from './bindingSource';
+import { ReportError } from './ReportError';
+import { ExportDialog } from './ExportDialog';
 import { asNumber, formatValue, localizedText, TONE_VARS, toneOf, type ValueFormat } from './format';
-import { defaultView, moveColumn, pageWindow, parseColumns, reconcileView, rowKeyOf, sparklineSeries, toCsv, toggleColumn, trendDirection, visibleColumns, type GridColumn, type GridView } from './gridState';
+import { defaultView, moveColumn, pageWindow, parseColumns, reconcileView, rowKeyOf, sparklineSeries, toggleColumn, trendDirection, visibleColumns, type GridColumn, type GridView } from './gridState';
 
 type Props = Record<string, unknown>;
 type Sort = { key: string; direction: 'ASC' | 'DESC' };
 type TrendConfig = { binding: string; rowKeys: string[]; categoryKey: string; valueKey: string };
 
-const EXPORT_CAP = 10_000;
-const PAGE_FETCH = 1_000;
 
 function readTrend(value: unknown): TrendConfig | null {
   if (!value || typeof value !== 'object') return null;
@@ -60,7 +60,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
   const defaultSize = typeof props.defaultPageSize === 'number' && sizes.includes(props.defaultPageSize) ? props.defaultPageSize : sizes[0]!;
   const searchable = props.searchable !== false;
   const selectable = props.selectable === true;
-  const exportable = props.exportable !== false;
+  const exportable = props.exportable !== false && Boolean(source?.export) && Boolean(dataId);
   const title = localizedText(props.title, locales);
   const defaultSort = (props.defaultSort && typeof (props.defaultSort as Sort).key === 'string' ? props.defaultSort as Sort : undefined);
   const inspectorKeys = Array.isArray(props.inspectorKeys) ? props.inspectorKeys.filter((key): key is string => typeof key === 'string') : null;
@@ -75,8 +75,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [inspected, setInspected] = useState<AnalyticsRow | null>(null);
-  const [exporting, setExporting] = useState<{ done: number; total: number } | null>(null);
-  const [exportNote, setExportNote] = useState<string | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setSearch(searchDraft.trim()), 300);
@@ -144,39 +143,6 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
     setSort((current) => (current?.key !== column.key ? { key: column.key, direction: 'DESC' } : current.direction === 'DESC' ? { key: column.key, direction: 'ASC' } : defaultSort && defaultSort.key !== column.key ? defaultSort : undefined));
   };
 
-  const exportCsv = async () => {
-    if (!source || !dataId) return;
-    setExportNote(null);
-    const all: AnalyticsRow[] = [];
-    const controller = new AbortController();
-    try {
-      let offset = 0;
-      let grand = total;
-      setExporting({ done: 0, total: Math.min(total, EXPORT_CAP) });
-      while (offset < grand && all.length < EXPORT_CAP) {
-        const response = await source.fetch(dataId, { filters: source.filtersFor(dataId), ...(sort ? { sort } : {}), ...(search ? { search } : {}), offset, limit: PAGE_FETCH }, controller.signal);
-        const chunk = analyticsRows(response);
-        if (!chunk.length) break;
-        all.push(...chunk);
-        grand = response.totalRows ?? grand;
-        offset += chunk.length;
-        setExporting({ done: Math.min(all.length, EXPORT_CAP), total: Math.min(grand, EXPORT_CAP) });
-      }
-      const exportable = all.slice(0, EXPORT_CAP);
-      const exportColumns = shown.filter((column) => column.kind !== 'sparkline' && column.kind !== 'actions' && column.kind !== 'rank');
-      const blob = new Blob([`﻿${toCsv(exportColumns, exportable)}`], { type: 'text/csv;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const link = Object.assign(document.createElement('a'), { href: url, download: `${(title || 'export').replace(/[^\w.-]+/g, '_')}.csv` });
-      document.body.append(link); link.click(); link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
-      if (grand > EXPORT_CAP) setExportNote(t('grid.exportCapped', { n: numberFormat.format(EXPORT_CAP) }));
-    } catch {
-      setExportNote(t('grid.exportError'));
-    } finally {
-      setExporting(null);
-    }
-  };
-
   const cell = (column: GridColumn, row: AnalyticsRow, _id: string, index: number) => {
     const raw = row[column.key] ?? null;
     if (column.kind === 'rank') return <span className="tabular-nums text-text-secondary">{numberFormat.format((page - 1) * pageSize + index + 1)}</span>;
@@ -197,7 +163,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
         </div>
       );
     }
-    if (column.kind === 'badge') return raw === null ? <span className="text-text-muted">—</span> : <span className="inline-flex max-w-full items-center rounded-md bg-surface-hover px-1.5 py-0.5 text-[0.72rem] font-medium text-text-secondary"><span className="truncate" title={String(raw)}>{String(raw)}</span></span>;
+    if (column.kind === 'badge') return raw === null ? <span className="text-text-muted">—</span> : <span className="inline-flex max-w-full items-center rounded-md bg-surface-hover px-1.5 py-0.5 text-[length:calc(0.72rem*var(--s,1))] font-medium text-text-secondary"><span className="truncate" title={String(raw)}>{String(raw)}</span></span>;
     if (column.zeroDash && (raw === null || asNumber(raw) === 0)) return <span className="text-text-muted">-</span>;
     const format: ValueFormat = column.kind === 'number' ? 'number' : column.kind === 'decimal' ? 'decimal' : column.kind === 'date' ? 'date' : column.kind === 'month' ? 'month' : column.kind === 'year' ? 'year' : 'text';
     const text = formatValue(raw, format, locale);
@@ -215,7 +181,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
   return (
     <div className="flex h-full min-h-0 flex-col" data-grid>
       <div className={cn('flex flex-wrap items-center gap-2', dense ? 'mb-1' : 'mb-2')}>
-        <h3 className="mr-auto min-w-0 truncate font-display text-[0.95rem] font-semibold text-text">
+        <h3 className="mr-auto min-w-0 truncate font-display text-[length:calc(0.95rem*var(--s,1))] font-semibold text-text">
           {title}{data.response && total > 0 ? <span className="ml-1.5 text-xs font-normal text-text-muted">({numberFormat.format(Math.min(total, (page - 1) * pageSize + 1))} - {numberFormat.format(Math.min(total, page * pageSize))})</span> : null}
         </h3>
         {searchable ? (
@@ -226,23 +192,23 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
           </label>
         ) : null}
         {exportable ? (
-          <button type="button" onClick={() => void exportCsv()} disabled={!data.response || total === 0 || exporting !== null} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text disabled:cursor-not-allowed disabled:opacity-50">
-            <DownloadSimple className="size-3.5" aria-hidden="true" />{exporting ? `${numberFormat.format(exporting.done)} / ${numberFormat.format(exporting.total)}` : t('grid.export')}
+          <button type="button" onClick={() => setExportOpen(true)} disabled={!data.response || total === 0} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text disabled:cursor-not-allowed disabled:opacity-50">
+            <DownloadSimple className="size-3.5" aria-hidden="true" />{t('grid.export')}
           </button>
         ) : null}
         <ColumnsMenu columns={columns} view={view} onChange={setView} />
       </div>
-      {exportNote ? <p role="status" className="mb-2 text-xs text-text-muted">{exportNote}</p> : null}
+      {exportOpen && source?.export && dataId ? <ExportDialog open onClose={() => setExportOpen(false)} total={total} run={(request, signal) => source.export!(dataId, request, signal)} request={{ filters: source.filtersFor(dataId), ...(sort ? { sort } : {}), ...(search ? { search } : {}), columns: shown.filter((column) => column.kind !== 'sparkline' && column.kind !== 'actions' && column.kind !== 'rank').map((column) => ({ key: column.key, label: column.label })) }} /> : null}
 
       <div ref={scroller} className={cn('relative min-h-0 flex-1 rounded-lg border border-border', 'overflow-auto', data.refreshing && 'opacity-70 transition-opacity')} aria-busy={data.status === 'loading' || data.refreshing}>
         {data.status === 'error' ? (
-          <div role="alert" className="flex min-h-40 flex-col items-center justify-center gap-2 text-xs text-error"><WarningCircle className="size-5" aria-hidden="true" />{data.error?.message || t('analytics.error')}<button type="button" className="rounded-md border border-border px-2.5 py-1 font-medium text-text hover:bg-surface-hover" onClick={data.reload}>{t('flt.retry')}</button></div>
+          <ReportError status={data.error?.status} message={data.error?.message} onRetry={data.reload} />
         ) : data.status !== 'ready' && !data.response ? (
           <div className="space-y-1.5 p-3" aria-hidden="true">{Array.from({ length: 8 }, (_, index) => <Skeleton key={index} className="h-6 w-full" />)}</div>
         ) : rows.length === 0 ? (
           <p role="status" className="flex min-h-40 items-center justify-center px-4 text-center text-xs text-text-muted">{t('grid.empty')}</p>
         ) : (
-          <table style={tableWidth ? { minWidth: tableWidth } : undefined} className={cn('w-full border-separate border-spacing-0 text-left', dense ? 'table-fixed text-[0.7rem]' : 'text-xs')}>
+          <table style={tableWidth ? { minWidth: tableWidth } : undefined} className={cn('w-full border-separate border-spacing-0 text-left', dense ? 'table-fixed text-[length:calc(0.7rem*var(--s,1))]' : 'text-xs')}>
             <thead className="sticky top-0 z-10">
               <tr className="bg-[color-mix(in_srgb,var(--color-surface-hover)_70%,var(--color-surface))]">
                 {selectable ? <th scope="col" className="w-8 border-b border-border px-2"><span className="sr-only">{t('grid.select')}</span></th> : null}
@@ -252,7 +218,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
                   const sortableColumn = column.sortable !== false && column.kind !== 'sparkline' && column.kind !== 'actions';
                   const width = widthOf(column);
                   return (
-                    <th key={column.key} scope="col" style={width ? { width } : undefined} aria-sort={active ? (sort.direction === 'ASC' ? 'ascending' : 'descending') : 'none'} className="group/th relative border-b border-border p-0 text-[0.68rem] font-semibold uppercase tracking-wide text-text-muted">
+                    <th key={column.key} scope="col" style={width ? { width } : undefined} aria-sort={active ? (sort.direction === 'ASC' ? 'ascending' : 'descending') : 'none'} className="group/th relative border-b border-border p-0 text-[length:calc(0.68rem*var(--s,1))] font-semibold uppercase tracking-wide text-text-muted">
                       <button type="button" disabled={!sortableColumn} onClick={() => toggleSort(column)} className={cn('flex w-full items-center gap-1 transition-colors', dense ? 'h-7 px-1.5' : 'h-9 px-3', align(column) === 'right' && 'justify-end', align(column) === 'center' && 'justify-center', sortableColumn && 'hover:bg-surface-hover hover:text-text')}>
                         <span className="truncate">{column.label}</span>
                         {sortableColumn ? <Icon className={cn('size-3 shrink-0', active ? 'text-accent' : 'text-text-muted/70')} aria-hidden="true" /> : null}
@@ -367,7 +333,7 @@ function ColumnsMenu({ columns, view, onChange }: { columns: GridColumn[]; view:
             );
           })}
         </ul>
-        <div className="border-t border-border px-3 py-1.5"><button type="button" className="text-[11px] font-medium text-accent hover:underline" onClick={() => onChange(defaultView(columns))}>{t('grid.resetColumns')}</button></div>
+        <div className="border-t border-border px-3 py-1.5"><button type="button" className="text-[length:calc(11px*var(--s,1))] font-medium text-accent hover:underline" onClick={() => onChange(defaultView(columns))}>{t('grid.resetColumns')}</button></div>
       </Popover>
     </>
   );
@@ -397,7 +363,7 @@ function Inspector({ row, columns, series, filterable, onFilter }: { row: Analyt
   const { t, locale } = useI18n();
   return (
     <div className="space-y-4">
-      {series && series.length > 1 ? <section aria-label={t('grid.trend')} className="rounded-lg border border-border p-3"><p className="mb-1 text-[0.68rem] font-semibold uppercase tracking-wide text-text-muted">{t('grid.trend')}</p><Sparkline values={series} color={trendDirection(series) === 'down' ? '#E0475B' : '#1F9D63'} className="h-14 w-full" label={t('grid.trend')} /></section> : null}
+      {series && series.length > 1 ? <section aria-label={t('grid.trend')} className="rounded-lg border border-border p-3"><p className="mb-1 text-[length:calc(0.68rem*var(--s,1))] font-semibold uppercase tracking-wide text-text-muted">{t('grid.trend')}</p><Sparkline values={series} color={trendDirection(series) === 'down' ? '#E0475B' : '#1F9D63'} className="h-14 w-full" label={t('grid.trend')} /></section> : null}
       <dl className="divide-y divide-border/60">
         {columns.map((column) => {
           const format: ValueFormat = column.kind === 'number' || column.kind === 'bar' ? 'number' : column.kind === 'decimal' ? 'decimal' : column.kind === 'date' ? 'date' : column.kind === 'month' ? 'month' : column.kind === 'year' ? 'year' : 'text';
@@ -407,7 +373,7 @@ function Inspector({ row, columns, series, filterable, onFilter }: { row: Analyt
               <dt className="shrink-0 text-xs text-text-muted">{column.label}</dt>
               <dd className="min-w-0 break-words text-right text-xs font-medium text-text">
                 {formatValue(raw, format, locale)}
-                {typeof raw === 'string' && filterable(column.key) ? <button type="button" onClick={() => onFilter(column.key, raw)} className="ml-2 inline-flex items-center gap-1 text-[11px] font-medium text-accent hover:underline"><FunnelSimple className="size-3" aria-hidden="true" />{t('grid.filter')}</button> : null}
+                {typeof raw === 'string' && filterable(column.key) ? <button type="button" onClick={() => onFilter(column.key, raw)} className="ml-2 inline-flex items-center gap-1 text-[length:calc(11px*var(--s,1))] font-medium text-accent hover:underline"><FunnelSimple className="size-3" aria-hidden="true" />{t('grid.filter')}</button> : null}
               </dd>
             </div>
           );

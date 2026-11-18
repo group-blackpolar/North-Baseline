@@ -1,5 +1,5 @@
 import { useCallback, useState, type ReactNode } from 'react';
-import { ArrowDown, ArrowSquareOut, ArrowUp, Archive, ArrowsLeftRight, Copy, Eye, FolderPlus, PencilSimple, Plus, SidebarSimple, Trash } from '@phosphor-icons/react';
+import { ArrowDown, ArrowSquareOut, ArrowUp, Archive, ArrowsLeftRight, Copy, Eye, FolderPlus, PencilSimple, SidebarSimple, Trash } from '@phosphor-icons/react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,7 @@ import { useI18n } from '@/lib/i18n';
 import { archiveResource, cloneTaxonomyResource, deleteResource, reorderResources, updatePanel, updateSubcategory } from '@/lib/northAdmin';
 import { errorText } from '@/features/access-admin/ui';
 import { selectClass } from '@/features/access-admin/ui';
-import { localName, type ViewResource } from './resources';
+import { localName, pageOf, type ViewResource } from './resources';
 import type { MenuItem } from './ContextMenu';
 import type { ModalState } from '../ViewsEditorContext';
 
@@ -103,16 +103,18 @@ export function useViewActions(input: ViewActionsInput) {
     const item = (id: string, label: string, icon: ReactNode, onSelect: () => void, extra: Partial<Extract<MenuItem, { type: 'item' }>> = {}): MenuItem => ({ type: 'item', id, label, icon, onSelect, ...extra });
 
     items.push(item('inspect', t('adm2.views.act.inspect'), <SidebarSimple />, () => onInspect(resource)));
-    if (resource.kind === 'PANEL') {
-      items.push(item('open', t('adm2.views.act.open'), <ArrowSquareOut />, () => onOpen(resource), { disabled: resource.status !== 'PUBLISHED' }));
+    // A subcategory IS its page: it offers the page actions itself (the page is created on first edit when it has none).
+    const page = pageOf(resources, resource);
+    if (resource.kind === 'PANEL' || resource.kind === 'SUBCATEGORY') {
+      items.push(item('open', t('adm2.views.act.open'), <ArrowSquareOut />, () => onOpen(resource), { disabled: page?.status !== 'PUBLISHED' }));
       items.push(item('edit', t('adm2.views.act.edit'), <PencilSimple />, () => onEdit(resource), { disabled: locked || archived }));
       items.push(item('preview', t('adm2.views.act.preview'), <Eye />, () => onEdit(resource), { disabled: locked || archived }));
     }
     if (resource.kind === 'CATEGORY') items.push(item('add-sub', t('adm2.views.act.newSubcategory'), <FolderPlus />, () => setModal({ type: 'create_subcategory', categoryId: resource.id }), { disabled: locked || archived }));
-    if (resource.kind === 'SUBCATEGORY') items.push(item('add-view', t('adm2.views.act.newView'), <Plus />, () => setModal({ type: 'create_view', categoryId: resource.categoryId, subcategoryId: resource.id }), { disabled: locked || archived }));
     items.push({ type: 'separator' });
     items.push(item('rename', t('adm2.views.act.rename'), <PencilSimple />, () => openRename(resource), { disabled: locked || archived, hint: 'F2' }));
-    items.push(item('duplicate', t('adm2.views.act.duplicate'), <Copy />, () => duplicate(resource), { disabled: locked || archived }));
+    // A page is never duplicated on its own (a subcategory holds one page): duplicating the subcategory copies its page.
+    if (resource.kind !== 'PANEL') items.push(item('duplicate', t('adm2.views.act.duplicate'), <Copy />, () => duplicate(resource), { disabled: locked || archived }));
     if (resource.kind !== 'CATEGORY') items.push(item('move', t('adm2.views.act.move'), <ArrowsLeftRight />, () => { setTarget(''); setDialogError(null); setMoving(resource); }, { disabled: locked || archived }));
     items.push(item('up', t('adm2.views.act.moveUp'), <ArrowUp />, () => reorder(resource, -1), { disabled: locked || index <= 0 }));
     items.push(item('down', t('adm2.views.act.moveDown'), <ArrowDown />, () => reorder(resource, 1), { disabled: locked || index < 0 || index >= list.length - 1 }));
@@ -121,7 +123,7 @@ export function useViewActions(input: ViewActionsInput) {
     items.push(item('delete', t('adm2.views.act.delete'), <Trash />, () => requestDelete(resource), { danger: true, disabled: locked }));
     return items;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [siblings, t, onInspect, onOpen, onEdit, setModal, locale]);
+  }, [siblings, resources, t, onInspect, onOpen, onEdit, setModal, locale]);
 
   const dialogs = (
     <>

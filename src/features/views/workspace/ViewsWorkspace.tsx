@@ -9,11 +9,13 @@ import { useOrganization } from '@/context/OrganizationContext';
 import { useTabs } from '@/context/TabsContext';
 import { useNotifications } from '@/context/NotificationContext';
 import { useI18n } from '@/lib/i18n';
+import { ensureSubcategoryPage } from '@/lib/northAdmin';
 import { resolvePublishedPanel } from '@/lib/organizations';
 import { publishedTabFromResolved } from '@/lib/publishedNavigation';
 import { pushPath } from '@/lib/routes';
 import { useElementWidth } from '@/lib/useElementWidth';
 import { cn } from '@/lib/utils';
+import { errorText } from '@/features/access-admin/ui';
 import { listMembers } from '@/features/access-admin/api';
 import { listAuditEntries, listDatasets } from '@/features/admin-center/api';
 import { useResource } from '@/features/admin-center/hooks';
@@ -23,7 +25,7 @@ import { FilterChips, FilterPanel } from './FilterPanel';
 import { ResourceInspector } from './ResourceInspector';
 import { ResultsPane, formatWhen, type DisplayMode } from './ResultsPane';
 import { StructureExplorer } from './StructureExplorer';
-import { activeFilterCount, detectHealth, flattenTree, localName, queryResources, summarize, emptyFilters, type GroupBy, type TreeCategory, type ViewFilters, type ViewResource } from './resources';
+import { pageOf, activeFilterCount, detectHealth, flattenTree, localName, queryResources, summarize, emptyFilters, type GroupBy, type TreeCategory, type ViewFilters, type ViewResource } from './resources';
 import { useRevisionInfo, useSavedFilters, useViewFilters } from './useViewsWorkspace';
 import { useViewActions } from './useViewActions';
 
@@ -86,29 +88,38 @@ export function ViewsWorkspace({ loadError, onRetry, onOpenEditor }: { loadError
 
   useEffect(() => { try { window.localStorage.setItem(MODE_KEY, display); } catch { /* ignore */ } }, [display]);
 
-  const edit = useCallback((resource: ViewResource) => {
-    if (resource.kind !== 'PANEL') return;
+  const pageFor = useCallback((resource: ViewResource) => pageOf(resources, resource), [resources]);
+
+  const edit = useCallback(async (resource: ViewResource) => {
+    if (resource.kind === 'CATEGORY') return;
+    let panelId = pageFor(resource)?.id;
+    if (!panelId) {
+      // A subcategory without a page yet: CORECROW creates it from the subcategory itself, then the Studio opens on it.
+      try { panelId = (await ensureSubcategoryPage(organizationId, resource.id)).id; void refreshTaxonomy(); }
+      catch (reason) { push({ type: 'error', title: errorText(reason) }); return; }
+    }
     // The Studio owns a whole browser tab with its own URL. If the browser blocks the new tab, edit in place instead.
     if (activeOrganization?.slug) {
-      const opened = window.open(`/${encodeURIComponent(activeOrganization.slug)}/studio/${encodeURIComponent(resource.id)}`, '_blank'); // no noopener: window.open would return null even when it succeeded, and the tab is same-origin
+      const opened = window.open(`/${encodeURIComponent(activeOrganization.slug)}/studio/${encodeURIComponent(panelId)}`, '_blank'); // no noopener: window.open would return null even when it succeeded, and the tab is same-origin
       if (opened) return;
     }
-    selectPanel(resource.categoryId, resource.subcategoryId!, resource.id);
+    selectPanel(resource.categoryId, resource.kind === 'SUBCATEGORY' ? resource.id : resource.subcategoryId!, panelId);
     setActiveMode('editor');
     onOpenEditor();
-  }, [activeOrganization?.slug, onOpenEditor, selectPanel, setActiveMode]);
+  }, [activeOrganization?.slug, onOpenEditor, organizationId, pageFor, push, refreshTaxonomy, selectPanel, setActiveMode]);
 
-  /** Opens the *published* view in the shell through the normal tab system (current tab navigates; no new tab). */
+  /** Opens the *published* page in the shell through the normal tab system (current tab navigates; no new tab). */
   const open = useCallback(async (resource: ViewResource) => {
+    const page = pageFor(resource);
     const category = resources.find((item) => item.id === resource.categoryId);
-    const subcategory = resources.find((item) => item.id === resource.subcategoryId);
-    if (resource.kind !== 'PANEL' || !activeOrganization?.slug || !category || !subcategory) return;
+    const subcategory = resources.find((item) => item.id === (resource.kind === 'SUBCATEGORY' ? resource.id : resource.subcategoryId));
+    if (!page || !activeOrganization?.slug || !category || !subcategory) return;
     try {
-      const result = await resolvePublishedPanel({ organizationSlug: activeOrganization.slug, categorySlug: category.slug, subcategorySlug: subcategory.slug, panelSlug: resource.slug });
+      const result = await resolvePublishedPanel({ organizationSlug: activeOrganization.slug, categorySlug: category.slug, subcategorySlug: subcategory.slug, panelSlug: page.slug });
       navigate(result.category.id, result.subcategory.id, publishedTabFromResolved(result));
       if (result.canonicalPath) pushPath(result.canonicalPath);
     } catch (reason) { push({ type: 'error', title: reason instanceof Error ? reason.message : t('state.loadError') }); }
-  }, [activeOrganization?.slug, navigate, push, resources, t]);
+  }, [activeOrganization?.slug, navigate, pageFor, push, resources, t]);
 
   const inspect = useCallback((resource: ViewResource) => { setSelectedId(resource.id); if (!wide) setInspectorSheet(true); else setInspectorOpen(true); }, [wide]);
 
@@ -125,12 +136,10 @@ export function ViewsWorkspace({ loadError, onRetry, onOpenEditor }: { loadError
     else if (resource.kind === 'SUBCATEGORY') patch({ categoryIds: [], subcategoryIds: [resource.id] });
     if (!wide) { setExplorerOpen(false); }
   };
-  const activate = (resource: ViewResource) => { if (resource.kind === 'PANEL') edit(resource); else inspect(resource); };
+  const activate = (resource: ViewResource) => { if (resource.kind === 'PANEL' || (resource.kind === 'SUBCATEGORY' && resource.resourceKind === 'CONTENT')) void edit(resource); else inspect(resource); };
 
   // Context for "create" quick actions: the selected node (or its parent) decides where the new resource goes.
   const targetCategory = selected ? resources.find((resource) => resource.id === selected.categoryId) : resources.filter((r) => r.kind === 'CATEGORY' && r.resourceKind === 'CONTENT' && r.status === 'ACTIVE').length === 1 ? resources.find((r) => r.kind === 'CATEGORY' && r.resourceKind === 'CONTENT' && r.status === 'ACTIVE') : undefined;
-  const contentSubs = resources.filter((r) => r.kind === 'SUBCATEGORY' && r.resourceKind === 'CONTENT' && r.status === 'ACTIVE');
-  const targetSub = selected?.subcategoryId ? resources.find((resource) => resource.id === selected.subcategoryId) : contentSubs.length === 1 ? contentSubs[0] : undefined;
   const canCreate = taxonomy !== null; // the management tree is only served to people CORECROW authorizes to manage structure
 
   const cards: Array<{ id: string; label: string; value: number; icon: IconComponent; apply?: Partial<ViewFilters>; note?: string }> = [
@@ -180,7 +189,7 @@ export function ViewsWorkspace({ loadError, onRetry, onOpenEditor }: { loadError
             <Input className="pl-7" value={filters.q} onChange={(event) => patch({ q: event.target.value })} placeholder={t('adm2.views.search')} aria-label={t('adm2.views.search')} />
           </div>
           <div className="ml-auto flex shrink-0 items-center gap-1">
-            <Button size="sm" variant="accent" disabled={!canCreate} onClick={() => (targetSub ? setModal({ type: 'create_view', categoryId: targetSub.categoryId, subcategoryId: targetSub.id }) : setModal({ type: 'create_category' }))} title={targetSub ? undefined : t('adm2.views.createViewHint')}><Plus /><span className="hidden @md:inline">{targetSub ? t('adm2.views.qa.createView') : t('adm2.views.qa.createCategory')}</span><span className="sr-only @md:hidden">{targetSub ? t('adm2.views.qa.createView') : t('adm2.views.qa.createCategory')}</span></Button>
+            <Button size="sm" variant="accent" disabled={!canCreate} onClick={() => (targetCategory ? setModal({ type: 'create_page', categoryId: targetCategory.id }) : setModal({ type: 'create_category' }))} title={targetCategory ? undefined : t('adm2.views.createViewHint')}><Plus /><span className="hidden @md:inline">{targetCategory ? t('adm2.views.qa.createPage') : t('adm2.views.qa.createCategory')}</span><span className="sr-only @md:hidden">{targetCategory ? t('adm2.views.qa.createPage') : t('adm2.views.qa.createCategory')}</span></Button>
             <Button size="icon" variant="ghost" aria-label={t('access.refresh')} title={t('access.refresh')} onClick={onRetry}><ArrowsClockwise /></Button>
             <Button size="icon" variant="ghost" aria-label={t('adm2.views.inspector.toggle')} aria-pressed={wide ? inspectorOpen : inspectorSheet} onClick={() => (wide ? setInspectorOpen((value) => !value) : setInspectorSheet(true))}><SidebarSimple className="-scale-x-100" /></Button>
           </div>
@@ -215,7 +224,7 @@ export function ViewsWorkspace({ loadError, onRetry, onOpenEditor }: { loadError
                     <div className="np-card space-y-2 p-3">
                       <h2 className="text-xs font-semibold text-text">{t('adm2.qa.title')}</h2>
                       <div className="flex flex-wrap gap-1.5">
-                        <Button size="sm" variant="secondary" disabled={!canCreate || !targetSub} title={targetSub ? undefined : t('adm2.views.createViewHint')} onClick={() => targetSub && setModal({ type: 'create_view', categoryId: targetSub.categoryId, subcategoryId: targetSub.id })}><Plus />{t('adm2.views.qa.createView')}</Button>
+                        <Button size="sm" variant="secondary" disabled={!canCreate || !targetCategory} title={targetCategory ? undefined : t('adm2.views.createViewHint')} onClick={() => targetCategory && setModal({ type: 'create_page', categoryId: targetCategory.id })}><Plus />{t('adm2.views.qa.createPage')}</Button>
                         <Button size="sm" variant="secondary" disabled={!canCreate} onClick={() => setModal({ type: 'create_category' })}><FolderSimplePlus />{t('adm2.views.qa.createCategory')}</Button>
                         <Button size="sm" variant="secondary" disabled={!canCreate || !targetCategory} title={targetCategory ? undefined : t('adm2.views.createSubHint')} onClick={() => targetCategory && setModal({ type: 'create_subcategory', categoryId: targetCategory.id })}><FolderSimplePlus />{t('adm2.views.qa.createSubcategory')}</Button>
                         <Button size="sm" variant="secondary" onClick={() => setFilters({ ...emptyFilters(), kinds: ['PANEL'], statuses: ['DRAFT'] })}><PencilSimpleLine />{t('adm2.views.qa.openDrafts')}</Button>

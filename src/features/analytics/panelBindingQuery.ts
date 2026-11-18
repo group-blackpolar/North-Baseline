@@ -49,3 +49,26 @@ export function queryPanelAnalyticsBinding(
     { method: 'POST', body: JSON.stringify({ filters, ...options }), signal },
   );
 }
+
+export const EXPORT_MIN_ROWS = 100;
+export const EXPORT_MAX_ROWS = 10_000;
+
+export type ExportRequest = {
+  format: 'csv' | 'xlsx';
+  /** Between EXPORT_MIN_ROWS and min(total, EXPORT_MAX_ROWS); CORECROW re-validates it against the real total. */
+  count: number;
+  filters?: DatasetQueryFilter[];
+  sort?: { key: string; direction: 'ASC' | 'DESC' };
+  search?: string;
+  columns?: Array<{ key: string; label: string }>;
+};
+
+export type ExportResult = { format: 'csv' | 'xlsx'; filename: string; mime: string; total: number; rows: number; contentBase64: string };
+
+/** Audited, server-built CSV/XLSX of one published binding for the reader's current selection. */
+export function exportPanelAnalyticsBinding(organizationId: string, panelId: string, bindingId: string, request: ExportRequest, signal?: AbortSignal): Promise<ExportResult> {
+  return apiRequest<ExportResult>(
+    `/v1/organizations/${pathSegment(organizationId)}/panels/${pathSegment(panelId)}/analytics-bindings/${pathSegment(bindingId)}/export`,
+    { method: 'POST', body: JSON.stringify({ filters: [], ...request }), signal },
+  );
+}

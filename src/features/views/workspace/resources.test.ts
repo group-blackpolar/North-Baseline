@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
 import {
-  activeFilterCount, applyFilters, detectHealth, emptyFilters, filtersToParams, flattenTree, groupResources, paginate, paramsToFilters, queryResources, summarize,
+  activeFilterCount, applyFilters, detectHealth, pageOf, emptyFilters, filtersToParams, flattenTree, groupResources, paginate, paramsToFilters, queryResources, summarize,
   type TreeCategory,
 } from './resources.ts';
 
@@ -84,4 +84,21 @@ test('filters round-trip through URL params and reject junk', () => {
   assert.equal(junk.updatedFrom, '');
   assert.equal(junk.sort, 'updatedAt');
   assert.equal(junk.origin, 'all');
+});
+
+test('a subcategory is its page: the panel sharing its slug, else the first, else none', () => {
+  const tree: TreeCategory[] = [{ id: 'c', name: { en: 'C' }, slug: 'c', status: 'ACTIVE', resourceKind: 'CONTENT', subcategories: [
+    { id: 's1', name: { en: 'S1' }, slug: 's1', status: 'ACTIVE', resourceKind: 'CONTENT', categoryId: 'c', panels: [{ id: 'p1', name: { en: 'P' }, slug: 'p', status: 'PUBLISHED', resourceKind: 'CONTENT', subcategoryId: 's1' }] },
+    { id: 's2', name: { en: 'S2' }, slug: 's2', status: 'ACTIVE', resourceKind: 'CONTENT', categoryId: 'c', panels: [
+      { id: 'pa', name: { en: 'A' }, slug: 'other', status: 'PUBLISHED', resourceKind: 'CONTENT', subcategoryId: 's2' },
+      { id: 'pb', name: { en: 'B' }, slug: 's2', status: 'PUBLISHED', resourceKind: 'CONTENT', subcategoryId: 's2' }] },
+    { id: 's3', name: { en: 'S3' }, slug: 's3', status: 'ACTIVE', resourceKind: 'CONTENT', categoryId: 'c', panels: [] },
+  ] }];
+  const resources = flattenTree(tree);
+  const byId = (id: string) => resources.find((item) => item.id === id)!;
+  assert.equal(pageOf(resources, byId('s1'))?.id, 'p1');
+  assert.equal(pageOf(resources, byId('s2'))?.id, 'pb', 'legacy: the panel with the subcategory slug wins');
+  assert.equal(pageOf(resources, byId('s3')), null, 'no page yet: CORECROW creates it on first edit');
+  assert.equal(pageOf(resources, byId('p1'))?.id, 'p1');
+  assert.equal(pageOf(resources, byId('c')), null);
 });

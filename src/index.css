@@ -427,3 +427,17 @@ a.np-card:active, button.np-card:active, .np-card[role="button"]:active { transf
 /* Organization Home: short staggered card entrance (reduced motion is handled globally above). */
 @keyframes oh-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .oh-rise { animation: oh-rise 420ms var(--ease-standard, ease-out) both; animation-delay: calc(var(--i, 0) * 55ms); }
+
+/* Report scale: a report sets --s (0.6-1, measured from its own size, see views/reportScale.ts). Every Tailwind type size, spacing and
+   icon size inside it follows, so a smaller report shrinks its text and padding together and nothing has to scroll or be cut. */
+.report-scale {
+  --spacing: calc(0.25rem * var(--s, 1));
+  --text-xs: calc(0.75rem * var(--s, 1));
+  --text-sm: calc(0.875rem * var(--s, 1));
+  --text-base: calc(1rem * var(--s, 1));
+  --text-lg: calc(1.125rem * var(--s, 1));
+  --text-xl: calc(1.25rem * var(--s, 1));
+  --text-2xl: calc(1.5rem * var(--s, 1));
+  --text-3xl: calc(1.875rem * var(--s, 1));
+  --text-4xl: calc(2.25rem * var(--s, 1));
+}

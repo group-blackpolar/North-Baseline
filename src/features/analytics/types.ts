@@ -19,7 +19,7 @@ export type AnalyticsData = {
  */
 export type AnalyticsResult =
   | { state: 'loading' }
-  | { state: 'error'; message?: string }
+  | { state: 'error'; message?: string; /** HTTP status of the failed request (403 = no permission). */ status?: number }
   | { state: 'empty'; message?: string }
   | { state: 'ready'; data: AnalyticsData };
 

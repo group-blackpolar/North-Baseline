@@ -6,7 +6,7 @@ import { createContext, useContext, useEffect, useReducer, useRef, type ReactNod
 import { ApiError } from '@/lib/api';
 import type { DatasetQueryFilter, DatasetQueryRow } from '../datasetQuery';
 import type { AnalyticsRow, AnalyticsValue } from '../types';
-import type { PanelBindingFilterDefinition } from '../panelBindingQuery';
+import type { ExportRequest, ExportResult, PanelBindingFilterDefinition } from '../panelBindingQuery';
 
 export type BindingRequest = {
   filters?: DatasetQueryFilter[];
@@ -34,6 +34,8 @@ export type BindingSource = {
   /** The filters the reader selected, already translated through this binding's own allowlist. */
   filtersFor: (bindingId: string, exceptFieldId?: string) => DatasetQueryFilter[];
   fetch: (bindingId: string, request: BindingRequest, signal: AbortSignal) => Promise<BindingResponse>;
+  /** Server-built CSV/XLSX of a binding; absent where exporting is unavailable (previews, public showcases). */
+  export?: (bindingId: string, request: ExportRequest, signal?: AbortSignal) => Promise<ExportResult>;
   /** Published pages register filter definitions and the freshest execution time; previews ignore both. */
   report?: (bindingId: string, response: BindingResponse) => void;
   /** Lets a component (map bubble, grid row action) narrow the dashboard; absent where filtering is unavailable. */

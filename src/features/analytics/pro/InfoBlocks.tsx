@@ -94,9 +94,9 @@ export function HeroBlock({ props, locales }: { props: Props; locales: string[] 
       ) : null}
       {props.showBrand === false ? null : <div className="hidden shrink-0 @[560px]:block">{typeof props.logoImage === 'string' ? <img src={props.logoImage} alt="" className="h-full max-h-24 w-auto rounded-lg bg-white object-contain p-1 @[900px]:max-h-28" /> : <OrgBrand props={{ showName: false }} size="hero" />}</div>}
       <div className="min-w-0 flex-1">
-        {eyebrow ? <p className="truncate text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-text-muted @[700px]:text-[0.7rem]">{eyebrow}</p> : null}
+        {eyebrow ? <p className="truncate text-[length:calc(0.62rem*var(--s,1))] font-semibold uppercase tracking-[0.14em] text-text-muted @[700px]:text-[length:calc(0.7rem*var(--s,1))]">{eyebrow}</p> : null}
         <h2 className="font-display text-[clamp(1.1rem,3.6cqw,2.25rem)] font-extrabold uppercase leading-[1.05] tracking-tight text-text">{title}</h2>
-        {body ? <p className="mt-1 line-clamp-3 max-w-[62ch] text-[0.74rem] leading-snug text-text-secondary @[700px]:text-[0.84rem]">{body}</p> : null}
+        {body ? <p className="mt-1 line-clamp-3 max-w-[62ch] text-[length:calc(0.74rem*var(--s,1))] leading-snug text-text-secondary @[700px]:text-[length:calc(0.84rem*var(--s,1))]">{body}</p> : null}
         {chips.length ? (
           <ul className="mt-2 hidden flex-wrap gap-2 @[560px]:flex">
             {chips.map((chip, index) => { const Glyph = iconOf(chip.icon); return <li key={index} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface/80 px-3 py-1 text-xs text-text-secondary"><Glyph className="size-3.5" aria-hidden="true" />{localizedText(chip.label, locales)}</li>; })}
@@ -118,14 +118,14 @@ export function HeroBlock({ props, locales }: { props: Props; locales: string[] 
 /** Page title bar: the organization's primary colour with white text, full width of its cell. */
 export function TitleBarBlock({ props, locales }: { props: Props; locales: string[] }) {
   const align = props.align === 'center' ? 'justify-center text-center' : props.align === 'right' ? 'justify-end text-right' : 'justify-start text-left';
-  return <div className={cn('flex h-full min-h-9 items-center rounded-lg px-4 font-display text-[0.95rem] font-semibold tracking-wide text-white', align)} style={{ background: 'var(--brand-primary, #1B3A7A)' }}><h2 className="truncate">{localizedText(props.text, locales)}</h2></div>;
+  return <div className={cn('flex h-full min-h-9 items-center rounded-lg px-4 font-display text-[length:calc(0.95rem*var(--s,1))] font-semibold tracking-wide text-white', align)} style={{ background: 'var(--brand-primary, #1B3A7A)' }}><h2 className="truncate">{localizedText(props.text, locales)}</h2></div>;
 }
 
 function BlockTitle({ props, locales }: { props: Props; locales: string[] }) {
   const title = localizedText(props.title, locales);
   if (!title) return null;
   const Glyph = iconOf(props.icon);
-  return <h3 className="mb-2 flex shrink-0 items-center gap-2 font-display text-[0.95rem] font-semibold text-text"><Glyph className="size-5 text-accent" weight="fill" aria-hidden="true" />{title}</h3>;
+  return <h3 className="mb-2 flex shrink-0 items-center gap-2 font-display text-[length:calc(0.95rem*var(--s,1))] font-semibold text-text"><Glyph className="size-5 text-accent" weight="fill" aria-hidden="true" />{title}</h3>;
 }
 
 export function LinkCardsBlock({ props, locales }: { props: Props; locales: string[] }) {
@@ -148,8 +148,8 @@ export function LinkCardsBlock({ props, locales }: { props: Props; locales: stri
             <>
               <IconTile name={item.icon} tone={item.tone} size={each >= 62 ? 'md' : 'sm'} />
               <span className="min-w-0 flex-1 text-left">
-                <span className="block truncate text-[0.84rem] font-semibold leading-tight text-text">{localizedText(item.title, locales)}</span>
-                {item.description && showDescription ? <span className="line-clamp-2 text-[0.74rem] leading-snug text-text-secondary">{localizedText(item.description, locales)}</span> : null}
+                <span className="block truncate text-[length:calc(0.84rem*var(--s,1))] font-semibold leading-tight text-text">{localizedText(item.title, locales)}</span>
+                {item.description && showDescription ? <span className="line-clamp-2 text-[length:calc(0.74rem*var(--s,1))] leading-snug text-text-secondary">{localizedText(item.description, locales)}</span> : null}
               </span>
               {interactive ? <CaretRight className="size-4 shrink-0 text-text-muted" aria-hidden="true" /> : null}
             </>
@@ -180,8 +180,8 @@ export function DefinitionListBlock({ props, locales }: { props: Props; locales:
         {items.map((item, index) => (
           <li key={typeof item.id === 'string' ? item.id : index} className="flex min-h-0 flex-1 items-center gap-3 px-3">
             {each >= 34 ? <IconTile name={item.icon} tone={item.tone} size="sm" /> : null}
-            <span className="w-24 shrink-0 truncate text-[0.8rem] font-semibold text-text @[420px]:w-32">{localizedText(item.term, locales)}</span>
-            <span className={cn('min-w-0 flex-1 text-[0.76rem] leading-snug text-text-secondary', twoLines ? 'line-clamp-2' : 'truncate')} title={localizedText(item.text, locales)}>{localizedText(item.text, locales)}</span>
+            <span className="w-24 shrink-0 truncate text-[length:calc(0.8rem*var(--s,1))] font-semibold text-text @[420px]:w-32">{localizedText(item.term, locales)}</span>
+            <span className={cn('min-w-0 flex-1 text-[length:calc(0.76rem*var(--s,1))] leading-snug text-text-secondary', twoLines ? 'line-clamp-2' : 'truncate')} title={localizedText(item.text, locales)}>{localizedText(item.text, locales)}</span>
           </li>
         ))}
       </ul>
