@@ -62,6 +62,7 @@ export const pack22Es = {
   'ev.result.score': '{score} de {max} puntos', 'ev.result.expired': 'El tiempo se agotó y la evaluación se entregó automáticamente.', 'ev.result.correct': 'Correctas', 'ev.result.incorrect': 'Incorrectas', 'ev.result.unanswered': 'Sin responder', 'ev.result.time': 'Tiempo',
   'ev.result.byCategory': 'Por categoría o competencia', 'ev.result.bySection': 'Por sección', 'ev.result.uncategorized': 'Sin categoría', 'ev.result.review': 'Revisión',
   'ev.result.reviewNever': 'El autor de la evaluación no habilitó la revisión de respuestas.', 'ev.result.reviewAfter': 'La revisión estará disponible a partir del {date}.', 'ev.result.theCorrectOne': 'Correcta', 'ev.result.yourAnswer': 'Tu respuesta',
+  'ev.outcome.correct': 'Correcta', 'ev.outcome.incorrect': 'Incorrecta', 'ev.outcome.unanswered': 'Sin responder',
   'ev.result.explanation': 'Explicación', 'ev.result.back': 'Volver a mis evaluaciones',
   // results (authors)
   'ev.results.title': 'Resultados', 'ev.results.none': 'Aún no hay evaluaciones publicadas', 'ev.results.noneHint': 'Los resultados aparecen cuando se publica una evaluación y alguien la responde.', 'ev.results.evaluation': 'Evaluación',
@@ -126,6 +127,7 @@ export const pack22En: Pack22Dictionary = {
   'ev.result.score': '{score} of {max} points', 'ev.result.expired': 'Time ran out and the evaluation was submitted automatically.', 'ev.result.correct': 'Correct', 'ev.result.incorrect': 'Incorrect', 'ev.result.unanswered': 'Unanswered', 'ev.result.time': 'Time',
   'ev.result.byCategory': 'By category or competency', 'ev.result.bySection': 'By section', 'ev.result.uncategorized': 'Uncategorized', 'ev.result.review': 'Review',
   'ev.result.reviewNever': 'The author did not enable answer review.', 'ev.result.reviewAfter': 'The review will be available from {date}.', 'ev.result.theCorrectOne': 'Correct', 'ev.result.yourAnswer': 'Your answer',
+  'ev.outcome.correct': 'Correct', 'ev.outcome.incorrect': 'Incorrect', 'ev.outcome.unanswered': 'Unanswered',
   'ev.result.explanation': 'Explanation', 'ev.result.back': 'Back to my evaluations',
   'ev.results.title': 'Results', 'ev.results.none': 'No evaluations published yet', 'ev.results.noneHint': 'Results appear once an evaluation is published and someone takes it.', 'ev.results.evaluation': 'Evaluation',
   'ev.results.noAttempts': 'No attempts yet.', 'ev.results.person': 'Person', 'ev.results.attempt': 'Attempt', 'ev.results.status': 'Status', 'ev.results.score': 'Score', 'ev.results.open': 'View',

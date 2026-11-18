@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { portalContainer } from '@/components/ui/portal';
 import { ArrowLeft, ArrowRight, BookOpenText, CheckCircle, CloudSlash, GridFour, Timer, WarningCircle } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -165,8 +167,9 @@ export function ExamPlayer({ organizationId, attempt: initial, onFinished, onExi
     </div>
   );
 
-  return (
-    <div role="dialog" aria-modal="true" aria-label={initial.evaluation.title} className="fixed inset-0 z-(--z-modal) flex h-dvh flex-col bg-background">
+  // Mounted in the shell (not in the page grid, whose zoom/transform would become the containing block of `fixed`), like every overlay. Sits at the drawer layer so its own sheets (same layer, mounted later) and dialogs open above it.
+  return createPortal(
+    <div role="dialog" aria-modal="true" aria-label={initial.evaluation.title} className="fixed inset-0 z-(--z-drawer) flex h-dvh flex-col bg-background">
       <header className="shrink-0 border-b border-border bg-surface pt-[env(safe-area-inset-top)]">
         <div className="flex items-center gap-2 px-3 py-2 sm:px-4">
           <div className="min-w-0 flex-1">
@@ -230,7 +233,8 @@ export function ExamPlayer({ organizationId, attempt: initial, onFinished, onExi
         description={unanswered > 0 ? t('ev.player.confirmUnanswered', { n: unanswered }) : t('ev.player.confirmAll')}>
         {unanswered > 0 ? <p className="flex items-center gap-2 text-sm text-warning"><WarningCircle className="size-4" aria-hidden />{t('ev.player.confirmHint')}</p> : null}
       </ConfirmDialog>
-    </div>
+    </div>,
+    portalContainer() ?? document.body,
   );
 }
 

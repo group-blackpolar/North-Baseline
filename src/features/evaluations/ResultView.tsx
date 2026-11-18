@@ -6,9 +6,9 @@ import { Blocks } from './Blocks';
 import { formatClock, formatPoints, type Group, type ResultView as Result, type ReviewItem } from './model';
 
 const OUTCOME = {
-  correct: { icon: CheckCircle, tone: 'text-success', key: 'ev.result.correct' },
-  incorrect: { icon: XCircle, tone: 'text-error', key: 'ev.result.incorrect' },
-  unanswered: { icon: MinusCircle, tone: 'text-text-muted', key: 'ev.result.unanswered' },
+  correct: { icon: CheckCircle, tone: 'text-success', key: 'ev.outcome.correct' },
+  incorrect: { icon: XCircle, tone: 'text-error', key: 'ev.outcome.incorrect' },
+  unanswered: { icon: MinusCircle, tone: 'text-text-muted', key: 'ev.outcome.unanswered' },
 } as const;
 
 /** Score, counts, time, per-category / per-section breakdown and, only when CORECROW released it, the review with correct answers. */
