@@ -20,7 +20,7 @@ export function InsightCards({ props, bindings, locales }: { props: Props; bindi
   const rules = parseRules(props.items);
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {title ? <h3 className="mb-2 flex items-center gap-1.5 font-display text-[0.95rem] font-semibold text-text"><Lightbulb className="size-4 text-warning" weight="fill" aria-hidden="true" />{title}</h3> : null}
+      {title ? <h3 className="mb-2 flex items-center gap-1.5 font-display text-[length:calc(0.95rem*var(--s,1))] font-semibold text-text"><Lightbulb className="size-4 text-warning" weight="fill" aria-hidden="true" />{title}</h3> : null}
       <ul className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-[repeat(auto-fit,minmax(11rem,1fr))]">
         {rules.map((rule) => <li key={rule.id} className="min-w-0"><InsightCard rule={rule} bindingId={bindingIdOf(bindings, rule.binding)} locales={locales} /></li>)}
       </ul>
@@ -61,13 +61,13 @@ function InsightCard({ rule, bindingId, locales }: { rule: Rule; bindingId: stri
 
   return (
     <div className="flex h-full min-w-0 items-start gap-2.5 rounded-xl border border-border bg-surface p-2.5 shadow-xs transition-shadow hover:shadow-soft">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg" style={{ background: tone.bg, color: tone.fg }} aria-hidden="true"><Glyph className="size-[18px]" weight="fill" /></span>
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg" style={{ background: tone.bg, color: tone.fg }} aria-hidden="true"><Glyph className="size-[calc(18px*var(--s,1))]" weight="fill" /></span>
       <div className="min-w-0 flex-1">
         {result.status === 'error' ? <p role="alert" className="text-xs text-error">{t('analytics.error')}</p> : !result.response ? <div className="space-y-1.5" aria-busy="true"><Skeleton className="h-4 w-20" /><Skeleton className="h-3 w-32" /></div> : body ? (
           <>
-            <p className="truncate text-[0.92rem] font-semibold leading-tight text-text" title={body.headline}>{body.headline}</p>
-            <p className="truncate text-[0.72rem] font-medium text-text-secondary" title={label}>{label}</p>
-            <p className="mt-0.5 text-[0.7rem] leading-snug text-text-muted">{body.text}</p>
+            <p className="truncate text-[length:calc(0.92rem*var(--s,1))] font-semibold leading-tight text-text" title={body.headline}>{body.headline}</p>
+            <p className="truncate text-[length:calc(0.72rem*var(--s,1))] font-medium text-text-secondary" title={label}>{label}</p>
+            <p className="mt-0.5 text-[length:calc(0.7rem*var(--s,1))] leading-snug text-text-muted">{body.text}</p>
           </>
         ) : <p className="text-xs text-text-muted">{t('analytics.empty')}</p>}
       </div>

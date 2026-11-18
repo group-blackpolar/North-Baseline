@@ -30,7 +30,7 @@ function DebouncedInput({ value, onCommit, ...rest }: { value: string; onCommit:
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="block min-w-0"><span className="mb-1 block truncate text-[0.7rem] font-semibold text-text-secondary">{label}</span>{children}</label>;
+  return <label className="block min-w-0"><span className="mb-1 block truncate text-[length:calc(0.7rem*var(--s,1))] font-semibold text-text-secondary">{label}</span>{children}</label>;
 }
 
 /**
@@ -92,7 +92,7 @@ export function FilterBar({ controls, selections, onChange, loadFacet, title, co
       const type = inputType(control.type);
       return (
         <fieldset key={control.fieldId} className="min-w-0">
-          <legend className="mb-1 block truncate text-[0.7rem] font-semibold text-text-secondary">{control.label}</legend>
+          <legend className="mb-1 block truncate text-[length:calc(0.7rem*var(--s,1))] font-semibold text-text-secondary">{control.label}</legend>
           <div className="flex items-center gap-1.5">
             <input type={type} aria-label={`${control.label} · ${t('flt.from')}`} className={inputClass} value={selection?.from ?? ''} max={selection?.to || undefined} onChange={(event) => set(control.fieldId, { ...selection, from: event.target.value })} />
             <span aria-hidden="true" className="text-text-muted">–</span>
@@ -121,7 +121,7 @@ export function FilterBar({ controls, selections, onChange, loadFacet, title, co
           <ul className="mt-1 flex flex-wrap items-center gap-1" aria-label={t('flt.active')}>
             {chips.map((chip) => (
               <li key={chip.key}>
-                <button type="button" aria-label={t('flt.remove', { name: chip.text })} onClick={() => onChange(removeChip(selections, chip))} className="inline-flex max-w-56 items-center gap-1 rounded-full border border-accent/30 bg-accent-soft px-2 py-0.5 text-[0.68rem] text-text transition-colors hover:border-accent/60">
+                <button type="button" aria-label={t('flt.remove', { name: chip.text })} onClick={() => onChange(removeChip(selections, chip))} className="inline-flex max-w-56 items-center gap-1 rounded-full border border-accent/30 bg-accent-soft px-2 py-0.5 text-[length:calc(0.68rem*var(--s,1))] text-text transition-colors hover:border-accent/60">
                   <span className="truncate" title={chip.text}><span className="text-text-secondary">{chip.label}: </span><span className="font-semibold">{chip.display}</span></span>
                   <X className="size-3 shrink-0 text-text-muted" aria-hidden="true" />
                 </button>
@@ -136,9 +136,9 @@ export function FilterBar({ controls, selections, onChange, loadFacet, title, co
   return (
     <section className="np-card overflow-visible" role="group" aria-label={title || t('analytics.filters')}>
       <header className="flex items-center gap-2 px-4 py-2.5">
-        <Funnel className="size-[18px] shrink-0 text-accent" weight="fill" aria-hidden="true" />
-        <h3 className="font-display text-[0.95rem] font-semibold text-text">{title || t('flt.title')}</h3>
-        {count > 0 ? <span className="rounded-full bg-accent px-1.5 text-[0.65rem] font-semibold tabular-nums text-white" aria-label={t('flt.activeCount', { n: count })}>{count}</span> : null}
+        <Funnel className="size-[calc(18px*var(--s,1))] shrink-0 text-accent" weight="fill" aria-hidden="true" />
+        <h3 className="font-display text-[length:calc(0.95rem*var(--s,1))] font-semibold text-text">{title || t('flt.title')}</h3>
+        {count > 0 ? <span className="rounded-full bg-accent px-1.5 text-[length:calc(0.65rem*var(--s,1))] font-semibold tabular-nums text-white" aria-label={t('flt.activeCount', { n: count })}>{count}</span> : null}
         <button type="button" aria-expanded={!collapsed} onClick={() => setCollapsed((value) => !value)} className="ml-auto inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent-soft">
           {collapsed ? t('flt.show') : t('flt.hide')}<CaretUp className={cn('size-3 transition-transform duration-150', collapsed && 'rotate-180')} aria-hidden="true" />
         </button>
@@ -153,7 +153,7 @@ export function FilterBar({ controls, selections, onChange, loadFacet, title, co
           <ul className="flex min-w-0 flex-1 flex-wrap gap-1.5" aria-label={t('flt.active')}>
             {chips.map((chip) => (
               <li key={chip.key}>
-                <button type="button" aria-label={t('flt.remove', { name: chip.text })} onClick={() => onChange(removeChip(selections, chip))} className="inline-flex max-w-80 items-center gap-1.5 rounded-lg border border-accent/30 bg-accent-soft px-2.5 py-1 text-[0.72rem] text-text transition-colors hover:border-accent/60 pointer-coarse:min-h-(--touch-min)">
+                <button type="button" aria-label={t('flt.remove', { name: chip.text })} onClick={() => onChange(removeChip(selections, chip))} className="inline-flex max-w-80 items-center gap-1.5 rounded-lg border border-accent/30 bg-accent-soft px-2.5 py-1 text-[length:calc(0.72rem*var(--s,1))] text-text transition-colors hover:border-accent/60 pointer-coarse:min-h-(--touch-min)">
                   <span className="truncate" title={chip.text}><span className="text-text-secondary">{chip.label}: </span><span className="font-semibold">{chip.display}</span></span>
                   <X className="size-3 shrink-0 text-text-muted" aria-hidden="true" />
                 </button>

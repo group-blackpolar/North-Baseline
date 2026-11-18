@@ -72,7 +72,7 @@ export default function GeoBubbleMap({ props, bindings, locales }: { props: Prop
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {title ? <h3 className="mb-2 font-display text-[0.95rem] font-semibold text-text">{title}</h3> : null}
+      {title ? <h3 className="mb-2 font-display text-[length:calc(0.95rem*var(--s,1))] font-semibold text-text">{title}</h3> : null}
       {data.status === 'error' ? (
         <div role="alert" className="flex min-h-32 flex-1 items-center justify-center gap-2 text-xs text-error"><WarningCircle className="size-4" aria-hidden="true" />{t('analytics.error')}</div>
       ) : !model ? <Skeleton className="min-h-40 flex-1" /> : model.list.length === 0 ? (
@@ -124,7 +124,7 @@ export default function GeoBubbleMap({ props, bindings, locales }: { props: Prop
               </div>
             ) : null}
           </div>
-          <ul className="flex shrink-0 flex-wrap gap-x-3 gap-y-0.5 pt-1 text-[0.66rem] leading-tight" aria-label={t('map.legend')}>
+          <ul className="flex shrink-0 flex-wrap gap-x-3 gap-y-0.5 pt-1 text-[length:calc(0.66rem*var(--s,1))] leading-tight" aria-label={t('map.legend')}>
             {CONTINENT_ORDER.filter((continent) => model.byContinent.has(continent)).sort((a, b) => (model.byContinent.get(b) ?? 0) - (model.byContinent.get(a) ?? 0)).map((continent) => (
               <li key={continent} className="flex items-center gap-1.5">
                 <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full" style={{ background: CONTINENT_COLOR[continent] }} />

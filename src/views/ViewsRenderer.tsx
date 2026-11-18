@@ -1,4 +1,4 @@
-import { Fragment, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Fragment, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { ArrowsClockwise, ArrowsIn, ArrowsOut, ArrowsOutSimple, Barricade, CaretLeft, Presentation } from '@phosphor-icons/react';
 import type { SessionUser } from '@/lib/auth';
 import type { Tab } from '@/context/TabsContext';
@@ -36,6 +36,7 @@ import { PanelGroup } from '@/features/analytics/pro/PanelGroup';
 import { DefinitionListBlock, HeroBlock, LinkCardsBlock, TitleBarBlock, OrgBrand, PanelNavigationContext, usePanelNavigation } from '@/features/analytics/pro/InfoBlocks';
 import { navigateToPublishedTarget } from '@/lib/publishedNavigation';
 import { useTabs } from '@/context/TabsContext';
+import { reportMode, reportScale, useReportSize, type ReportMode } from './reportScale';
 
 // Administration is the largest authenticated surface and most sessions never open it: load it on demand.
 const PersonalView = lazy(() => import('@/features/personal/PersonalView').then((module) => ({ default: module.PersonalView })));
@@ -82,21 +83,8 @@ function RichNode({ node }: { node: unknown }) {
 type Breakpoint = 'desktop' | 'tablet' | 'mobile';
 type GridPosition = PublishedPanelDocument['sections'][number]['components'][number]['layout'][Breakpoint];
 
-function currentBreakpoint(): Breakpoint {
-  if (typeof window === 'undefined') return 'desktop';
-  if (window.innerWidth < 640) return 'mobile';
-  return window.innerWidth < 1024 ? 'tablet' : 'desktop';
-}
-
-function usePublishedBreakpoint() {
-  const [breakpoint, setBreakpoint] = useState<Breakpoint>(currentBreakpoint);
-  useEffect(() => {
-    const update = () => setBreakpoint(currentBreakpoint());
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
-  }, []);
-  return breakpoint;
-}
+/** Which stored layout a report uses, from the report's own measured width (not the window's). */
+const BREAKPOINT_OF_MODE = { screen: 'desktop', tablet: 'tablet', phone: 'mobile' } as const satisfies Record<ReportMode, Breakpoint>;
 
 function gridStyle(position: GridPosition, rowOffset = 0) {
   const x = Math.max(0, Math.min(11, position.x));
@@ -109,9 +97,6 @@ const SELF_SCROLLING = new Set(['kpi_card', 'data_grid', 'geo_map', 'insights', 
 const EXPANDABLE = new Set(['bar_chart', 'line_chart', 'donut_chart', 'geo_map', 'data_grid', 'insights']);
 
 // These blocks draw their own cards: the cell adds no frame or padding.
-/** Reports are drawn at 80 % (CSS zoom: percentage widths/heights still fill the cell, so the page keeps fitting the viewport). The rest of the shell stays at 100 %. */
-const REPORT_ZOOM = 0.8;
-
 const isFrameless = (type: string) => type === 'hero' || type === 'link_cards' || type === 'definition_list' || type === 'report_cards' || type === 'title_bar';
 
 function PublishedGridItem({ component, breakpoint, matrix, title, rowOffset = 0, placed = true, children }: { component: PublishedPanelDocument['sections'][number]['components'][number]; breakpoint: Breakpoint; matrix: boolean; title: string; /** Rows taken by a band lifted above the matrix. */ rowOffset?: number; /** false: drawn inside a panel group, not at its own grid cell. */ placed?: boolean; children: ReactNode }) {
@@ -256,7 +241,7 @@ function PublishedAnalyticsContent({ component, locales }: { component: Publishe
         return (
           <div className="flex h-full min-h-0 flex-col gap-1.5">
             <div className="flex shrink-0 items-center gap-2">
-              <button type="button" onClick={() => { source?.clearFilter?.(categoryKey, selected.find((value) => String(value) === drilled) ?? drilled); setDrilled(null); }} className="inline-flex h-6 shrink-0 items-center gap-1 rounded-md border border-border px-1.5 text-[11px] font-medium text-text-secondary hover:bg-surface-hover hover:text-text">
+              <button type="button" onClick={() => { source?.clearFilter?.(categoryKey, selected.find((value) => String(value) === drilled) ?? drilled); setDrilled(null); }} className="inline-flex h-6 shrink-0 items-center gap-1 rounded-md border border-border px-1.5 text-[length:calc(11px*var(--s,1))] font-medium text-text-secondary hover:bg-surface-hover hover:text-text">
                 <CaretLeft className="size-3" aria-hidden="true" />{t('panel.drillBack')}
               </button>
               <h3 className="min-w-0 truncate text-sm font-medium text-text" title={`${title} · ${drilled}`}>{drillTitle || title} · {drilled}</h3>
@@ -268,7 +253,7 @@ function PublishedAnalyticsContent({ component, locales }: { component: Publishe
       const canDrill = Boolean(drillBinding) && interactive;
       return (
         <div className="flex h-full min-h-0 flex-col gap-1.5">
-          {title ? <h3 className="shrink-0 truncate text-sm font-medium text-text" title={title}>{title}{canDrill ? <span className="ml-2 text-[11px] font-normal text-text-muted">{t('panel.drillHint')}</span> : null}</h3> : null}
+          {title ? <h3 className="shrink-0 truncate text-sm font-medium text-text" title={title}>{title}{canDrill ? <span className="ml-2 text-[length:calc(11px*var(--s,1))] font-normal text-text-muted">{t('panel.drillHint')}</span> : null}</h3> : null}
           <div className={cn('min-h-0 flex-1', dim)}><AnalyticsBarChart result={result} {...config} categoryFormat={categoryFormat} onSelect={select ? (value) => { const isSelected = selected.some((item) => String(item) === value); select(value); if (canDrill && !isSelected) setDrilled(value); } : undefined} selected={selected.map(String)} /></div>
         </div>
       );
@@ -338,10 +323,14 @@ function sceneTitle(section: PublishedPanelDocument['sections'][number], locales
 }
 
 export function PublishedPanel({ title, document, locales, organizationId, panelId }: { title: string; document: PublishedPanelDocument | null; locales: string[]; organizationId: string | null | undefined; panelId: string }) {
-  const breakpoint = usePublishedBreakpoint();
   const { t, locale } = useI18n();
   const showcaseSlug = useShowcaseSlug();
-  const articleRef = useRef<HTMLElement>(null);
+  // A report that fills the viewport (fixed matrix with `fit`) tracks its height too; a scrolling one only its width.
+  const documentFits = Boolean(document?.sections.some((section) => section.layout.rowHeight && section.layout.fit === true));
+  const [articleRef, size, articleEl] = useReportSize<HTMLElement>(documentFits);
+  const mode = reportMode(size.width);
+  const breakpoint = BREAKPOINT_OF_MODE[mode];
+  const scale = reportScale(size, documentFits && mode === 'screen');
   const [definitionsByBinding, setDefinitionsByBinding] = useState<Record<string, PanelBindingFilterDefinition[]>>({});
   const [selections, setSelections] = useState<FilterSelections>(() => loadSelections(panelId));
   const [executedByBinding, setExecutedByBinding] = useState<Record<string, string>>({});
@@ -356,7 +345,7 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
     setPresenting(null);
   }, [panelId]);
   useEffect(() => {
-    const sync = () => setFullscreen(window.document.fullscreenElement === articleRef.current);
+    const sync = () => setFullscreen(window.document.fullscreenElement === articleEl);
     window.document.addEventListener('fullscreenchange', sync);
     return () => window.document.removeEventListener('fullscreenchange', sync);
   }, []);
@@ -502,8 +491,8 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
             : SafeComponent({ type: component.type, props: component.props, locales });
     };
     const style = matrix ? {
-      gridTemplateRows: `repeat(${matrix.rows}, ${matrix.fit ? `minmax(${matrix.rowHeight}px, 1fr)` : `${matrix.rowHeight}px`})`,
-      ...(matrix.fit ? { minHeight: matrix.rows * matrix.rowHeight + (matrix.rows - 1) * GAP_PX[section.layout.gap] } : {}),
+      gridTemplateRows: `repeat(${matrix.rows}, ${matrix.fit ? `minmax(${Math.round(matrix.rowHeight * scale)}px, 1fr)` : `${Math.round(matrix.rowHeight * scale)}px`})`,
+      ...(matrix.fit ? { minHeight: matrix.rows * Math.round(matrix.rowHeight * scale) + (matrix.rows - 1) * Math.round(GAP_PX[section.layout.gap] * scale) } : {}),
     } : undefined;
     return <Fragment key={section.id}>
       {lifted && bandBars.length ? <div className="shrink-0 space-y-2">{bandBars.map((component) => <div key={component.id}>{SafeComponent({ type: component.type, props: component.props, locales })}</div>)}</div> : null}
@@ -519,19 +508,21 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
   const updatedAt = Object.values(executedByBinding).sort().at(-1) ?? null;
   const toggleFullscreen = () => {
     if (window.document.fullscreenElement) void window.document.exitFullscreen().catch(() => {});
-    else void articleRef.current?.requestFullscreen().catch(() => {});
+    else void articleEl?.requestFullscreen().catch(() => {});
   };
   const toolbarButton = 'inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs font-medium text-text-secondary transition-colors duration-(--duration-fast) hover:bg-surface-hover hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 pointer-coarse:h-(--touch-min)';
 
-  return <BindingSourceProvider source={bindingSource}><article ref={articleRef} style={{ zoom: REPORT_ZOOM }} className={cn('north-enter mx-auto w-full max-w-[1680px]', fitted ? 'flex h-full flex-col gap-2 p-2 lg:p-3' : 'space-y-5 p-4 lg:p-5', fullscreen && 'max-w-none overflow-auto bg-background')}>
-    <div className={cn('flex flex-wrap items-center gap-3', titledByDocument ? 'justify-end' : 'justify-between')}>
-      {titledByDocument ? null : <h1 className={cn('font-display font-semibold', fitted ? 'text-lg' : 'text-2xl')}>{title}</h1>}
-      <div className="flex items-center gap-2">
-        {updatedAt ? <span className="mr-1 hidden text-right text-[11px] leading-tight text-text-muted sm:block"><span className="block">{t('pres.updated')}</span><span className="block tabular-nums text-text-secondary">{new Intl.DateTimeFormat(intlTag(locale), { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(updatedAt))}</span></span> : null}
+  const actions = <div className="flex items-center gap-2">
+        {updatedAt ? <span className="mr-1 hidden text-right text-[length:calc(11px*var(--s,1))] leading-tight text-text-muted sm:block"><span className="block">{t('pres.updated')}</span><span className="block tabular-nums text-text-secondary">{new Intl.DateTimeFormat(intlTag(locale), { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(updatedAt))}</span></span> : null}
         <button type="button" className={toolbarButton} onClick={() => setVersion((value) => value + 1)}><ArrowsClockwise className="size-3.5" aria-hidden="true" />{t('panel.refresh')}</button>
         {sections.length > 0 ? <button type="button" className={toolbarButton} onClick={() => setPresenting(selections)}><Presentation className="size-3.5" aria-hidden="true" />{t('pres.start')}</button> : null}
         {window.document.fullscreenEnabled ? <button type="button" className={toolbarButton} onClick={toggleFullscreen} aria-pressed={fullscreen}>{fullscreen ? <ArrowsIn className="size-3.5" aria-hidden="true" /> : <ArrowsOut className="size-3.5" aria-hidden="true" />}{fullscreen ? t('pres.exitFullscreen') : t('pres.fullscreen')}</button> : null}
-      </div>
+      </div>;
+
+  return <BindingSourceProvider source={bindingSource}><article ref={articleRef} style={{ '--s': scale } as CSSProperties} className={cn('report-scale north-enter mx-auto w-full max-w-[1680px]', fitted ? 'flex h-full flex-col gap-2 p-2 lg:p-3' : 'space-y-5 p-4 lg:p-5', fullscreen && 'max-w-none overflow-auto bg-background')}>
+    <div className={cn('flex flex-wrap items-center gap-3', titledByDocument ? 'justify-end' : 'justify-between')}>
+      {titledByDocument ? null : <h1 className={cn('font-display font-semibold', fitted ? 'text-lg' : 'text-2xl')}>{title}</h1>}
+      {mode === 'phone' ? null : actions}
     </div>
     {hasFilterSlot ? null : filterBar}
     {presenting ? null : sections.map(renderSection)}
@@ -542,6 +533,7 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
       updatedAt={updatedAt}
       onExit={() => setPresenting(null)}
     /></Suspense> : null}
+    {mode === 'phone' ? <div className="sticky bottom-0 z-(--z-sticky) -mx-4 -mb-4 mt-2 border-t border-border bg-surface/95 p-2 backdrop-blur [&>div]:justify-stretch [&>div>button]:flex-1 [&>div>button]:justify-center [&>div>span]:hidden">{actions}</div> : null}
   </article></BindingSourceProvider>;
 }
 

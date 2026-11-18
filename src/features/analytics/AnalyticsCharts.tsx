@@ -254,7 +254,7 @@ export function AnalyticsDonutChart({ result, categoryKey, valueKey, variant = '
             // The ring's hole is ~62 % of min(width, height): the figure and label must fit inside it, so they scale with it and the label is dropped when it cannot be read.
             const hole = Math.min(ring.width, ring.height || ring.width) * 0.88 * 0.62;
             const figure = hole > 0 ? Math.max(11, Math.min(18, hole / 5)) : 18;
-            return <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">{showTotal ? <span className="font-display font-semibold tabular-nums leading-none text-text" style={{ fontSize: figure }}>{new Intl.NumberFormat(locale === 'es' ? 'es-419' : locale, { notation: hole && hole < 70 ? 'compact' : 'standard', maximumFractionDigits: 0 }).format(total)}</span> : null}{centerLabel && hole >= 84 ? <span className="mt-0.5 truncate text-[0.65rem] leading-none text-text-muted" style={{ maxWidth: hole }}>{centerLabel}</span> : null}</div>;
+            return <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">{showTotal ? <span className="font-display font-semibold tabular-nums leading-none text-text" style={{ fontSize: figure }}>{new Intl.NumberFormat(locale === 'es' ? 'es-419' : locale, { notation: hole && hole < 70 ? 'compact' : 'standard', maximumFractionDigits: 0 }).format(total)}</span> : null}{centerLabel && hole >= 84 ? <span className="mt-0.5 truncate text-[length:calc(0.65rem*var(--s,1))] leading-none text-text-muted" style={{ maxWidth: hole }}>{centerLabel}</span> : null}</div>;
           })() : null}
         </div>
         {side !== 'none' ? (

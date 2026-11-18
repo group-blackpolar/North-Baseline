@@ -47,11 +47,11 @@ export function PeriodSelect({ label, from, to, onChange, loadPeriods, compact =
 
   return (
     <div className="min-w-0">
-      {compact ? null : <span className="mb-1 block truncate text-[0.7rem] font-semibold text-text-secondary">{label}</span>}
+      {compact ? null : <span className="mb-1 block truncate text-[length:calc(0.7rem*var(--s,1))] font-semibold text-text-secondary">{label}</span>}
       <button ref={anchorRef} type="button" aria-haspopup="dialog" aria-expanded={open} aria-label={`${label}: ${summary}`} onClick={() => setOpen((current) => !current)}
         className={cn(compact ? 'h-10' : 'h-9', 'flex w-full items-center gap-2 rounded-lg border bg-surface px-3 text-left text-xs text-text transition-[border-color,box-shadow] hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 pointer-coarse:h-(--touch-min)', from || to ? 'border-accent shadow-[0_0_0_1px_var(--color-accent)]' : 'border-border', open && 'border-accent')}>
         <CalendarBlank className="size-3.5 shrink-0 text-text-muted" aria-hidden="true" />
-        {compact ? <span className="flex min-w-0 flex-1 flex-col leading-tight" title={`${label}: ${summary}`}><span className="truncate text-[0.62rem] font-medium text-text-muted">{label}</span><span className={cn('truncate text-xs', (from || to) ? 'font-medium text-text' : 'text-text-secondary')}>{summary}</span></span> : null}
+        {compact ? <span className="flex min-w-0 flex-1 flex-col leading-tight" title={`${label}: ${summary}`}><span className="truncate text-[length:calc(0.62rem*var(--s,1))] font-medium text-text-muted">{label}</span><span className={cn('truncate text-xs', (from || to) ? 'font-medium text-text' : 'text-text-secondary')}>{summary}</span></span> : null}
         {compact ? null : <span className={cn('min-w-0 flex-1 truncate', !(from || to) && 'text-text-secondary')} title={summary}>{summary}</span>}
         <CaretDown className={cn('size-3.5 shrink-0 text-text-muted transition-transform', open && 'rotate-180')} aria-hidden="true" />
       </button>
@@ -59,29 +59,29 @@ export function PeriodSelect({ label, from, to, onChange, loadPeriods, compact =
         <div className="space-y-3 overflow-y-auto p-3">
           {latest ? (
             <section aria-label={t('flt.presets')}>
-              <p className="mb-1.5 text-[0.68rem] font-semibold uppercase tracking-wide text-text-muted">{t('flt.presets')}</p>
+              <p className="mb-1.5 text-[length:calc(0.68rem*var(--s,1))] font-semibold uppercase tracking-wide text-text-muted">{t('flt.presets')}</p>
               <div className="flex flex-wrap gap-1.5">
                 {PRESETS.map((preset) => {
                   const bounds = presetBounds(preset.id, latest);
                   const active = from === bounds.from && to === bounds.to;
-                  return <button key={preset.id} type="button" aria-pressed={active} onClick={() => { apply(bounds); setOpen(false); }} className={cn('rounded-full border px-2.5 py-1 text-[0.72rem] font-medium transition-colors', active ? 'border-accent bg-accent-soft text-accent' : 'border-border text-text-secondary hover:bg-surface-hover hover:text-text')}>{t(preset.label)}</button>;
+                  return <button key={preset.id} type="button" aria-pressed={active} onClick={() => { apply(bounds); setOpen(false); }} className={cn('rounded-full border px-2.5 py-1 text-[length:calc(0.72rem*var(--s,1))] font-medium transition-colors', active ? 'border-accent bg-accent-soft text-accent' : 'border-border text-text-secondary hover:bg-surface-hover hover:text-text')}>{t(preset.label)}</button>;
                 })}
               </div>
-              <p className="mt-1.5 text-[0.68rem] text-text-muted">{t('flt.presetNote', { date: describePeriod(monthBounds(latest).from, latest, tag) })}</p>
+              <p className="mt-1.5 text-[length:calc(0.68rem*var(--s,1))] text-text-muted">{t('flt.presetNote', { date: describePeriod(monthBounds(latest).from, latest, tag) })}</p>
             </section>
           ) : null}
           {loadPeriods ? (
             state.status === 'loading' && state.months.length === 0 ? <div className="space-y-1.5"><Skeleton className="h-5 w-full" /><Skeleton className="h-5 w-full" /><Skeleton className="h-5 w-3/4" /></div> : state.status === 'error' ? <p role="alert" className="text-xs text-text-secondary">{t('flt.loadError')}</p> : (
               <div className="grid grid-cols-[6.5rem_1fr] gap-3">
                 <section aria-label={t('flt.year')}>
-                  <p className="mb-1 text-[0.68rem] font-semibold uppercase tracking-wide text-text-muted">{t('flt.year')}</p>
+                  <p className="mb-1 text-[length:calc(0.68rem*var(--s,1))] font-semibold uppercase tracking-wide text-text-muted">{t('flt.year')}</p>
                   <ul className="max-h-48 space-y-px overflow-y-auto">
                     {state.years.map((entry) => { const day = dayOf(entry.value); if (!day) return null; const year = Number(day.slice(0, 4)); const bounds = yearBounds(year); const active = selectedKind.kind === 'year' && from === bounds.from;
                       return <li key={year}><button type="button" aria-pressed={active} className={cn(item, active && 'bg-accent-soft text-accent')} onClick={() => apply(bounds)}><span className="font-medium">{year}</span><span className="tabular-nums text-text-muted">{number.format(entry.count)}</span></button></li>; })}
                   </ul>
                 </section>
                 <section aria-label={t('flt.month')}>
-                  <p className="mb-1 text-[0.68rem] font-semibold uppercase tracking-wide text-text-muted">{t('flt.month')}</p>
+                  <p className="mb-1 text-[length:calc(0.68rem*var(--s,1))] font-semibold uppercase tracking-wide text-text-muted">{t('flt.month')}</p>
                   <ul className="max-h-48 space-y-px overflow-y-auto">
                     {state.months.map((entry) => { const day = dayOf(entry.value); if (!day) return null; const bounds = monthBounds(day); const active = selectedKind.kind === 'month' && from === bounds.from;
                       return <li key={day}><button type="button" aria-pressed={active} className={cn(item, active && 'bg-accent-soft text-accent')} onClick={() => { apply(bounds); setOpen(false); }}><span className="font-medium capitalize">{monthLabel(day)}</span><span className="tabular-nums text-text-muted">{number.format(entry.count)}</span></button></li>; })}
@@ -91,7 +91,7 @@ export function PeriodSelect({ label, from, to, onChange, loadPeriods, compact =
             )
           ) : null}
           <section aria-label={t('flt.custom')}>
-            <p className="mb-1.5 text-[0.68rem] font-semibold uppercase tracking-wide text-text-muted">{t('flt.custom')}</p>
+            <p className="mb-1.5 text-[length:calc(0.68rem*var(--s,1))] font-semibold uppercase tracking-wide text-text-muted">{t('flt.custom')}</p>
             <div className="flex items-center gap-1.5">
               <input type="date" aria-label={`${label} · ${t('flt.from')}`} value={isIsoDay(from) ? from : ''} max={isIsoDay(to) ? to : undefined} onChange={(event) => apply({ from: event.target.value || undefined, to })} className="h-8 min-w-0 flex-1 rounded-md border border-border bg-surface px-2 text-base outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 md:text-xs" />
               <span aria-hidden="true" className="text-text-muted">–</span>
@@ -99,7 +99,7 @@ export function PeriodSelect({ label, from, to, onChange, loadPeriods, compact =
             </div>
           </section>
         </div>
-        <div className="flex items-center justify-between border-t border-border px-3 py-2 text-[0.72rem]">
+        <div className="flex items-center justify-between border-t border-border px-3 py-2 text-[length:calc(0.72rem*var(--s,1))]">
           <span className="truncate text-text-secondary">{from || to ? summary : t('flt.noPeriod')}</span>
           <button type="button" disabled={!from && !to} className="font-medium text-accent hover:underline disabled:pointer-events-none disabled:opacity-40" onClick={() => { apply({}); setOpen(false); }}>{t('flt.clearField')}</button>
         </div>

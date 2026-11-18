@@ -103,7 +103,7 @@ export function FacetSelect({ label, multi, selected, onChange, load, compact = 
 
   return (
     <div className="min-w-0">
-      {compact ? null : <span className="mb-1 block truncate text-[0.7rem] font-semibold text-text-secondary">{label}</span>}
+      {compact ? null : <span className="mb-1 block truncate text-[length:calc(0.7rem*var(--s,1))] font-semibold text-text-secondary">{label}</span>}
       <button
         ref={anchorRef}
         type="button"
@@ -119,7 +119,7 @@ export function FacetSelect({ label, multi, selected, onChange, load, compact = 
           open && 'border-accent',
         )}
       >
-        {compact ? <span className="flex min-w-0 flex-1 flex-col leading-tight" title={`${label}: ${summary}`}><span className="truncate text-[0.62rem] font-medium text-text-muted">{label}</span><span className={cn('truncate text-xs', (selected.length) ? 'font-medium text-text' : 'text-text-secondary')}>{summary}</span></span> : null}
+        {compact ? <span className="flex min-w-0 flex-1 flex-col leading-tight" title={`${label}: ${summary}`}><span className="truncate text-[length:calc(0.62rem*var(--s,1))] font-medium text-text-muted">{label}</span><span className={cn('truncate text-xs', (selected.length) ? 'font-medium text-text' : 'text-text-secondary')}>{summary}</span></span> : null}
         {compact ? null : <span className={cn('min-w-0 flex-1 truncate', !(selected.length) && 'text-text-secondary')} title={summary}>{summary}</span>}
         <CaretDown className={cn('size-3.5 shrink-0 text-text-muted transition-transform duration-150', open && 'rotate-180')} aria-hidden="true" />
       </button>
@@ -137,7 +137,7 @@ export function FacetSelect({ label, multi, selected, onChange, load, compact = 
             />
           </label>
         </div>
-        <div className="flex items-center justify-between px-3 pt-2 pb-1 text-[0.7rem] text-text-secondary">
+        <div className="flex items-center justify-between px-3 pt-2 pb-1 text-[length:calc(0.7rem*var(--s,1))] text-text-secondary">
           <span>{t('flt.existing')}</span>
           {state.total !== null ? <span className="rounded-full bg-surface-hover px-1.5 tabular-nums">{number.format(state.total)}</span> : null}
         </div>
@@ -165,11 +165,11 @@ export function FacetSelect({ label, multi, selected, onChange, load, compact = 
                   </li>
                 );
               })}
-              {state.more ? <li ref={sentinelRef} className="p-2 text-center text-[0.7rem] text-text-muted" aria-live="polite">{state.loadingMore ? t('flt.loadingMore') : ' '}</li> : null}
+              {state.more ? <li ref={sentinelRef} className="p-2 text-center text-[length:calc(0.7rem*var(--s,1))] text-text-muted" aria-live="polite">{state.loadingMore ? t('flt.loadingMore') : ' '}</li> : null}
             </ul>
           )}
         </div>
-        <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2 text-[0.72rem]">
+        <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2 text-[length:calc(0.72rem*var(--s,1))]">
           <span className="text-text-secondary">{t('flt.selectedCount', { n: selected.length })}</span>
           <button type="button" disabled={selected.length === 0} className="font-medium text-accent hover:underline disabled:pointer-events-none disabled:opacity-40" onClick={() => onChange([])}>{t('flt.clearField')}</button>
         </div>

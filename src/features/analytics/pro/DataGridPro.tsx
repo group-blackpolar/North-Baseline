@@ -162,7 +162,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
         </div>
       );
     }
-    if (column.kind === 'badge') return raw === null ? <span className="text-text-muted">—</span> : <span className="inline-flex max-w-full items-center rounded-md bg-surface-hover px-1.5 py-0.5 text-[0.72rem] font-medium text-text-secondary"><span className="truncate" title={String(raw)}>{String(raw)}</span></span>;
+    if (column.kind === 'badge') return raw === null ? <span className="text-text-muted">—</span> : <span className="inline-flex max-w-full items-center rounded-md bg-surface-hover px-1.5 py-0.5 text-[length:calc(0.72rem*var(--s,1))] font-medium text-text-secondary"><span className="truncate" title={String(raw)}>{String(raw)}</span></span>;
     if (column.zeroDash && (raw === null || asNumber(raw) === 0)) return <span className="text-text-muted">-</span>;
     const format: ValueFormat = column.kind === 'number' ? 'number' : column.kind === 'decimal' ? 'decimal' : column.kind === 'date' ? 'date' : column.kind === 'month' ? 'month' : column.kind === 'year' ? 'year' : 'text';
     const text = formatValue(raw, format, locale);
@@ -180,7 +180,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
   return (
     <div className="flex h-full min-h-0 flex-col" data-grid>
       <div className={cn('flex flex-wrap items-center gap-2', dense ? 'mb-1' : 'mb-2')}>
-        <h3 className="mr-auto min-w-0 truncate font-display text-[0.95rem] font-semibold text-text">
+        <h3 className="mr-auto min-w-0 truncate font-display text-[length:calc(0.95rem*var(--s,1))] font-semibold text-text">
           {title}{data.response && total > 0 ? <span className="ml-1.5 text-xs font-normal text-text-muted">({numberFormat.format(Math.min(total, (page - 1) * pageSize + 1))} - {numberFormat.format(Math.min(total, page * pageSize))})</span> : null}
         </h3>
         {searchable ? (
@@ -207,7 +207,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
         ) : rows.length === 0 ? (
           <p role="status" className="flex min-h-40 items-center justify-center px-4 text-center text-xs text-text-muted">{t('grid.empty')}</p>
         ) : (
-          <table style={tableWidth ? { minWidth: tableWidth } : undefined} className={cn('w-full border-separate border-spacing-0 text-left', dense ? 'table-fixed text-[0.7rem]' : 'text-xs')}>
+          <table style={tableWidth ? { minWidth: tableWidth } : undefined} className={cn('w-full border-separate border-spacing-0 text-left', dense ? 'table-fixed text-[length:calc(0.7rem*var(--s,1))]' : 'text-xs')}>
             <thead className="sticky top-0 z-10">
               <tr className="bg-[color-mix(in_srgb,var(--color-surface-hover)_70%,var(--color-surface))]">
                 {selectable ? <th scope="col" className="w-8 border-b border-border px-2"><span className="sr-only">{t('grid.select')}</span></th> : null}
@@ -217,7 +217,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
                   const sortableColumn = column.sortable !== false && column.kind !== 'sparkline' && column.kind !== 'actions';
                   const width = widthOf(column);
                   return (
-                    <th key={column.key} scope="col" style={width ? { width } : undefined} aria-sort={active ? (sort.direction === 'ASC' ? 'ascending' : 'descending') : 'none'} className="group/th relative border-b border-border p-0 text-[0.68rem] font-semibold uppercase tracking-wide text-text-muted">
+                    <th key={column.key} scope="col" style={width ? { width } : undefined} aria-sort={active ? (sort.direction === 'ASC' ? 'ascending' : 'descending') : 'none'} className="group/th relative border-b border-border p-0 text-[length:calc(0.68rem*var(--s,1))] font-semibold uppercase tracking-wide text-text-muted">
                       <button type="button" disabled={!sortableColumn} onClick={() => toggleSort(column)} className={cn('flex w-full items-center gap-1 transition-colors', dense ? 'h-7 px-1.5' : 'h-9 px-3', align(column) === 'right' && 'justify-end', align(column) === 'center' && 'justify-center', sortableColumn && 'hover:bg-surface-hover hover:text-text')}>
                         <span className="truncate">{column.label}</span>
                         {sortableColumn ? <Icon className={cn('size-3 shrink-0', active ? 'text-accent' : 'text-text-muted/70')} aria-hidden="true" /> : null}
@@ -332,7 +332,7 @@ function ColumnsMenu({ columns, view, onChange }: { columns: GridColumn[]; view:
             );
           })}
         </ul>
-        <div className="border-t border-border px-3 py-1.5"><button type="button" className="text-[11px] font-medium text-accent hover:underline" onClick={() => onChange(defaultView(columns))}>{t('grid.resetColumns')}</button></div>
+        <div className="border-t border-border px-3 py-1.5"><button type="button" className="text-[length:calc(11px*var(--s,1))] font-medium text-accent hover:underline" onClick={() => onChange(defaultView(columns))}>{t('grid.resetColumns')}</button></div>
       </Popover>
     </>
   );
@@ -362,7 +362,7 @@ function Inspector({ row, columns, series, filterable, onFilter }: { row: Analyt
   const { t, locale } = useI18n();
   return (
     <div className="space-y-4">
-      {series && series.length > 1 ? <section aria-label={t('grid.trend')} className="rounded-lg border border-border p-3"><p className="mb-1 text-[0.68rem] font-semibold uppercase tracking-wide text-text-muted">{t('grid.trend')}</p><Sparkline values={series} color={trendDirection(series) === 'down' ? '#E0475B' : '#1F9D63'} className="h-14 w-full" label={t('grid.trend')} /></section> : null}
+      {series && series.length > 1 ? <section aria-label={t('grid.trend')} className="rounded-lg border border-border p-3"><p className="mb-1 text-[length:calc(0.68rem*var(--s,1))] font-semibold uppercase tracking-wide text-text-muted">{t('grid.trend')}</p><Sparkline values={series} color={trendDirection(series) === 'down' ? '#E0475B' : '#1F9D63'} className="h-14 w-full" label={t('grid.trend')} /></section> : null}
       <dl className="divide-y divide-border/60">
         {columns.map((column) => {
           const format: ValueFormat = column.kind === 'number' || column.kind === 'bar' ? 'number' : column.kind === 'decimal' ? 'decimal' : column.kind === 'date' ? 'date' : column.kind === 'month' ? 'month' : column.kind === 'year' ? 'year' : 'text';
@@ -372,7 +372,7 @@ function Inspector({ row, columns, series, filterable, onFilter }: { row: Analyt
               <dt className="shrink-0 text-xs text-text-muted">{column.label}</dt>
               <dd className="min-w-0 break-words text-right text-xs font-medium text-text">
                 {formatValue(raw, format, locale)}
-                {typeof raw === 'string' && filterable(column.key) ? <button type="button" onClick={() => onFilter(column.key, raw)} className="ml-2 inline-flex items-center gap-1 text-[11px] font-medium text-accent hover:underline"><FunnelSimple className="size-3" aria-hidden="true" />{t('grid.filter')}</button> : null}
+                {typeof raw === 'string' && filterable(column.key) ? <button type="button" onClick={() => onFilter(column.key, raw)} className="ml-2 inline-flex items-center gap-1 text-[length:calc(11px*var(--s,1))] font-medium text-accent hover:underline"><FunnelSimple className="size-3" aria-hidden="true" />{t('grid.filter')}</button> : null}
               </dd>
             </div>
           );

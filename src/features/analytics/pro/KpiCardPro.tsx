@@ -64,7 +64,7 @@ export function KpiCardPro({ props, bindings, locales }: { props: Props; binding
     <div className="@container h-full min-w-0" title={tooltip || undefined} data-kpi-variant={variant}>
     <div className={cn('flex h-full min-w-0 items-center gap-2.5 @[190px]:gap-3', compact ? 'py-0.5' : 'py-1')}>
       <span className={cn('hidden shrink-0 items-center justify-center rounded-xl @[150px]:flex', compact ? 'size-9' : 'size-9 @[200px]:size-11')} style={{ background: tone.bg, color: tone.fg }} aria-hidden="true">
-        <Glyph className={compact ? 'size-[18px]' : 'size-[18px] @[200px]:size-5'} weight="fill" />
+        <Glyph className={compact ? 'size-[calc(18px*var(--s,1))]' : 'size-[calc(18px*var(--s,1))] @[200px]:size-5'} weight="fill" />
       </span>
       <div className="min-w-0 flex-1">
         {data.status === 'error' ? (
@@ -77,14 +77,14 @@ export function KpiCardPro({ props, bindings, locales }: { props: Props; binding
               <span className={cn('truncate font-display font-semibold leading-tight tracking-tight text-text tabular-nums', compact ? 'text-lg' : 'text-[clamp(1.05rem,9cqw,1.45rem)]')}>{formatValue(view.raw, format, locale, decimals)}</span>
               {unit ? <span className="shrink-0 text-xs font-medium text-text-muted">{unit}</span> : null}
             </p>
-            <p className="truncate text-[0.78rem] leading-snug text-text-secondary">{label}</p>
+            <p className="truncate text-[length:calc(0.78rem*var(--s,1))] leading-snug text-text-secondary">{label}</p>
             {view.delta ? (
-              <p className={cn('mt-0.5 flex items-center gap-1 text-[0.72rem] font-medium', good === null ? 'text-text-muted' : good ? 'text-success' : 'text-error')}>
+              <p className={cn('mt-0.5 flex items-center gap-1 text-[length:calc(0.72rem*var(--s,1))] font-medium', good === null ? 'text-text-muted' : good ? 'text-success' : 'text-error')}>
                 <TrendIcon className="size-3 shrink-0" weight="bold" aria-hidden="true" />
                 <span className="tabular-nums">{view.delta.percent === null ? formatValue(view.delta.absolute, 'number', locale) : `${view.delta.percent > 0 ? '+' : ''}${formatValue(view.delta.percent, 'percent', locale, 1)}`}</span>
                 <span className="truncate font-normal text-text-muted">{localizedText(comparison?.label, locales) || t('kpi.vsPrevious')}</span>
               </p>
-            ) : view.sub ? <p className="mt-0.5 truncate text-[0.72rem] text-text-muted">{view.sub}</p> : null}
+            ) : view.sub ? <p className="mt-0.5 truncate text-[length:calc(0.72rem*var(--s,1))] text-text-muted">{view.sub}</p> : null}
           </div>
         )}
       </div>
