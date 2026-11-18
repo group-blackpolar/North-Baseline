@@ -70,8 +70,8 @@ export const pack22Es = {
   'ev.results.tabAttempts': 'Intentos', 'ev.results.tabStats': 'Estadísticas', 'ev.player.history': 'Mis resultados',
   'ev.stats.none': 'Aún no hay datos', 'ev.stats.noneHint': 'Las estadísticas aparecen cuando se publica la evaluación y alguien la entrega.', 'ev.stats.version': 'Versión', 'ev.stats.versionOption': 'Versión {n} · {attempts} intentos',
   'ev.stats.started': 'Intentos', 'ev.stats.graded': '{n} calificados', 'ev.stats.completion': 'Finalización', 'ev.stats.timedOut': '{n} por tiempo agotado', 'ev.stats.mean': 'Promedio', 'ev.stats.median': 'Mediana', 'ev.stats.range': 'Mínimo–máximo', 'ev.stats.time': 'Tiempo medio',
-  'ev.stats.distribution': 'Distribución de puntajes (% por tramos de 10)', 'ev.stats.bucket': 'Del {from} al {to} %: {n} intentos',
-  'ev.stats.hardest': 'Preguntas más difíciles', 'ev.stats.hardestHint': 'Ordenadas por porcentaje de aciertos. Abre una pregunta para ver qué alternativas eligieron.', 'ev.stats.questionMeta': '{correct} aciertos · {incorrect} errores · {omitted} sin responder', 'ev.stats.picked': '{n} veces',
+  'ev.stats.distribution': 'Distribución de puntajes (% por tramos de 10)', 'ev.stats.bucket': 'Del {from} al {to} %: {n}',
+  'ev.stats.hardest': 'Preguntas más difíciles', 'ev.stats.hardestHint': 'Ordenadas por porcentaje de aciertos. Abre una pregunta para ver qué alternativas eligieron.', 'ev.stats.questionMeta': 'Aciertos: {correct} · Errores: {incorrect} · Sin responder: {omitted}', 'ev.stats.picked': '{n} ×',
   'ev.stats.compare': 'Comparación entre versiones', 'ev.stats.published': 'Publicada', 'ev.stats.questions': 'Preguntas',
 } as const;
 
@@ -140,7 +140,7 @@ export const pack22En: Pack22Dictionary = {
   'ev.results.tabAttempts': 'Attempts', 'ev.results.tabStats': 'Statistics', 'ev.player.history': 'My results',
   'ev.stats.none': 'No data yet', 'ev.stats.noneHint': 'Statistics appear once the evaluation is published and someone submits it.', 'ev.stats.version': 'Version', 'ev.stats.versionOption': 'Version {n} · {attempts} attempts',
   'ev.stats.started': 'Attempts', 'ev.stats.graded': '{n} graded', 'ev.stats.completion': 'Completion', 'ev.stats.timedOut': '{n} timed out', 'ev.stats.mean': 'Average', 'ev.stats.median': 'Median', 'ev.stats.range': 'Min–max', 'ev.stats.time': 'Average time',
-  'ev.stats.distribution': 'Score distribution (% in steps of 10)', 'ev.stats.bucket': '{from} to {to} %: {n} attempts',
-  'ev.stats.hardest': 'Hardest questions', 'ev.stats.hardestHint': 'Sorted by percentage correct. Open a question to see which options people chose.', 'ev.stats.questionMeta': '{correct} correct · {incorrect} wrong · {omitted} unanswered', 'ev.stats.picked': '{n} times',
+  'ev.stats.distribution': 'Score distribution (% in steps of 10)', 'ev.stats.bucket': '{from} to {to} %: {n}',
+  'ev.stats.hardest': 'Hardest questions', 'ev.stats.hardestHint': 'Sorted by percentage correct. Open a question to see which options people chose.', 'ev.stats.questionMeta': 'Correct: {correct} · Wrong: {incorrect} · Unanswered: {omitted}', 'ev.stats.picked': '{n} ×',
   'ev.stats.compare': 'Comparison between versions', 'ev.stats.published': 'Published', 'ev.stats.questions': 'Questions',
 };
