@@ -36,7 +36,7 @@ import { PanelGroup } from '@/features/analytics/pro/PanelGroup';
 import { DefinitionListBlock, HeroBlock, LinkCardsBlock, TitleBarBlock, OrgBrand, PanelNavigationContext, usePanelNavigation } from '@/features/analytics/pro/InfoBlocks';
 import { navigateToPublishedTarget } from '@/lib/publishedNavigation';
 import { useTabs } from '@/context/TabsContext';
-import { reportMode, reportScale, useReportSize, type ReportMode } from './reportScale';
+import { fitContentHeight, reportMode, reportScale, useReportSize, type ReportMode, type ScaleSection } from './reportScale';
 
 // Administration is the largest authenticated surface and most sessions never open it: load it on demand.
 const PersonalView = lazy(() => import('@/features/personal/PersonalView').then((module) => ({ default: module.PersonalView })));
@@ -339,11 +339,12 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
   const { t, locale } = useI18n();
   const showcaseSlug = useShowcaseSlug();
   // A report that fills the viewport (fixed matrix with `fit`) tracks its height too; a scrolling one only its width.
-  const documentFits = Boolean(document?.sections.some((section) => section.layout.rowHeight && section.layout.fit === true));
+  const fitHeight = document ? fitContentHeight(document.sections as unknown as ScaleSection[]) : null;
+  const documentFits = fitHeight !== null;
   const [articleRef, size, articleEl] = useReportSize<HTMLElement>(documentFits);
   const mode = reportMode(size.width);
   const breakpoint = BREAKPOINT_OF_MODE[mode];
-  const scale = reportScale(size, documentFits && mode === 'screen');
+  const scale = reportScale(size, documentFits && mode === 'screen', fitHeight ?? undefined);
   const [definitionsByBinding, setDefinitionsByBinding] = useState<Record<string, PanelBindingFilterDefinition[]>>({});
   const [selections, setSelections] = useState<FilterSelections>(() => loadSelections(panelId));
   const [executedByBinding, setExecutedByBinding] = useState<Record<string, string>>({});
