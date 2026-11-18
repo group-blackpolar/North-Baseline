@@ -61,6 +61,7 @@ export function ContentEditor({ organizationId, evaluationId, draft, locked }: {
                 <QuestionCard key={q.id} q={q} index={index} total={content.questions.length} open={openId === q.id} locked={locked || busy}
                   onToggle={() => setOpenId(openId === q.id ? null : q.id)} onMove={(by) => move(index, by)} onRemove={() => void remove(q)}
                   onEdit={(patch) => draft.editQuestion(q.id, patch)} onCorrect={(optionId) => void draft.setCorrect(q.id, optionId)}
+                  onReview={() => void draft.commitQuestion(q.id).then(() => draft.run((rev) => evaluationsApi.updateQuestion(organizationId, evaluationId, q.id, { aiDraft: false }, rev))).then(() => draft.reload()).catch(() => undefined)}
                   passages={content.passages} sections={content.sections} />
               ))}
             </ol>
@@ -99,9 +100,9 @@ function PassageCard({ passage, locked, onSave, onRemove }: { passage: { id: str
   );
 }
 
-function QuestionCard({ q, index, total, open, locked, passages, sections, onToggle, onMove, onRemove, onEdit, onCorrect }: {
+function QuestionCard({ q, index, total, open, locked, passages, sections, onToggle, onMove, onRemove, onEdit, onCorrect, onReview }: {
   q: AuthorQuestion; index: number; total: number; open: boolean; locked: boolean; passages: Array<{ id: string; title: string }>; sections: Array<{ id: string; title: string }>;
-  onToggle: () => void; onMove: (by: -1 | 1) => void; onRemove: () => void; onEdit: (patch: Partial<AuthorQuestion>) => void; onCorrect: (optionId: string) => void;
+  onToggle: () => void; onMove: (by: -1 | 1) => void; onRemove: () => void; onEdit: (patch: Partial<AuthorQuestion>) => void; onCorrect: (optionId: string) => void; onReview: () => void;
 }) {
   const { t } = useI18n();
   const issues = questionIssues(q);
@@ -114,6 +115,7 @@ function QuestionCard({ q, index, total, open, locked, passages, sections, onTog
           <CaretDown className={cn('size-4 shrink-0 transition-transform', open ? '' : '-rotate-90')} aria-hidden />
           <span className="shrink-0 font-display text-sm font-semibold text-text">{t('ev.player.question', { n: index + 1 })}</span>
           <span className="min-w-0 flex-1 truncate text-sm text-text-secondary">{summary}</span>
+          {q.aiDraft ? <span className="inline-flex shrink-0 items-center rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-medium text-accent">{t('ev.builder.aiDraft')}</span> : null}
           {issues.length ? <span className="inline-flex shrink-0 items-center gap-1 text-xs text-warning"><WarningCircle className="size-4" aria-hidden /><span className="hidden sm:inline">{t('ev.builder.incomplete')}</span></span> : null}
         </button>
         <Button size="icon-sm" variant="ghost" aria-label={t('ev.builder.moveUp')} disabled={locked || index === 0} onClick={() => onMove(-1)}><ArrowUp className="size-4" aria-hidden /></Button>
@@ -122,6 +124,12 @@ function QuestionCard({ q, index, total, open, locked, passages, sections, onTog
       </div>
       {open ? (
         <div className="space-y-4 border-t border-border p-3 sm:p-4">
+          {q.aiDraft ? (
+            <div role="note" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-accent/40 bg-accent/10 p-3 text-sm">
+              <span className="min-w-0 flex-1 basis-56 text-text">{t('ev.builder.aiHint')}</span>
+              <Button size="sm" variant="accent" disabled={locked} onClick={() => onReview()}>{t('ev.builder.markReviewed')}</Button>
+            </div>
+          ) : null}
           <label className="block space-y-1"><span className="ui-label">{t('ev.builder.statement')}</span>
             <BlockTextArea key={`${q.id}-p`} className={cn(field, 'min-h-24 resize-y leading-6')} blocks={q.prompt} disabled={locked} onChange={(prompt) => onEdit({ prompt })} /></label>
           {hiddenPrompt ? <p className="text-xs text-text-muted">{t('ev.builder.keptBlocks', { n: hiddenPrompt })}</p> : null}
