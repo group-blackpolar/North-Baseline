@@ -194,7 +194,7 @@ function resultOf(state: BindingState): AnalyticsResult {
     const rows = analyticsRows(state.response);
     return rows.length ? { state: 'ready', data: { columns, rows } } : { state: 'empty' };
   }
-  if (state.status === 'error') return { state: 'error', message: state.error?.message };
+  if (state.status === 'error') return { state: 'error', message: state.error?.message, status: state.error?.status };
   return { state: 'loading' };
 }
 

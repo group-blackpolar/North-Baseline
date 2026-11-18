@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, CaretDown, CaretLeft, CaretRight, CaretUpDown, Columns, DotsThreeVertical, DownloadSimple, Eye, EyeSlash, FunnelSimple, MagnifyingGlass, WarningCircle } from '@phosphor-icons/react';
+import { ArrowDown, ArrowUp, CaretDown, CaretLeft, CaretRight, CaretUpDown, Columns, DotsThreeVertical, DownloadSimple, Eye, EyeSlash, FunnelSimple, MagnifyingGlass } from '@phosphor-icons/react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { Popover } from '@/components/ui/popover';
 import { Sheet } from '@/components/ui/sheet';
@@ -10,6 +10,7 @@ import { useCellFill, useElementSize } from '../cellFill';
 import type { DatasetQueryFilter } from '../datasetQuery';
 import type { AnalyticsRow } from '../types';
 import { analyticsRows, bindingIdOf, useBindingResult, useBindingSource } from './bindingSource';
+import { ReportError } from './ReportError';
 import { ExportDialog } from './ExportDialog';
 import { asNumber, formatValue, localizedText, TONE_VARS, toneOf, type ValueFormat } from './format';
 import { defaultView, moveColumn, pageWindow, parseColumns, reconcileView, rowKeyOf, sparklineSeries, toggleColumn, trendDirection, visibleColumns, type GridColumn, type GridView } from './gridState';
@@ -201,7 +202,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
 
       <div ref={scroller} className={cn('relative min-h-0 flex-1 rounded-lg border border-border', 'overflow-auto', data.refreshing && 'opacity-70 transition-opacity')} aria-busy={data.status === 'loading' || data.refreshing}>
         {data.status === 'error' ? (
-          <div role="alert" className="flex min-h-40 flex-col items-center justify-center gap-2 text-xs text-error"><WarningCircle className="size-5" aria-hidden="true" />{data.error?.message || t('analytics.error')}<button type="button" className="rounded-md border border-border px-2.5 py-1 font-medium text-text hover:bg-surface-hover" onClick={data.reload}>{t('flt.retry')}</button></div>
+          <ReportError status={data.error?.status} message={data.error?.message} onRetry={data.reload} />
         ) : data.status !== 'ready' && !data.response ? (
           <div className="space-y-1.5 p-3" aria-hidden="true">{Array.from({ length: 8 }, (_, index) => <Skeleton key={index} className="h-6 w-full" />)}</div>
         ) : rows.length === 0 ? (

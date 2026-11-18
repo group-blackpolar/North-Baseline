@@ -1,5 +1,6 @@
 import { Lightbulb } from '@phosphor-icons/react';
 import { useMemo } from 'react';
+import { ReportError } from './ReportError';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useI18n } from '@/lib/i18n';
 import { analyticsRows, bindingIdOf, comparisonRows, useBindingResult } from './bindingSource';
@@ -63,7 +64,7 @@ function InsightCard({ rule, bindingId, locales }: { rule: Rule; bindingId: stri
     <div className="flex h-full min-w-0 items-start gap-2.5 rounded-xl border border-border bg-surface p-2.5 shadow-xs transition-shadow hover:shadow-soft">
       <span className="flex size-9 shrink-0 items-center justify-center rounded-lg" style={{ background: tone.bg, color: tone.fg }} aria-hidden="true"><Glyph className="size-[calc(18px*var(--s,1))]" weight="fill" /></span>
       <div className="min-w-0 flex-1">
-        {result.status === 'error' ? <p role="alert" className="text-xs text-error">{t('analytics.error')}</p> : !result.response ? <div className="space-y-1.5" aria-busy="true"><Skeleton className="h-4 w-20" /><Skeleton className="h-3 w-32" /></div> : body ? (
+        {result.status === 'error' ? <ReportError status={result.error?.status} compact /> : !result.response ? <div className="space-y-1.5" aria-busy="true"><Skeleton className="h-4 w-20" /><Skeleton className="h-3 w-32" /></div> : body ? (
           <>
             <p className="truncate text-[length:calc(0.92rem*var(--s,1))] font-semibold leading-tight text-text" title={body.headline}>{body.headline}</p>
             <p className="truncate text-[length:calc(0.72rem*var(--s,1))] font-medium text-text-secondary" title={label}>{label}</p>

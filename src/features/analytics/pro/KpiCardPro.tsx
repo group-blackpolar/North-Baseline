@@ -1,5 +1,6 @@
-import { ArrowDown, ArrowUp, Equals, WarningCircle } from '@phosphor-icons/react';
+import { ArrowDown, ArrowUp, Equals } from '@phosphor-icons/react';
 import { useMemo } from 'react';
+import { ReportError } from './ReportError';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -68,7 +69,7 @@ export function KpiCardPro({ props, bindings, locales }: { props: Props; binding
       </span>
       <div className="min-w-0 flex-1">
         {data.status === 'error' ? (
-          <p role="alert" className="flex items-center gap-1.5 text-xs text-error"><WarningCircle className="size-4 shrink-0" aria-hidden="true" />{t('analytics.error')}</p>
+          <ReportError status={data.error?.status} compact className="items-start justify-start px-0 text-left" />
         ) : !view ? (
           <div className="space-y-1.5" aria-busy="true"><Skeleton className="h-6 w-24" /><Skeleton className="h-3 w-32" /></div>
         ) : (

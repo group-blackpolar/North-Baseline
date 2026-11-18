@@ -1,5 +1,6 @@
-import { WarningCircle } from '@phosphor-icons/react';
+
 import { useMemo, useRef, useState } from 'react';
+import { ReportError } from './ReportError';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -74,7 +75,7 @@ export default function GeoBubbleMap({ props, bindings, locales }: { props: Prop
     <div className="flex h-full min-h-0 flex-col">
       {title ? <h3 className="mb-2 font-display text-[length:calc(0.95rem*var(--s,1))] font-semibold text-text">{title}</h3> : null}
       {data.status === 'error' ? (
-        <div role="alert" className="flex min-h-32 flex-1 items-center justify-center gap-2 text-xs text-error"><WarningCircle className="size-4" aria-hidden="true" />{t('analytics.error')}</div>
+        <ReportError status={data.error?.status} />
       ) : !model ? <Skeleton className="min-h-40 flex-1" /> : model.list.length === 0 ? (
         <p role="status" className="flex min-h-32 flex-1 items-center justify-center text-xs text-text-muted">{t('analytics.empty')}</p>
       ) : (

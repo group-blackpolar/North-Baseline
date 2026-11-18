@@ -587,6 +587,7 @@ const es = {
   'pa.templates.emptyBody': 'No hay plantillas globales publicadas en el catálogo.',
   'analytics.loading': 'Cargando datos…',
   'analytics.error': 'No fue posible cargar estos datos.',
+  'analytics.forbidden': 'No tienes permiso para ver estos datos.',
   'analytics.empty': 'No hay datos disponibles para esta vista.',
   'panel.expand': 'Ampliar', 'panel.drillBack': 'Volver', 'panel.drillHint': 'Clic en una barra para ver su detalle',
   'analytics.noNumericValues': 'No hay valores numéricos para este gráfico.',

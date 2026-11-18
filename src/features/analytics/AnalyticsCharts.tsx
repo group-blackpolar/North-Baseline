@@ -18,10 +18,11 @@ import {
   YAxis,
   ZAxis,
 } from 'recharts';
-import { ArrowDown, ArrowUp, CaretUpDown, Funnel, WarningCircle } from '@phosphor-icons/react';
+import { ArrowDown, ArrowUp, CaretUpDown, Funnel } from '@phosphor-icons/react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { AXIS_TICK, CHART_PALETTE, GRID, NorthChartTooltip, useLabelAxisWidth } from '@/components/charts';
 import { DelayedSkeleton, SkeletonChart } from '@/components/ui/skeleton';
+import { ReportError } from './pro/ReportError';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { intlTag } from '@/lib/intlTag';
@@ -61,7 +62,7 @@ function ResultState({ result, children }: { result: AnalyticsResult; children: 
     return <><span className="sr-only" role="status">{t('analytics.loading')}</span><DelayedSkeleton loading minHeight={128} fallback={<SkeletonChart height={160} />} /></>;
   }
   if (result.state === 'error') {
-    return <div role="alert" className="flex min-h-32 items-center justify-center gap-2 px-4 text-center text-xs text-error"><WarningCircle className="size-4 shrink-0" />{result.message || t('analytics.error')}</div>;
+    return <ReportError status={result.status} message={result.message} />;
   }
   if (result.state === 'empty') {
     return <div role="status" className="flex min-h-32 items-center justify-center px-4 text-center text-xs text-text-muted">{result.message || t('analytics.empty')}</div>;
