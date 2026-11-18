@@ -52,7 +52,8 @@ export function OrganizationSwitcher({ collapsed }: { collapsed: boolean }) {
   const personalActive = activeOrganization.id === PERSONAL_ORG_ID;
   const name = personalActive ? t('personal.workspace.name') : (activeOrganization.name ?? '');
   const orgs = organizations.filter((org) => org.id !== PERSONAL_ORG_ID);
-  const personal = organizations.find((org) => org.id === PERSONAL_ORG_ID) ?? { id: PERSONAL_ORG_ID };
+  // The provider lists Personal only for accounts allowed to have one.
+  const personal = organizations.find((org) => org.id === PERSONAL_ORG_ID);
   const choose = (org: OrganizationLike) => { setMenu(null); goToOrganization(org); };
 
   const trigger = (
@@ -90,11 +91,11 @@ export function OrganizationSwitcher({ collapsed }: { collapsed: boolean }) {
       {collapsed ? <Tooltip label={menu ? '' : name} side="right">{trigger}</Tooltip> : trigger}
       {menu && (
         <div role="menu" data-org-switcher aria-label={t('shell.organizations')} style={{ top: menu.top, left: menu.left, width: menu.width }} className="north-enter fixed z-(--z-popover) max-h-[70vh] overflow-y-auto rounded-lg border border-border bg-surface p-1.5 shadow-pop">
-          {[personal as OrganizationLike, ...(orgs as OrganizationLike[])].map((org, index) => {
+          {[...(personal ? [personal as OrganizationLike] : []), ...(orgs as OrganizationLike[])].map((org, index) => {
             const active = org.id === activeOrganization.id;
             return (
               <div key={org.id}>
-                {index === 1 && orgs.length > 0 && <p className="ui-label px-2 pb-1 pt-2">{t('org.list')}</p>}
+                {index === 1 && personal && orgs.length > 0 && <p className="ui-label px-2 pb-1 pt-2">{t('org.list')}</p>}
                 <button
                   type="button"
                   role="menuitemradio"

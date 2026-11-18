@@ -15,6 +15,7 @@ import { WorkspaceProvider, useWorkspace } from '@/context/WorkspaceContext';
 import { TabsProvider, useTabs } from '@/context/TabsContext';
 import { CatalogProvider, useCatalog } from '@/context/CatalogContext';
 import { PERSONAL_ORG_ID } from '@/lib/demo/store';
+import { canUsePersonalWorkspace } from '@/lib/workspaceAccess';
 import { PermissionProvider } from '@/context/PermissionContext';
 import { I18nProvider, useI18n } from '@/lib/i18n';
 import { SessionGuard } from '@/components/session/SessionGuard';
@@ -653,6 +654,12 @@ function AuthenticatedRouter({ user, onAuthError, route, pendingInvitation, onIn
   const [gateError, setGateError] = useState('');
   const [accepting, setAccepting] = useState(false);
   const member = isOrganizationRoute ? organizations.find((organization) => organization.slug === route.organizationSlug) : null;
+  // Accounts without a Personal Workspace never stay on its URLs: send them to the organization they were resolved to.
+  const personalBlocked = !canUsePersonalWorkspace(user) && (route.kind === 'workspace' || route.kind === 'platform-admin');
+  useEffect(() => {
+    if (!personalBlocked || isLoading) return;
+    replacePath(activeOrganization?.slug ? `/${encodeURIComponent(activeOrganization.slug)}` : '/');
+  }, [personalBlocked, isLoading, activeOrganization?.slug]);
 
   useEffect(() => {
     if (!pendingInvitation) return;
@@ -687,6 +694,7 @@ function AuthenticatedRouter({ user, onAuthError, route, pendingInvitation, onIn
     if (!studioMember) return <GenericNotFound />;
     return <Suspense fallback={<ShellSkeleton />}><StudioWindow organizationId={studioMember.id} organizationSlug={route.organizationSlug} panelId={route.panelId} /></Suspense>;
   }
+  if (personalBlocked) return <ShellSkeleton />;
   if (route.kind === 'platform-admin') return <PlatformAdminEntry user={user} onAuthError={onAuthError} route={route} />;
   if (!isOrganizationRoute) return <AppShell user={user} onAuthError={onAuthError} route={route} />;
   if (isLoading) return <ShellSkeleton />;
