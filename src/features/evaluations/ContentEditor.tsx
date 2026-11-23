@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { evaluationsApi } from './api';
-import { blocksToText, formatPoints, type Block, hiddenBlockCount, optionLabel, questionIssues, textToBlocks, type AuthorQuestion } from './model';
+import { blocksToText, formatPoints, type Block, hiddenBlockCount, optionLabel, questionIssues, textToBlocks, type AuthorQuestion, type Skill } from './model';
 import type { useDraft } from './useDraft';
 
 type Draft = ReturnType<typeof useDraft>;
@@ -61,7 +61,7 @@ export function ContentEditor({ organizationId, evaluationId, draft, locked }: {
                 <QuestionCard key={q.id} q={q} index={index} total={content.questions.length} open={openId === q.id} locked={locked || busy}
                   onToggle={() => setOpenId(openId === q.id ? null : q.id)} onMove={(by) => move(index, by)} onRemove={() => void remove(q)}
                   onEdit={(patch) => draft.editQuestion(q.id, patch)} onCorrect={(optionId) => void draft.setCorrect(q.id, optionId)}
-                  passages={content.passages} sections={content.sections} />
+                  passages={content.passages} sections={content.sections} skills={content.skills} />
               ))}
             </ol>
             <Button size="sm" variant="secondary" disabled={locked || busy} onClick={() => void addQuestion(section.id)}><Plus className="size-4" aria-hidden />{t('ev.builder.addQuestion')}</Button>
@@ -99,8 +99,8 @@ function PassageCard({ passage, locked, onSave, onRemove }: { passage: { id: str
   );
 }
 
-function QuestionCard({ q, index, total, open, locked, passages, sections, onToggle, onMove, onRemove, onEdit, onCorrect }: {
-  q: AuthorQuestion; index: number; total: number; open: boolean; locked: boolean; passages: Array<{ id: string; title: string }>; sections: Array<{ id: string; title: string }>;
+function QuestionCard({ q, index, total, open, locked, passages, sections, skills, onToggle, onMove, onRemove, onEdit, onCorrect }: {
+  q: AuthorQuestion; index: number; total: number; open: boolean; locked: boolean; passages: Array<{ id: string; title: string }>; sections: Array<{ id: string; title: string }>; skills: Skill[];
   onToggle: () => void; onMove: (by: -1 | 1) => void; onRemove: () => void; onEdit: (patch: Partial<AuthorQuestion>) => void; onCorrect: (optionId: string) => void;
 }) {
   const { t } = useI18n();
@@ -146,6 +146,18 @@ function QuestionCard({ q, index, total, open, locked, passages, sections, onTog
             <label className="space-y-1"><span className="ui-label">{t('ev.builder.passage')}</span><select className={field} value={q.passageId ?? ''} disabled={locked} onChange={(event) => onEdit({ passageId: event.target.value || null })}><option value="">{t('ev.builder.noPassage')}</option>{passages.map((p) => <option key={p.id} value={p.id}>{p.title || t('ev.player.text')}</option>)}</select></label>
             <label className="space-y-1"><span className="ui-label">{t('ev.builder.section')}</span><select className={field} value={q.sectionId} disabled={locked || sections.length < 2} onChange={(event) => onEdit({ sectionId: event.target.value })}>{sections.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}</select></label>
           </div>
+          <fieldset className="space-y-3 rounded-xl border border-border p-3"><legend className="ui-label px-1">{t('st.builder.tags')}</legend>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <label className="space-y-1"><span className="text-sm text-text">{t('st.builder.topic')}</span><input className={field} value={q.topic ?? ''} maxLength={120} disabled={locked} onChange={(event) => onEdit({ topic: event.target.value.trim() ? event.target.value : null })} /></label>
+              <label className="space-y-1"><span className="text-sm text-text">{t('st.builder.difficulty')}</span><select className={field} value={q.difficulty ?? ''} disabled={locked} onChange={(event) => { if (event.target.value) onEdit({ difficulty: event.target.value as AuthorQuestion['difficulty'] }); }}><option value="" disabled>{t('st.builder.undefined')}</option>{(['EASY', 'MEDIUM', 'HARD'] as const).map((level) => <option key={level} value={level}>{t(`st.difficulty.${level}`)}</option>)}</select></label>
+              <label className="space-y-1"><span className="text-sm text-text">{t('st.builder.reference')}</span><input className={field} value={q.reference ?? ''} maxLength={300} disabled={locked} onChange={(event) => onEdit({ reference: event.target.value.trim() ? event.target.value : null })} /></label>
+            </div>
+            {skills.length ? (
+              <div className="space-y-1"><span className="text-sm text-text">{t('st.builder.skills')}</span>
+                <div className="flex flex-wrap gap-x-4 gap-y-1">{skills.filter((skill) => !q.category || skill.competency === q.category || q.skills.includes(skill.id)).map((skill) => (
+                  <label key={skill.id} className="flex items-center gap-1.5 text-sm"><input type="checkbox" checked={q.skills.includes(skill.id)} disabled={locked} onChange={(event) => onEdit({ skills: event.target.checked ? [...q.skills, skill.id] : q.skills.filter((id) => id !== skill.id) })} />{skill.label}</label>))}</div>
+              </div>) : <p className="text-xs text-text-muted">{t('st.builder.noSkills')}</p>}
+          </fieldset>
           <label className="block space-y-1"><span className="ui-label">{t('ev.builder.explanation')}</span>
             <BlockTextArea key={`${q.id}-e`} className={cn(field, 'min-h-20 resize-y leading-6')} blocks={q.explanation} disabled={locked} onChange={(explanation) => onEdit({ explanation })} placeholder={t('ev.builder.explanationHint')} /></label>
           {hiddenExplanation ? <p className="text-xs text-text-muted">{t('ev.builder.keptBlocks', { n: hiddenExplanation })}</p> : null}

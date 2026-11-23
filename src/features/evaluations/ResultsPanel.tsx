@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Status } from '@/components/ui/status';
 import { useResource } from '@/features/admin-center/hooks';
+import { usePermissions } from '@/context/PermissionContext';
 import { useI18n } from '@/lib/i18n';
 import { evaluationsApi } from './api';
 import { formatPoints, type EvaluationKind, type ResultView as Result } from './model';
@@ -17,6 +18,7 @@ const field = 'rounded-md border border-border bg-surface px-3 py-2 text-sm text
 /** Every attempt of one evaluation with its score, and any result in full (for people holding evaluations.results.read). */
 export function ResultsPanel({ organizationId, kind }: { organizationId: string; kind?: EvaluationKind }) {
   const { t } = useI18n();
+  const { can } = usePermissions();
   const evaluations = useResource(() => evaluationsApi.list(organizationId), [organizationId]);
   const [selected, setSelected] = useState('');
   const [detail, setDetail] = useState<Result | null>(null);
@@ -26,7 +28,7 @@ export function ResultsPanel({ organizationId, kind }: { organizationId: string;
   const evaluationId = selected || list[0]?.id || '';
   const attempts = useResource(() => (evaluationId ? evaluationsApi.attempts(organizationId, evaluationId) : Promise.resolve([])), [organizationId, evaluationId]);
 
-  if (detail) return <div><Button size="sm" variant="ghost" onClick={() => setDetail(null)}><ArrowLeft className="size-4" aria-hidden />{t('ev.builder.back')}</Button><ResultView result={detail} /></div>;
+  if (detail) return <div><Button size="sm" variant="ghost" onClick={() => setDetail(null)}><ArrowLeft className="size-4" aria-hidden />{t('ev.builder.back')}</Button><ResultView result={detail} title={evaluations.data?.find((row) => row.id === evaluationId)?.title} organizationId={organizationId} canRegenerate={can('evaluations.manage')} /></div>;
   return (
     <section aria-label={t('ev.results.title')} className="space-y-3">
       {evaluations.status === 'loading' ? <Skeleton className="h-24 w-full rounded-xl" /> : list.length === 0 ? <EmptyState icon={ChartBar} title={t('ev.results.none')} body={t('ev.results.noneHint')} /> : (

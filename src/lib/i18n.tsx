@@ -16,14 +16,15 @@ import { pack19Es, pack19En, type Pack19Dictionary } from '@/locales/pack19';
 import { pack20Es, pack20En, type Pack20Dictionary } from '@/locales/pack20';
 import { pack21Es, pack21En, type Pack21Dictionary } from '@/locales/pack21';
 import { pack22Es, pack22En, type Pack22Dictionary } from '@/locales/pack22';
+import { pack23Es, pack23En, type Pack23Dictionary } from '@/locales/pack23';
 
-export type Dictionary = BaseDictionary & AuthDictionary & AdminDictionary & MediaDictionary & AssistantDictionary & Pack12Dictionary & Pack13Dictionary & StudioDictionary & Pack16Dictionary & Pack17Dictionary & Pack18Dictionary & Pack19Dictionary & Pack20Dictionary & Pack21Dictionary & Pack22Dictionary;
+export type Dictionary = BaseDictionary & AuthDictionary & AdminDictionary & MediaDictionary & AssistantDictionary & Pack12Dictionary & Pack13Dictionary & StudioDictionary & Pack16Dictionary & Pack17Dictionary & Pack18Dictionary & Pack19Dictionary & Pack20Dictionary & Pack21Dictionary & Pack22Dictionary & Pack23Dictionary;
 export type Locale = 'es' | 'en';
 
 /** Registrar un idioma nuevo = añadir su archivo base + auth */
 const REGISTRIES: Record<Locale, Dictionary> = {
-  es: { ...baseEs, ...authEs, ...adminEs, ...mediaEs, ...assistantEs, ...pack12Es, ...pack13Es, ...studioEs, ...pack16Es, ...pack17Es, ...pack18Es, ...pack19Es, ...pack20Es, ...pack21Es, ...pack22Es },
-  en: { ...baseEn, ...authEn, ...adminEn, ...mediaEn, ...assistantEn, ...pack12En, ...pack13En, ...studioEn, ...pack16En, ...pack17En, ...pack18En, ...pack19En, ...pack20En, ...pack21En, ...pack22En },
+  es: { ...baseEs, ...authEs, ...adminEs, ...mediaEs, ...assistantEs, ...pack12Es, ...pack13Es, ...studioEs, ...pack16Es, ...pack17Es, ...pack18Es, ...pack19Es, ...pack20Es, ...pack21Es, ...pack22Es, ...pack23Es },
+  en: { ...baseEn, ...authEn, ...adminEn, ...mediaEn, ...assistantEn, ...pack12En, ...pack13En, ...studioEn, ...pack16En, ...pack17En, ...pack18En, ...pack19En, ...pack20En, ...pack21En, ...pack22En, ...pack23En },
 };
 
 const STORAGE_KEY = 'north-locale';
