@@ -18,18 +18,24 @@ export interface Settings {
   review: { mode: ReviewMode; revealAfter: string | null };
   ai: { allowedDuringAttempt: boolean };
   /** FORWARD_ONLY: questions open one at a time, each answer is confirmed to the server, nothing closed can be reopened, each question has its own server-timed limit. */
-  pacing: { navigation: 'FREE' | 'FORWARD_ONLY'; questionSeconds: number | null };
+  pacing: { navigation: 'FREE' | 'FORWARD_ONLY'; questionSeconds: number | null; sessionMinutes: number | null };
+  /** Internal performance levels (not an official scale). */
+  performance: { levels: PerformanceLevel[] };
 }
+export interface PerformanceLevel { key: string; label: string; minPercent: number; summary?: string }
+export type Difficulty = 'EASY' | 'MEDIUM' | 'HARD';
+export interface Skill { id: string; competency: string; label: string; strength: string; gap: string; study: string; strategy: string }
 export interface AuthorOption { id: string; text: string }
 export interface AuthorQuestion {
   id: string; sectionId: string; passageId: string | null; category: string | null; prompt: Block[]; options: AuthorOption[];
   correctOptionId: string | null; explanation: Block[]; points: number;
+  topic: string | null; skills: string[]; difficulty: Difficulty | null; reference: string | null;
 }
 export interface Section { id: string; title: string; description?: string }
 export interface Passage { id: string; title: string; body: Block[] }
-export interface AuthorContent { schemaVersion: 1; settings: Settings; sections: Section[]; passages: Passage[]; questions: AuthorQuestion[] }
+export interface AuthorContent { schemaVersion: 1; settings: Settings; sections: Section[]; passages: Passage[]; questions: AuthorQuestion[]; skills: Skill[] }
 export interface AuthorView {
-  id: string; kind: EvaluationKind; title: string; description: string | null; status: EvaluationStatus; draftRevision: number; publishedRevision: number | null;
+  id: string; kind: EvaluationKind; categoryId: string | null; title: string; description: string | null; status: EvaluationStatus; draftRevision: number; publishedRevision: number | null;
   currentVersionId: string | null; hasUnpublishedChanges: boolean; content: AuthorContent; createdAt: string; updatedAt: string;
 }
 export interface EvaluationRow {
@@ -42,7 +48,9 @@ export interface AssignmentRow { role?: string; groupId?: string; userId?: strin
 
 export interface AvailableRow {
   id: string; kind: EvaluationKind; title: string; description: string | null; durationMinutes: number | null; questionCount: number; maxAttempts: number | null;
-  pacing: { navigation: 'FREE' | 'FORWARD_ONLY'; questionSeconds: number | null }; sectionCount: number;
+  pacing: { navigation: 'FREE' | 'FORWARD_ONLY'; questionSeconds: number | null; sessionMinutes: number | null }; sectionCount: number;
+  sections: Array<{ id: string; title: string; description: string | null; questionCount: number }>;
+  categoryId: string | null; state: 'TODO' | 'IN_PROGRESS' | 'COMPLETED'; lastAttemptId: string | null; lastPercent: number | null; lastSubmittedAt: string | null;
   attemptsUsed: number; openAttemptId: string | null; opensAt: string | null; closesAt: string | null; canStart: boolean;
 }
 export interface PlayerOption { id: string; label: string; text: string }
@@ -53,17 +61,35 @@ export interface PlayerContent {
 }
 export interface SavedAnswer { questionId: string; optionId: string | null; seq: number }
 export interface Group { key: string | null; title: string | null; correct: number; incorrect: number; unanswered: number; timedOut: number; scorePoints: number; maxPoints: number; percent: number }
-export interface ReviewItem { questionId: string; number: number; prompt: Block[]; options: PlayerOption[]; selectedOptionId: string | null; correctOptionId: string | null; outcome: 'correct' | 'incorrect' | 'omitted' | 'invalid_timeout'; explanation: Block[] }
+export interface ReviewItem {
+  questionId: string; number: number; prompt: Block[]; options: PlayerOption[]; selectedOptionId: string | null; correctOptionId: string | null; outcome: 'correct' | 'incorrect' | 'omitted' | 'invalid_timeout'; explanation: Block[];
+  competency: string | null; topic: string | null; difficulty: Difficulty | null; reference: string | null; seconds: number | null;
+}
+export interface CompetencyResult {
+  key: string; title: string; correct: number; incorrect: number; omitted: number; timedOut: number; total: number; scorePoints: number; maxPoints: number; percent: number;
+  level: { key: string; label: string }; timeSeconds: number | null; masteredTopics: string[]; reinforceTopics: string[]; paragraph: string;
+}
+export interface PlanItem { skillId: string; label: string; competency: string; questions: number[]; study: string; strategy: string; priority: 'gap' | 'consolidate' }
+export interface FeedbackView {
+  version: number; generator: string; createdAt: string; overall: { percent: number; level: { key: string; label: string } }; competencies: CompetencyResult[]; plan: PlanItem[];
+  versions?: Array<{ version: number; generator: string; reason: string; createdBy: string | null; createdAt: string }>;
+}
+export interface CategoryRow {
+  id: string; key: string; name: string; description: string | null; color: string; imageAssetId: string | null; status: 'ACTIVE' | 'ARCHIVED'; position: number;
+  counts: { total: number; completed: number; inProgress: number };
+}
+export interface CategoriesView { categories: CategoryRow[]; uncategorized: { total: number; completed: number; inProgress: number } }
 export interface ResultView {
   attemptId: string; evaluationId: string; status: AttemptStatus; submittedAt: string | null; correct: number; incorrect: number; unanswered: number; timedOut: number;
   scorePoints: number; maxPoints: number; percent: number; timeUsedSeconds: number;
   breakdown: { byCategory: Group[]; bySection: Group[] };
   review: { available: boolean; policy: ReviewMode; availableAt: string | null; items: ReviewItem[] | null };
+  feedback: FeedbackView; levels: PerformanceLevel[];
 }
 export interface AttemptView {
   id: string; evaluationId: string; status: AttemptStatus; attemptNumber: number; startedAt: string; deadlineAt: string | null; serverTime: string;
   evaluation: { title: string; description: string | null; kind: EvaluationKind }; remainingSeconds: number | null;
-  pacing: { navigation: 'FREE' | 'FORWARD_ONLY'; questionSeconds: number | null };
+  pacing: { navigation: 'FREE' | 'FORWARD_ONLY'; questionSeconds: number | null; sessionMinutes: number | null };
   /** Paced attempts: closed count, the open question's position and the sessions with their progress. `content` then carries only the open question and its text. */
   progress: { total: number; closed: number; index: number; sections: Array<{ id: string; title: string; description: string | null; total: number; closed: number }> } | null;
   current: { questionId: string; openedAt: string; expiresAt: string | null; remainingSeconds: number | null } | null;

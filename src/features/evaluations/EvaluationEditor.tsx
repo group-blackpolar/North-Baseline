@@ -9,6 +9,7 @@ import { useI18n } from '@/lib/i18n';
 import { listPermissionSubjects } from '@/lib/northAdmin';
 import { cn } from '@/lib/utils';
 import { evaluationsApi } from './api';
+import { CategoryPicker, LevelsEditor, SkillsEditor } from './AuthoringExtras';
 import { ContentEditor } from './ContentEditor';
 import { formatPoints, type AssignmentRow, type Issue, type Settings } from './model';
 import { useDraft } from './useDraft';
@@ -63,6 +64,8 @@ function SettingsTab({ organizationId, evaluationId, draft, locked }: { organiza
   const [title, setTitle] = useState(view.title);
   const [description, setDescription] = useState(view.description ?? '');
   const [settings, setSettings] = useState<Settings>(view.content.settings);
+  const [skills, setSkills] = useState(view.content.skills);
+  const [categoryId, setCategoryId] = useState(view.categoryId);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const patch = (next: Partial<Settings>) => setSettings((current) => ({ ...current, ...next }));
@@ -70,7 +73,7 @@ function SettingsTab({ organizationId, evaluationId, draft, locked }: { organiza
     setBusy(true); setMessage(null);
     try {
       await draft.commitAll();
-      const saved = await evaluationsApi.updateDetails(organizationId, evaluationId, { title: title.trim() || view.title, description: description.trim() || null, settings, expectedRevision: draft.revision.current });
+      const saved = await evaluationsApi.updateDetails(organizationId, evaluationId, { title: title.trim() || view.title, description: description.trim() || null, settings, skills, expectedRevision: draft.revision.current });
       draft.revision.current = saved.draftRevision; draft.setView(saved); setMessage({ ok: true, text: t('ev.settings.saved') });
     } catch (reason) { setMessage({ ok: false, text: reason instanceof ApiError && reason.code === 'EVALUATION_REVISION_CONFLICT' ? t('ev.builder.conflict') : reason instanceof Error ? reason.message : 'error' }); if (reason instanceof ApiError && reason.code === 'EVALUATION_REVISION_CONFLICT') await draft.reload(); }
     finally { setBusy(false); }
@@ -81,6 +84,7 @@ function SettingsTab({ organizationId, evaluationId, draft, locked }: { organiza
     <div className="max-w-2xl space-y-5">
       <label className="block space-y-1"><span className="ui-label">{t('ev.settings.title')}</span><input className={field} value={title} maxLength={200} disabled={locked} onChange={(event) => setTitle(event.target.value)} /></label>
       <label className="block space-y-1"><span className="ui-label">{t('ev.settings.description')}</span><textarea className={cn(field, 'min-h-20 resize-y')} value={description} maxLength={2000} disabled={locked} onChange={(event) => setDescription(event.target.value)} /></label>
+      <CategoryPicker organizationId={organizationId} evaluationId={evaluationId} value={categoryId} disabled={locked} onChanged={setCategoryId} />
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="space-y-1"><span className="ui-label">{t('ev.settings.duration')}</span>
           <input type="number" min={1} max={1440} inputMode="numeric" className={field} placeholder={t('ev.settings.untimed')} value={settings.durationMinutes ?? ''} disabled={locked} onChange={(event) => patch({ durationMinutes: num(event.target.value, null) })} />
@@ -94,9 +98,14 @@ function SettingsTab({ organizationId, evaluationId, draft, locked }: { organiza
           {(['FREE', 'FORWARD_ONLY'] as const).map((mode) => <option key={mode} value={mode}>{t(`ev.settings.pacing.${mode}`)}</option>)}
         </select>
         {settings.pacing.navigation === 'FORWARD_ONLY' ? (
+          <>
           <label className="block space-y-1"><span className="text-sm text-text">{t('ev.settings.questionSeconds')}</span>
             <input type="number" min={5} max={3600} inputMode="numeric" className={field} placeholder={t('ev.settings.unlimited')} value={settings.pacing.questionSeconds ?? ''} disabled={locked} onChange={(event) => patch({ pacing: { ...settings.pacing, questionSeconds: num(event.target.value, null) } })} />
             <span className="text-xs text-text-muted">{t('ev.settings.questionSecondsHint')}</span></label>
+            <label className="block space-y-1"><span className="text-sm text-text">{t('st.builder.sessionMinutes')}</span>
+              <input type="number" min={1} max={1440} inputMode="numeric" className={field} placeholder={t('ev.settings.unlimited')} value={settings.pacing.sessionMinutes ?? ''} disabled={locked} onChange={(event) => patch({ pacing: { ...settings.pacing, sessionMinutes: num(event.target.value, null) } })} />
+              <span className="text-xs text-text-muted">{t('st.builder.sessionMinutesHint')}</span></label>
+          </>
         ) : null}
       </fieldset>
       <fieldset className="space-y-3 rounded-xl border border-border p-3"><legend className="ui-label px-1">{t('ev.settings.scoring')}</legend>
@@ -113,6 +122,8 @@ function SettingsTab({ organizationId, evaluationId, draft, locked }: { organiza
         </select>
         {settings.review.mode === 'AFTER_DATE' ? <input type="datetime-local" aria-label={t('ev.settings.revealAfter')} className={field} value={toLocalInput(settings.review.revealAfter)} disabled={locked} onChange={(event) => patch({ review: { mode: 'AFTER_DATE', revealAfter: fromLocalInput(event.target.value) } })} /> : null}
       </fieldset>
+      <LevelsEditor levels={settings.performance.levels} disabled={locked} onChange={(levels) => patch({ performance: { levels } })} />
+      <SkillsEditor skills={skills} disabled={locked} onChange={setSkills} />
       <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={settings.ai.allowedDuringAttempt} disabled={locked} onChange={(event) => patch({ ai: { allowedDuringAttempt: event.target.checked } })} /><span>{t('ev.settings.ai')}<span className="block text-xs text-text-muted">{t('ev.settings.aiHint')}</span></span></label>
       {!locked ? <div className="flex items-center gap-3"><Button variant="accent" loading={busy} onClick={() => void save()}>{t('ev.settings.save')}</Button>{message ? <span role="status" className={cn('text-sm', message.ok ? 'text-success' : 'text-error')}>{message.text}</span> : null}</div> : null}
     </div>

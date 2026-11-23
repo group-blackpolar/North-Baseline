@@ -57,6 +57,7 @@ export function useDraft(organizationId: string, evaluationId: string, messages:
   const questionInput = (q: AuthorQuestion): QuestionInput => ({
     sectionId: q.sectionId, passageId: q.passageId, category: q.category, prompt: q.prompt, explanation: q.explanation, points: q.points,
     options: q.options.map((option) => ({ id: option.id, text: option.text })),
+    topic: q.topic, skills: q.skills, reference: q.reference, ...(q.difficulty ? { difficulty: q.difficulty } : {}),
   });
 
   /** Sends the pending edit of one question now. */

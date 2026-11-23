@@ -1,6 +1,6 @@
 import { apiRequest } from '@/lib/api';
 import type {
-  AssignmentRow, AttemptRow, AttemptView, AuthorView, AvailableRow, Block, EvaluationKind, EvaluationRow, EvaluationStatus, Issue, ResultView, Settings, VersionRow,
+  AssignmentRow, AttemptRow, AttemptView, AuthorView, AvailableRow, Block, EvaluationKind, EvaluationRow, EvaluationStatus, Issue, CategoriesView, CategoryRow, Skill, ResultView, Settings, VersionRow,
 } from './model';
 import type { SaveResponse, Saved } from './answerSync';
 
@@ -11,6 +11,7 @@ const json = (value: unknown) => JSON.stringify(value);
 export type DraftResult = { draftRevision: number; id?: string };
 export type QuestionInput = {
   sectionId?: string; passageId?: string | null; category?: string | null; prompt?: Block[]; explanation?: Block[]; points?: number;
+  topic?: string | null; skills?: string[]; difficulty?: 'EASY' | 'MEDIUM' | 'HARD'; reference?: string | null;
   options?: Array<{ id?: string; text: string }>; correctOptionId?: string | null;
 };
 
@@ -19,8 +20,9 @@ export const evaluationsApi = {
   list: (o: string, status?: EvaluationStatus) => apiRequest<EvaluationRow[]>(`${ev(o)}${status ? `?status=${status}` : ''}`),
   create: (o: string, input: { kind: EvaluationKind; title: string; description?: string | null }) => apiRequest<AuthorView>(ev(o), { method: 'POST', body: json(input) }),
   get: (o: string, id: string) => apiRequest<AuthorView>(ev(o, id)),
-  updateDetails: (o: string, id: string, input: { title?: string; description?: string | null; settings?: Settings; expectedRevision?: number }) => apiRequest<AuthorView>(ev(o, id), { method: 'PATCH', body: json(input) }),
+  updateDetails: (o: string, id: string, input: { title?: string; description?: string | null; settings?: Settings; skills?: Skill[]; expectedRevision?: number }) => apiRequest<AuthorView>(ev(o, id), { method: 'PATCH', body: json(input) }),
   remove: (o: string, id: string) => apiRequest<void>(ev(o, id), { method: 'DELETE' }),
+  setCategory: (o: string, id: string, categoryId: string | null) => apiRequest<AuthorView>(`${ev(o, id)}/category`, { method: 'PUT', body: json({ categoryId }) }),
   duplicate: (o: string, id: string) => apiRequest<AuthorView>(`${ev(o, id)}/duplicate`, { method: 'POST' }),
   archive: (o: string, id: string, archived: boolean) => apiRequest<AuthorView>(`${ev(o, id)}/${archived ? 'archive' : 'unarchive'}`, { method: 'POST' }),
   validate: (o: string, id: string) => apiRequest<{ valid: boolean; draftRevision: number; issues: Issue[] }>(`${ev(o, id)}/validate`, { method: 'POST' }),
@@ -50,8 +52,15 @@ export const evaluationsApi = {
   confirmAnswer: (o: string, attemptId: string, input: { questionId: string; optionId: string | null }) => apiRequest<{ accepted: boolean; reason: 'TIMEOUT' | 'ALREADY_CLOSED' | 'NOT_CURRENT' | 'ATTEMPT_CLOSED' | null; attempt: AttemptView }>(`${base(o)}/evaluation-attempts/${encodeURIComponent(attemptId)}/confirm`, { method: 'POST', body: json(input) }),
   submit: (o: string, attemptId: string) => apiRequest<ResultView>(`${base(o)}/evaluation-attempts/${encodeURIComponent(attemptId)}/submit`, { method: 'POST' }),
   result: (o: string, attemptId: string) => apiRequest<ResultView>(`${base(o)}/evaluation-attempts/${encodeURIComponent(attemptId)}/result`),
+  regenerateFeedback: (o: string, attemptId: string) => apiRequest<{ version: number; changed: boolean }>(`${base(o)}/evaluation-attempts/${encodeURIComponent(attemptId)}/feedback/regenerate`, { method: 'POST' }),
 };
 export const statsApi = {
   stats: (o: string, id: string, versionId?: string) => apiRequest<import('./model').StatsResponse>(`${ev(o, id)}/stats${versionId ? `?versionId=${encodeURIComponent(versionId)}` : ''}`),
   mine: (o: string) => apiRequest<import('./model').MyResultRow[]>(`${base(o)}/evaluation-results/mine`),
+};
+export type CategoryInput = { name?: string; description?: string | null; color?: string; imageAssetId?: string | null; position?: number; status?: 'ACTIVE' | 'ARCHIVED' };
+export const categoriesApi = {
+  list: (o: string, includeArchived = false) => apiRequest<CategoriesView>(`${base(o)}/evaluation-categories${includeArchived ? '?includeArchived=true' : ''}`),
+  create: (o: string, input: CategoryInput & { key: string; name: string }) => apiRequest<CategoryRow>(`${base(o)}/evaluation-categories`, { method: 'POST', body: json(input) }),
+  update: (o: string, id: string, input: CategoryInput) => apiRequest<CategoryRow>(`${base(o)}/evaluation-categories/${encodeURIComponent(id)}`, { method: 'PATCH', body: json(input) }),
 };

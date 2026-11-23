@@ -9,6 +9,7 @@ import { Status } from '@/components/ui/status';
 import { useResource } from '@/features/admin-center/hooks';
 import { useI18n } from '@/lib/i18n';
 import { evaluationsApi } from './api';
+import { CategoryAdmin } from './AuthoringExtras';
 import { EvaluationEditor } from './EvaluationEditor';
 import type { EvaluationKind, EvaluationRow } from './model';
 import { ClipboardText } from '@phosphor-icons/react';
@@ -39,6 +40,7 @@ export function BuilderPanel({ organizationId, kind, can }: { organizationId: st
         <p className="text-sm text-text-secondary">{t('ev.builder.listHint')}</p>
         {can.create ? <Button variant="accent" onClick={() => setCreating(true)}><Plus className="size-4" aria-hidden />{t('ev.builder.create')}</Button> : null}
       </div>
+      {kind !== 'FORM' ? <CategoryAdmin organizationId={organizationId} canManage={can.manage} /> : null}
       {error ? <p role="alert" className="rounded-lg border border-error/40 bg-error/10 p-3 text-sm text-error">{error}</p> : null}
       {rows.status === 'loading' ? <Skeleton className="h-28 w-full rounded-xl" />
         : list.length === 0 ? <EmptyState icon={ClipboardText} title={t('ev.builder.none')} body={t('ev.builder.noneHint')} />
