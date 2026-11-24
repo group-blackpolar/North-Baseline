@@ -62,5 +62,7 @@ export type CategoryInput = { name?: string; description?: string | null; color?
 export const categoriesApi = {
   list: (o: string, includeArchived = false) => apiRequest<CategoriesView>(`${base(o)}/evaluation-categories${includeArchived ? '?includeArchived=true' : ''}`),
   create: (o: string, input: CategoryInput & { key: string; name: string }) => apiRequest<CategoryRow>(`${base(o)}/evaluation-categories`, { method: 'POST', body: json(input) }),
+  /** Short-lived signed URL of the category's image (needs only evaluations.take or .read). */
+  image: (o: string, id: string) => apiRequest<{ download: { url: string } }>(`${base(o)}/evaluation-categories/${encodeURIComponent(id)}/image`),
   update: (o: string, id: string, input: CategoryInput) => apiRequest<CategoryRow>(`${base(o)}/evaluation-categories/${encodeURIComponent(id)}`, { method: 'PATCH', body: json(input) }),
 };

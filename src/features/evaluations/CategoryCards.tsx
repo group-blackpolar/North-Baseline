@@ -4,7 +4,7 @@ import { useI18n } from '@/lib/i18n';
 import { useCategoryImage } from './useCategoryImage';
 import type { CategoriesView, CategoryRow } from './model';
 
-export type CategorySummary = Pick<CategoryRow, 'name' | 'description' | 'color' | 'imageAssetId' | 'counts'>;
+export type CategorySummary = Partial<Pick<CategoryRow, 'id'>> & Pick<CategoryRow, 'name' | 'description' | 'color' | 'imageAssetId' | 'counts'>;
 
 /**
  * One category card: identity colour (data, applied as an accent and a soft tint so text keeps the theme's contrast), optional decorative image under
@@ -12,7 +12,7 @@ export type CategorySummary = Pick<CategoryRow, 'name' | 'description' | 'color'
  */
 export function CategoryCard({ organizationId, category, onOpen }: { organizationId: string; category: CategorySummary; onOpen: () => void }) {
   const { t } = useI18n();
-  const image = useCategoryImage(organizationId, category.imageAssetId);
+  const image = useCategoryImage(organizationId, category.imageAssetId, category.id);
   const { total, completed, inProgress } = category.counts;
   const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
   const accent = { '--cat': category.color } as CSSProperties;
