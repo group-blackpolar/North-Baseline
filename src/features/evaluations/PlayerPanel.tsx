@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ClipboardText } from '@phosphor-icons/react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -29,6 +29,18 @@ export function PlayerPanel({ organizationId, kind }: { organizationId: string; 
   const [open, setOpen] = useState<string | null>(null); // category key; '' = exams without category; null = home
 
   const refresh = useCallback(() => { void rows.reload(); void categories.reload(); }, [rows, categories]);
+  // What an administrator changes (a category image, a new exam, a state) shows up here without signing in again: on returning to the tab and every 30 s while the list is on screen.
+  const refreshRef = useRef(refresh);
+  refreshRef.current = refresh;
+  const listing = mode.kind === 'list';
+  useEffect(() => {
+    if (!listing) return undefined;
+    const tick = () => { if (document.visibilityState === 'visible') refreshRef.current(); };
+    const timer = window.setInterval(tick, 30_000);
+    document.addEventListener('visibilitychange', tick);
+    window.addEventListener('focus', tick);
+    return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', tick); window.removeEventListener('focus', tick); };
+  }, [listing]);
   const start = useCallback(async (row: AvailableRow) => {
     setError(null); setIntro(null); setMode({ kind: 'loading' });
     try { setMode({ kind: 'taking', attempt: await evaluationsApi.startAttempt(organizationId, row.id) }); }

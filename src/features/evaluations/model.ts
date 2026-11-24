@@ -39,7 +39,7 @@ export interface AuthorView {
   currentVersionId: string | null; hasUnpublishedChanges: boolean; content: AuthorContent; createdAt: string; updatedAt: string;
 }
 export interface EvaluationRow {
-  id: string; kind: EvaluationKind; title: string; description: string | null; status: EvaluationStatus; draftRevision: number; questionCount: number;
+  id: string; kind: EvaluationKind; categoryId: string | null; title: string; description: string | null; status: EvaluationStatus; draftRevision: number; questionCount: number;
   currentVersion: number | null; hasUnpublishedChanges: boolean; updatedAt: string;
 }
 export interface Issue { code: string; path: string; message: string }

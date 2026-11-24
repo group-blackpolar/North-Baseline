@@ -7,8 +7,10 @@ export function useCategoryImage(organizationId: string, assetId: string | null)
   useEffect(() => {
     let live = true;
     setUrl(null);
-    if (assetId) readAssetUrl(organizationId, assetId).then((next) => { if (live) setUrl(next); }).catch(() => undefined);
-    return () => { live = false; };
+    const sign = () => { if (assetId) readAssetUrl(organizationId, assetId).then((next) => { if (live) setUrl(next); }).catch(() => undefined); };
+    sign();
+    const timer = assetId ? window.setInterval(sign, 4 * 60_000) : undefined; // signed URLs are short-lived
+    return () => { live = false; window.clearInterval(timer); };
   }, [organizationId, assetId]);
   return url;
 }
