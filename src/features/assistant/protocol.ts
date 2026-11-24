@@ -167,7 +167,8 @@ function upsertTool(tools: ToolStep[], id: string, name: string, status: ToolSte
 }
 
 /** Maps a normalized CORECROW error code (or HTTP status) to a translation key suffix. */
-export function errorKind(code: string | null | undefined, status?: number): 'unavailable' | 'rateLimited' | 'busy' | 'timeout' | 'forbidden' | 'tooLong' | 'generic' {
+export function errorKind(code: string | null | undefined, status?: number): 'unavailable' | 'rateLimited' | 'busy' | 'timeout' | 'forbidden' | 'tooLong' | 'blocked' | 'generic' {
+  if (code === 'AI_BLOCKED_DURING_EVALUATION') return 'blocked';
   if (code === 'AI_DISABLED' || code === 'AI_PROVIDER_NOT_CONFIGURED' || code === 'AI_PROVIDER_AUTHENTICATION_FAILED' || code === 'AI_MODEL_UNAVAILABLE') return 'unavailable';
   if (code === 'AI_PROVIDER_RATE_LIMITED' || code === 'AI_RATE_LIMITED' || code === 'RATE_LIMITED' || status === 429) return 'rateLimited';
   if (code === 'AI_CONCURRENCY_LIMITED') return 'busy';

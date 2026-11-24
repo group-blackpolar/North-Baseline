@@ -13,6 +13,8 @@ export type QuestionInput = {
   sectionId?: string; passageId?: string | null; category?: string | null; prompt?: Block[]; explanation?: Block[]; points?: number;
   topic?: string | null; skills?: string[]; difficulty?: 'EASY' | 'MEDIUM' | 'HARD'; reference?: string | null;
   options?: Array<{ id?: string; text: string }>; correctOptionId?: string | null;
+  /** Only `false` can be sent: a person marks an AI draft as reviewed. */
+  aiDraft?: false;
 };
 
 export const evaluationsApi = {

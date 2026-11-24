@@ -85,6 +85,13 @@ export const pack22Es = {
   'ev.intro.ruleClock': 'El temporizador no se pausa: ni al recargar, ni al cambiar de pestaña, ni al leer el texto.',
   'ev.settings.pacing': 'Ritmo del intento', 'ev.settings.pacing.FREE': 'Libre: se puede ir y volver entre preguntas', 'ev.settings.pacing.FORWARD_ONLY': 'Secuencial: confirmar cada respuesta, sin volver atrás', 'ev.settings.questionSeconds': 'Segundos por pregunta', 'ev.settings.questionSecondsHint': 'Vacío = sin límite por pregunta (solo el total). El servidor mide cada plazo.',
   'ev.issue.EVALUATION_SECTION_ORDER': 'En una evaluación secuencial las preguntas de cada sesión deben ir seguidas.',
+  'assistant.mode.side': 'Panel lateral', 'assistant.mode.full': 'Espacio completo', 'assistant.mode.compact': 'Tarjeta compacta', 'assistant.mode.backToPanel': 'Volver al panel',
+  'assistant.resize': 'Cambiar el ancho del panel (flechas izquierda y derecha)', 'assistant.history': 'Conversaciones', 'assistant.history.empty': 'Todavía no hay conversaciones.', 'assistant.history.untitled': 'Conversación',
+  'assistant.page.share': 'Compartir esta página con el asistente', 'assistant.page.sharing': 'Se comparte: {page} (solo el nombre y el identificador, nunca respuestas ni datos).', 'assistant.page.off': 'No se comparte nada de esta página.',
+  'assistant.what.evaluations': 'la estructura de la evaluación', 'assistant.what.evaluationDrafts': 'borradores de preguntas', 'assistant.action.what.evaluationDrafts': 'Añadir borradores de preguntas escritos por el asistente. Quedarán marcados y una persona deberá revisarlos antes de publicar.',
+  'assistant.error.blocked': 'El asistente no está disponible mientras realizas una evaluación que no lo permite.',
+  'ev.builder.aiDraft': 'Borrador de IA: pendiente de revisión', 'ev.builder.markReviewed': 'Marcar como revisada', 'ev.builder.aiHint': 'Escrita por el asistente. Revisa el enunciado, las alternativas y la clave antes de publicar.',
+  'ev.issue.EVALUATION_AI_REVIEW_PENDING': 'Una pregunta escrita por el asistente debe revisarse antes de publicar.',
 } as const;
 
 export type Pack22Dictionary = { [K in keyof typeof pack22Es]: string };
@@ -167,4 +174,11 @@ export const pack22En: Pack22Dictionary = {
   'ev.intro.ruleClock': 'The timer never pauses: not on reload, not when switching tabs, not while reading the text.',
   'ev.settings.pacing': 'Attempt pacing', 'ev.settings.pacing.FREE': 'Free: move back and forth between questions', 'ev.settings.pacing.FORWARD_ONLY': 'Sequential: confirm each answer, no going back', 'ev.settings.questionSeconds': 'Seconds per question', 'ev.settings.questionSecondsHint': 'Empty = no per-question limit (only the total). The server times every window.',
   'ev.issue.EVALUATION_SECTION_ORDER': 'In a sequential evaluation the questions of each session must be consecutive.',
+  'assistant.mode.side': 'Side panel', 'assistant.mode.full': 'Full workspace', 'assistant.mode.compact': 'Compact card', 'assistant.mode.backToPanel': 'Back to panel',
+  'assistant.resize': 'Resize the panel (left and right arrow keys)', 'assistant.history': 'Conversations', 'assistant.history.empty': 'No conversations yet.', 'assistant.history.untitled': 'Conversation',
+  'assistant.page.share': 'Share this page with the assistant', 'assistant.page.sharing': 'Sharing: {page} (only the name and identifier, never answers or data).', 'assistant.page.off': 'Nothing from this page is shared.',
+  'assistant.what.evaluations': 'the evaluation structure', 'assistant.what.evaluationDrafts': 'question drafts', 'assistant.action.what.evaluationDrafts': 'Add question drafts written by the assistant. They will be marked and a person must review them before publishing.',
+  'assistant.error.blocked': 'The assistant is not available while you take an evaluation that does not allow it.',
+  'ev.builder.aiDraft': 'AI draft: pending review', 'ev.builder.markReviewed': 'Mark as reviewed', 'ev.builder.aiHint': 'Written by the assistant. Check the statement, the options and the key before publishing.',
+  'ev.issue.EVALUATION_AI_REVIEW_PENDING': 'A question written by the assistant must be reviewed before publishing.',
 };

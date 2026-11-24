@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { ApiError } from '@/lib/api';
 import { uuid } from '@/lib/utils';
-import { cancelAction, cancelRun, confirmAction, createConversation, createRun, listConversations, readConversation, readRun, streamRun } from './api.ts';
+import { cancelAction, cancelRun, confirmAction, createConversation, createRun, listConversations, readConversation, readRun, streamRun, type ConversationSummary } from './api.ts';
 import { chatReducer, initialChatState } from './protocol.ts';
 
 const codeOf = (error: unknown) => {
@@ -18,6 +18,7 @@ export function useAssistant(organizationId: string) {
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [history, setHistory] = useState<ConversationSummary[]>([]);
   const controller = useRef<AbortController | null>(null);
   const loaded = useRef(false);
   const runId = useRef<string | null>(null);
@@ -48,7 +49,7 @@ export function useAssistant(organizationId: string) {
     finally { setLoading(false); }
   }, [organizationId]);
 
-  const send = useCallback(async (message: string) => {
+  const send = useCallback(async (message: string, pageContext?: Parameters<typeof createRun>[3]) => {
     const text = message.trim();
     if (!text) return;
     controller.current?.abort();
@@ -61,7 +62,7 @@ export function useAssistant(organizationId: string) {
         conversationId = (await createConversation(organizationId)).id;
         dispatch({ type: 'conversation', conversationId });
       }
-      const { runId: created } = await createRun(organizationId, conversationId, text);
+      const { runId: created } = await createRun(organizationId, conversationId, text, pageContext);
       if (mine.signal.aborted) return;
       dispatch({ type: 'run.created', runId: created });
       await streamRun({ organizationId, runId: created, signal: mine.signal, onEvent: (event) => { if (!mine.signal.aborted) dispatch({ type: 'event', event }); } });
@@ -99,6 +100,25 @@ export function useAssistant(organizationId: string) {
     loaded.current = true; // a new conversation must not be replaced by the previous one
   }, []);
 
+  /** The organization's conversations, newest first (CORECROW returns only this person's, inside this organization). */
+  const loadHistory = useCallback(async () => {
+    try { setHistory(await listConversations(organizationId)); } catch { /* the list is a convenience; the chat still works */ }
+  }, [organizationId]);
+
+  /** Switches to a stored conversation (its messages come from CORECROW, not from the browser). */
+  const openConversation = useCallback(async (conversationId: string) => {
+    controller.current?.abort();
+    controller.current = null;
+    loaded.current = true;
+    setLoadError(null); setLoading(true);
+    try {
+      const stored = await readConversation(organizationId, conversationId);
+      dispatch({ type: 'reset' });
+      dispatch({ type: 'loaded', conversationId: stored.id, messages: stored.messages });
+    } catch (error) { setLoadError(codeOf(error)); }
+    finally { setLoading(false); }
+  }, [organizationId]);
+
   /** The user decided on a proposed action: nothing was done before this call. */
   const decide = useCallback(async (actionId: string, accept: boolean) => {
     dispatch({ type: 'action.update', id: actionId, status: accept ? 'confirming' : 'cancelled' });
@@ -111,5 +131,5 @@ export function useAssistant(organizationId: string) {
     }
   }, []);
 
-  return { state, loading, loadError, load, send, cancel, startOver, decide };
+  return { state, loading, loadError, load, send, cancel, startOver, decide, history, loadHistory, openConversation };
 }

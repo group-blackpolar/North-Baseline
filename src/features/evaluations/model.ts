@@ -30,6 +30,8 @@ export interface AuthorQuestion {
   id: string; sectionId: string; passageId: string | null; category: string | null; prompt: Block[]; options: AuthorOption[];
   correctOptionId: string | null; explanation: Block[]; points: number;
   topic: string | null; skills: string[]; difficulty: Difficulty | null; reference: string | null;
+  /** Written by the assistant; blocks publication until a person marks it reviewed. */
+  aiDraft?: boolean;
 }
 export interface Section { id: string; title: string; description?: string }
 export interface Passage { id: string; title: string; body: Block[] }

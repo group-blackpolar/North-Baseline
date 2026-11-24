@@ -144,3 +144,24 @@ test('panel bus: a request waits for its panel, is taken once and expires', asyn
   stop();
   resetPanelRequests();
 });
+
+import { buildRunContext, clampDockWidth, readDockWidth } from './assistantUi.ts';
+test('dock width stays between a usable chat and 60 % of the window', () => {
+  assert.equal(clampDockWidth(100, 1600), 320);
+  assert.equal(clampDockWidth(2000, 1600), 640);
+  assert.equal(clampDockWidth(500, 800), 480, '60 % of a narrow window');
+  assert.equal(clampDockWidth(NaN, 1600), 400);
+  assert.equal(readDockWidth({ getItem: () => '777' }, 1600), 640);
+  assert.equal(readDockWidth({ getItem: () => { throw new Error('blocked'); } }, 1600), 400, 'storage may be unavailable');
+});
+
+test('page context is sent only when sharing is on, and only as identifiers plus a short label', () => {
+  const page = { module: 'Evaluations Lab!', label: '  Exam\n builder  ' };
+  assert.equal(buildRunContext({ share: false, page, registered: { module: 'evaluations' } }), undefined);
+  assert.deepEqual(buildRunContext({ share: true, page, registered: null }), { module: 'evaluations-lab', label: 'Exam builder' });
+  const registered = { module: 'evaluations', label: 'x'.repeat(300), resource: { type: 'evaluation' as const, id: 'abc' } };
+  const built = buildRunContext({ share: true, page, registered })!;
+  assert.deepEqual([built.module, built.label!.length, built.resource], ['evaluations', 120, { type: 'evaluation', id: 'abc' }], 'the registered context wins and is bounded');
+  assert.equal(buildRunContext({ share: true, page: { module: '123' }, registered: null }), undefined, 'an invalid module is dropped, not guessed');
+  assert.equal(buildRunContext({ share: true, page: null, registered: null }), undefined);
+});
