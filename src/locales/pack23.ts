@@ -23,6 +23,7 @@ export const pack23Es = {
   'st.builder.skills': 'Habilidades', 'st.builder.skillsHint': 'Cada pregunta se etiqueta con habilidades; la retroalimentación personalizada se construye con estos textos y los resultados reales.', 'st.builder.addSkill': 'Añadir habilidad', 'st.builder.skillNew': 'Nueva habilidad', 'st.builder.skillRemove': 'Quitar habilidad',
   'st.builder.skill.label': 'Nombre', 'st.builder.skill.strength': 'Cuando acierta: «Demostraste que puedes…»', 'st.builder.skill.gap': 'Cuando falla: «Presentaste dificultades para…»', 'st.builder.skill.study': 'Qué estudiar', 'st.builder.skill.strategy': 'Estrategia para mejorar',
   'st.builder.tags': 'Etiquetas pedagógicas', 'st.builder.topic': 'Tema evaluado', 'st.builder.difficulty': 'Dificultad', 'st.builder.undefined': 'Sin definir', 'st.builder.reference': 'Referencia al material', 'st.builder.noSkills': 'Define habilidades en Ajustes para etiquetar la pregunta.',
+  'st.builder.newInCategory': 'Nueva evaluación aquí', 'st.builder.categoryEmpty': 'Esta categoría aún no tiene evaluaciones.',
   'st.difficulty.EASY': 'Fácil', 'st.difficulty.MEDIUM': 'Media', 'st.difficulty.HARD': 'Alta',
 } as const;
 
@@ -52,5 +53,6 @@ export const pack23En: Pack23Dictionary = {
   'st.builder.skills': 'Skills', 'st.builder.skillsHint': 'Each question is tagged with skills; the personalised feedback is built from these texts and the real results.', 'st.builder.addSkill': 'Add skill', 'st.builder.skillNew': 'New skill', 'st.builder.skillRemove': 'Remove skill',
   'st.builder.skill.label': 'Name', 'st.builder.skill.strength': 'When right: "You showed that you can..."', 'st.builder.skill.gap': 'When wrong: "You had difficulty to..."', 'st.builder.skill.study': 'What to study', 'st.builder.skill.strategy': 'Strategy to improve',
   'st.builder.tags': 'Pedagogical tags', 'st.builder.topic': 'Topic assessed', 'st.builder.difficulty': 'Difficulty', 'st.builder.undefined': 'Not set', 'st.builder.reference': 'Reference to the material', 'st.builder.noSkills': 'Define skills in Settings to tag the question.',
+  'st.builder.newInCategory': 'New evaluation here', 'st.builder.categoryEmpty': 'This category has no evaluations yet.',
   'st.difficulty.EASY': 'Easy', 'st.difficulty.MEDIUM': 'Medium', 'st.difficulty.HARD': 'Hard',
 };
