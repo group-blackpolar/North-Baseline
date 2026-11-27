@@ -7,6 +7,7 @@ import { ApiError } from '@/lib/api';
 import type { DatasetQueryFilter, DatasetQueryRow } from '../datasetQuery';
 import type { AnalyticsRow, AnalyticsValue } from '../types';
 import type { ExportRequest, ExportResult, PanelBindingFilterDefinition } from '../panelBindingQuery';
+import { collectPages } from './gridState';
 
 export type BindingRequest = {
   filters?: DatasetQueryFilter[];
@@ -97,7 +98,7 @@ const asApiError = (reason: unknown) => reason instanceof ApiError ? reason : ne
  * Fetches one named binding. The previous result stays on screen (dimmed through `refreshing`) while a filter, sort or
  * page change loads; failures drop the data (fail closed).
  */
-export function useBindingResult(bindingId: string | null, request: BindingRequest = {}, options: { /** The component that emits a selection on this field keeps showing all its values (the selection is highlighted, not applied to itself). */ exceptField?: string } = {}): BindingState & { reload: () => void } {
+export function useBindingResult(bindingId: string | null, request: BindingRequest = {}, options: { /** The component that emits a selection on this field keeps showing all its values (the selection is highlighted, not applied to itself). */ exceptField?: string; /** Read every page; the response says `complete: false` when some rows are still missing. */ allPages?: boolean } = {}): BindingState & { reload: () => void } {
   const source = useBindingSource();
   const [state, dispatch] = useReducer(reduce, { status: 'idle', response: null, refreshing: false, error: null } as BindingState);
   const [reloads, bump] = useReducer((value: number) => value + 1, 0);
@@ -114,11 +115,12 @@ export function useBindingResult(bindingId: string | null, request: BindingReque
     dispatch({ type: 'start', keepPrevious: true });
     const parsed = JSON.parse(requestJson) as BindingRequest;
     const merged: BindingRequest = { ...parsed, filters: [...(JSON.parse(filtersJson) as DatasetQueryFilter[]), ...(parsed.filters ?? [])] };
-    source.fetch(bindingId, merged, controller.signal)
+    const fetchPage = (offset: number) => source.fetch(bindingId, offset ? { ...merged, offset } : merged, controller.signal);
+    (options.allPages ? collectPages(fetchPage) : fetchPage(0))
       .then((response) => { if (latest.current === id) { dispatch({ type: 'ok', response }); source.report?.(bindingId, response); } })
       .catch((reason: unknown) => { if (!controller.signal.aborted && latest.current === id) dispatch({ type: 'fail', error: asApiError(reason) }); });
     return () => controller.abort();
-  }, [bindingId, filtersJson, reloads, requestJson, source, version]);
+  }, [bindingId, filtersJson, options.allPages, reloads, requestJson, source, version]);
 
   return { ...state, reload: bump };
 }

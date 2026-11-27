@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { defaultView, moveColumn, pageWindow, parseColumns, reconcileView, rowKeyOf, sparklineSeries, toggleColumn, trendDirection, visibleColumns } from './gridState.ts';
+import { collectPages, defaultView, moveColumn, pageWindow, parseColumns, reconcileView, rowKeyOf, sparklineSeries, toggleColumn, trendDirection, visibleColumns } from './gridState.ts';
 
 const label = (raw: unknown) => (typeof raw === 'object' && raw ? String((raw as Record<string, unknown>).es ?? '') : '');
 const columns = parseColumns([
@@ -50,4 +50,20 @@ test('sparklines are built per row key, ordered by category, from numeric values
   assert.equal(trendDirection([1, 2, 3]), 'up');
   assert.equal(trendDirection([3, 1]), 'down');
   assert.equal(trendDirection([4]), 'flat');
+});
+
+test('collectPages reads every page and says when rows are still missing', async () => {
+  const server = (total: number, limit: number, offsets: number[] = []) => async (offset: number) => { offsets.push(offset); return { rows: Array.from({ length: Math.max(0, Math.min(limit, total - offset)) }, (_, i) => ({ n: offset + i })) }; };
+  for (const [total, limit, requests] of [[330, 1000, 1], [1439, 1000, 2], [2000, 1000, 3], [250, 100, 3]] as const) {
+    const offsets: number[] = [];
+    const all = await collectPages(server(total, limit, offsets));
+    assert.equal(all.rows.length, total);
+    assert.equal(all.complete, true);
+    assert.equal(offsets.length, requests, `${total}/${limit}`);
+    assert.equal(new Set(all.rows.map((row) => row.n)).size, total);
+  }
+  assert.equal((await collectPages(server(5000, 1000), 3)).complete, false);
+  // A source that ignores the offset (anonymous showcase) is reported incomplete instead of duplicating rows.
+  const stuck = await collectPages(async () => ({ rows: Array.from({ length: 100 }, (_, i) => ({ n: i })) }));
+  assert.deepEqual([stuck.complete, stuck.rows.length], [false, 100]);
 });

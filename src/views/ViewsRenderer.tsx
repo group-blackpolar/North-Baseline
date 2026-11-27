@@ -29,7 +29,7 @@ import { exportPanelAnalyticsBinding, queryPanelAnalyticsBinding } from '@/featu
 import { queryShowcaseBinding } from '@/lib/showcase';
 import { consumePanelRequest, peekPanelRequest, subscribePanelRequests } from '@/features/assistant/panelBus';
 import { selectionsFromFilters } from '@/features/assistant/directives';
-import { chipsOf, filterModeOf, filtersForDefinitions, loadSelections, saveSelections, type FilterSelections } from '@/features/filters/filterModel';
+import { chipsOf, filterModeOf, filtersForDefinitions, loadSelections, planFacet, saveSelections, type FilterSelections } from '@/features/filters/filterModel';
 import { cn } from '@/lib/utils';
 import { CellFillProvider } from '@/features/analytics/cellFill';
 import { PanelGroup } from '@/features/analytics/pro/PanelGroup';
@@ -404,14 +404,20 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
     apply();
     return subscribePanelRequests(apply);
   }, [controls, panelId, updateSelections]);
+  const tableBindings = useMemo(() => new Set(document?.sections.flatMap((section) => section.components).flatMap((component) => { const data = component.type === 'data_grid' ? component.bindings?.data : undefined; return data ? [data.sourceId] : []; }) ?? []), [document]);
   const filtersFor = useCallback((source: FilterSelections) => Object.fromEntries(Object.entries(definitionsByBinding).map(([bindingId, definitions]) => [bindingId, filtersForDefinitions(definitions, source)])) as Record<string, DatasetQueryFilter[]>, [definitionsByBinding]);
   const filtersByBinding = useMemo(() => filtersFor(presenting ?? selections), [filtersFor, presenting, selections]);
   const loadFacet = useCallback<FacetLoader>(async (fieldId, search, offset, signal, granularity) => {
-    const entry = Object.entries(definitionsByBinding).find(([, definitions]) => definitions.some((definition) => definition.fieldId === fieldId));
-    if (!entry || !organizationId) return { values: [], truncated: false };
-    const result = await queryPanelFacet(organizationId, panelId, entry[0], { fieldId, ...(search ? { search } : {}), ...(offset ? { offset } : {}), ...(granularity ? { granularity, limit: 100 } : {}), filters: filtersForDefinitions(entry[1], selections, fieldId) }, signal);
+    const plan = planFacet(definitionsByBinding, fieldId, selections, tableBindings);
+    if (!plan || !organizationId) return { values: [], truncated: false };
+    const result = await queryPanelFacet(organizationId, panelId, plan.bindingId, { fieldId, ...(search ? { search } : {}), ...(offset ? { offset } : {}), ...(granularity ? { granularity, limit: 100 } : {}), filters: plan.filters }, signal);
     return { values: result.values, truncated: result.truncated, ...(result.total !== undefined ? { total: result.total } : {}) };
-  }, [definitionsByBinding, organizationId, panelId, selections]);
+  }, [definitionsByBinding, organizationId, panelId, selections, tableBindings]);
+  // What the options of one control are computed from: a new key reloads an open list, `ignored` is told to the reader.
+  const facetContext = useCallback((fieldId: string) => {
+    const plan = planFacet(definitionsByBinding, fieldId, selections, tableBindings);
+    return { key: plan ? JSON.stringify([plan.bindingId, plan.filters]) : '', ignored: (plan?.ignored ?? []).map((id) => controls.find((control) => control.fieldId === id)?.label ?? id) };
+  }, [controls, definitionsByBinding, selections, tableBindings]);
 
   // One source for every analytics component on the page: same filters, same refresh, same CORECROW contract.
   // The object is stable (identity never changes while the panel is open) and reads the live state through a ref, so
@@ -479,7 +485,7 @@ export function PublishedPanel({ title, document, locales, organizationId, panel
   };
   const filterTitle = localized(sections.flatMap((section) => section.components).find((component) => component.type === 'filter_bar')?.props.title, locales) || undefined;
   const hasFilterSlot = sections.some((section) => section.components.some((component) => component.type === 'filter_bar'));
-  const filterBar = <FilterBar controls={controls} selections={selections} onChange={updateSelections} loadFacet={canFacet ? loadFacet : undefined} title={filterTitle} hiddenKeys={hiddenFields} compact={sections.some((section) => matrixOf(section) !== null)} />;
+  const filterBar = <FilterBar controls={controls} selections={selections} onChange={updateSelections} loadFacet={canFacet ? loadFacet : undefined} facetContext={facetContext} title={filterTitle} hiddenKeys={hiddenFields} compact={sections.some((section) => matrixOf(section) !== null)} />;
   const fitted = sections.some((section) => matrixOf(section)?.fit);
   // A document that already carries its own title (title bar or hero) owns the page title: a second <h1> above it would repeat it.
   // On a phone a report with several sections shows one at a time behind tabs (the filters stay above them), instead of one very long page.

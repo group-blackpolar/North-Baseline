@@ -39,7 +39,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
  * loading), dates a period selector over the months and years that hold data, numbers a range and free text a contains
  * box. Active selections show as removable chips and apply live.
  */
-export function FilterBar({ controls, selections, onChange, loadFacet, title, compact = false, hiddenKeys = [] }: {
+export function FilterBar({ controls, selections, onChange, loadFacet, facetContext, title, compact = false, hiddenKeys = [] }: {
   /** Dataset field keys that stay filterable (chart clicks, chips) but get no control in the bar. */
   hiddenKeys?: string[];
   /** Dense single-band variant for fixed-matrix dashboards: no header, inline labels, chips on the same band. */
@@ -49,6 +49,8 @@ export function FilterBar({ controls, selections, onChange, loadFacet, title, co
   onChange: (selections: FilterSelections) => void;
   /** Absent where facet values are not available (e.g. the anonymous showcase): categorical fields fall back to text. */
   loadFacet?: FacetLoader;
+  /** What a field's options are computed from, and which active filters they cannot apply. */
+  facetContext?: (fieldId: string) => { key: string; ignored: string[] };
   title?: string;
 }) {
   const { t, locale } = useI18n();
@@ -62,6 +64,8 @@ export function FilterBar({ controls, selections, onChange, loadFacet, title, co
   const controlsView = controls.filter((control) => !hiddenKeys.includes(control.key)).map((control) => {
     const selection = selections[control.fieldId];
     const faceted = (control.mode === 'multi' || control.mode === 'single') && loadFacet;
+    const context = facetContext?.(control.fieldId);
+    const notice = context?.ignored.length ? t('flt.ignored', { fields: context.ignored.join(', ') }) : undefined;
     if (faceted) {
       return (
         <FacetSelect
@@ -72,6 +76,8 @@ export function FilterBar({ controls, selections, onChange, loadFacet, title, co
           selected={selection?.values ?? []}
           onChange={(values: FilterScalar[]) => set(control.fieldId, { ...selection, values })}
           load={(search, offset, signal) => loadFacet(control.fieldId, search, offset, signal)}
+          contextKey={context?.key}
+          notice={notice}
         />
       );
     }
@@ -83,6 +89,7 @@ export function FilterBar({ controls, selections, onChange, loadFacet, title, co
           label={control.label}
           from={selection?.from}
           to={selection?.to}
+          notice={notice}
           onChange={(range) => set(control.fieldId, { ...selection, from: range.from, to: range.to })}
           loadPeriods={loadFacet ? async (granularity, signal) => (await loadFacet(control.fieldId, '', 0, signal, granularity)).values as FacetValue[] : undefined}
         />

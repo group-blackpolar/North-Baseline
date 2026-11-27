@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { FacetValue } from './facetsApi';
-import type { FilterScalar } from './filterModel';
+import { MAX_FILTER_VALUES, type FilterScalar } from './filterModel';
 
 export type FacetPage = { values: FacetValue[]; truncated: boolean; total?: number };
 export type FacetPageLoader = (search: string, offset: number, signal: AbortSignal) => Promise<FacetPage>;
@@ -25,7 +25,10 @@ export function selectionSummary(selected: FilterScalar[], all: string, many: (c
  * values (with counts) as checkboxes. Values load in pages as the list is scrolled (nothing is downloaded up front), search
  * runs on the server, and values already selected stay listed (and checked) whatever the search or the other filters return.
  */
-export function FacetSelect({ label, multi, selected, onChange, load, compact = false }: {
+export function FacetSelect({ label, multi, selected, onChange, load, contextKey = '', notice, compact = false }: {
+  /** Changes when the other filters (or the binding answering) change: the open list is loaded again. */
+  contextKey?: string;
+  notice?: string;
   /** Dense variant: the label lives inside the trigger instead of above it. */
   compact?: boolean;
   label: string;
@@ -63,7 +66,7 @@ export function FacetSelect({ label, multi, selected, onChange, load, compact = 
       .then((page) => { if (!controller.signal.aborted) setState({ status: 'ready', values: page.values, total: page.total ?? null, more: page.truncated, loadingMore: false }); })
       .catch(() => { if (!controller.signal.aborted) setState((current) => ({ ...current, status: 'error', loadingMore: false })); });
     return () => controller.abort();
-  }, [open, query, reloads]);
+  }, [open, query, reloads, contextKey]);
 
   const loadMore = useCallback(() => {
     setState((current) => {
@@ -141,6 +144,8 @@ export function FacetSelect({ label, multi, selected, onChange, load, compact = 
           <span>{t('flt.existing')}</span>
           {state.total !== null ? <span className="rounded-full bg-surface-hover px-1.5 tabular-nums">{number.format(state.total)}</span> : null}
         </div>
+        {notice ? <p role="status" className="mx-3 mb-1 rounded-md border border-border bg-surface-hover px-2 py-1 text-[length:calc(0.7rem*var(--s,1))] text-text-secondary">{notice}</p> : null}
+        {selected.length >= MAX_FILTER_VALUES ? <p role="status" className="mx-3 mb-1 text-[length:calc(0.7rem*var(--s,1))] text-text-secondary">{t('flt.maxValues', { n: MAX_FILTER_VALUES })}</p> : null}
         <div id={listId} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1 pb-1" aria-busy={state.status === 'loading' || state.loadingMore}>
           {state.status === 'loading' && rows.length === 0 ? (
             <div className="space-y-1.5 p-2">{[0, 1, 2, 3, 4].map((index) => <Skeleton key={index} className="h-5 w-full" />)}</div>
@@ -158,9 +163,9 @@ export function FacetSelect({ label, multi, selected, onChange, load, compact = 
                 return (
                   <li key={String(value)}>
                     <label className={cn('flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-xs transition-colors hover:bg-surface-hover pointer-coarse:min-h-(--touch-min)', checked && 'bg-accent-soft/70')}>
-                      <input type="checkbox" checked={checked} onChange={() => toggle(value)} className="size-4 shrink-0 rounded accent-(--color-accent)" />
+                      <input type="checkbox" checked={checked} disabled={!checked && multi && selected.length >= MAX_FILTER_VALUES} onChange={() => toggle(value)} className="size-4 shrink-0 rounded accent-(--color-accent)" />
                       <span className="min-w-0 flex-1 truncate" title={display(value)}>{display(value)}</span>
-                      {count !== undefined ? <span className="shrink-0 tabular-nums text-text-muted">{number.format(count)}</span> : null}
+                      {count !== undefined ? <span className="shrink-0 tabular-nums text-text-muted">{count === 1 ? t('flt.records.one') : t('flt.records.many', { n: number.format(count) })}</span> : null}
                     </label>
                   </li>
                 );
