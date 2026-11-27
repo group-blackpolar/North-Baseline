@@ -13,7 +13,7 @@ import { analyticsRows, bindingIdOf, useBindingResult, useBindingSource } from '
 import { ReportError } from './ReportError';
 import { ExportDialog } from './ExportDialog';
 import { asNumber, formatValue, localizedText, TONE_VARS, toneOf, type ValueFormat } from './format';
-import { defaultView, moveColumn, pageWindow, parseColumns, reconcileView, rowKeyOf, sparklineSeries, toggleColumn, trendDirection, visibleColumns, type GridColumn, type GridView } from './gridState';
+import { defaultView, moveColumn, pageWindow, fitPageRows, parseColumns, reconcileView, rowKeyOf, sparklineSeries, toggleColumn, trendDirection, visibleColumns, type GridColumn, type GridView } from './gridState';
 
 type Props = Record<string, unknown>;
 type Sort = { key: string; direction: 'ASC' | 'DESC' };
@@ -83,10 +83,21 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
   }, [searchDraft]);
 
   // In a fixed cell the page holds exactly the rows that fit (header 33 px, row 29 px): no inner scroll, the pager reaches the rest.
-  const [scroller, box] = useElementSize<HTMLDivElement>();
-  // Row and header heights are MEASURED from the rendered table (fonts, zoom and borders change them); 30/34 px until the first rows exist.
-  const [metrics, setMetrics] = useState({ row: 30, head: 34, bar: 0 });
-  const fitRows = dense && box.height > 0 ? Math.max(3, Math.floor((box.height - metrics.head - metrics.bar - 2) / metrics.row)) : 0;
+  const [scroller, box] = useElementSize<HTMLDivElement>(true);
+  // Row, header and total heights are MEASURED from the rendered table (fonts, zoom and borders change them); until the first
+  // rows exist they are estimates, with room reserved for the total so the first page is not asked twice.
+  const [metrics, setMetrics] = useState({ row: 30, head: 34, foot: totalsId ? 32 : 0, scrollbar: 10 });
+  // Columns and their narrowest widths come from the box and the saved view, never from the rows.
+  const base = visibleColumns(columns, view);
+  const declared = (column: GridColumn) => view.widths[column.key] ?? column.width ?? 140;
+  const selectWidth = selectable ? 32 : 0;
+  const available = box.width - 2 - selectWidth;
+  const declaredTotal = base.reduce((sum, column) => sum + declared(column), 0);
+  // Columns give up to 40 % of their declared width so as many as possible stay visible; what still does not fit scrolls sideways.
+  const fitScale = dense && available > 0 && declaredTotal > available ? Math.max(0.6, available / declaredTotal) : 1;
+  const widthOf = (column: GridColumn) => (dense && fitScale < 1 ? Math.max(44, Math.floor(declared(column) * fitScale)) : view.widths[column.key] ?? column.width);
+  const tableWidth = dense ? base.reduce((sum, column) => sum + (widthOf(column) ?? 140), selectWidth) : undefined;
+  const fitRows = dense && box.height > 0 ? fitPageRows({ width: box.width, height: box.height, ...metrics, tableMinWidth: tableWidth ?? 0 }) : 0;
   const auto = dense && choice === 'auto';
   const pageSize = dense ? (auto ? fitRows || sizeState : (choice as number)) : sizeState;
   const request = useMemo(() => ({ ...(sort ? { sort } : {}), offset: (page - 1) * pageSize, limit: pageSize, ...(search ? { search } : {}) }), [page, pageSize, search, sort]);
@@ -120,26 +131,23 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
   const trendIncomplete = (trendData.response as { complete?: boolean } | null)?.complete === false;
   const series = useMemo(() => (trend && trendData.response && !trendIncomplete ? sparklineSeries(analyticsRows(trendData.response), trend.rowKeys, trend.categoryKey, trend.valueKey) : new Map<string, number[]>()), [trend, trendData.response, trendIncomplete]);
 
-  // In a fixed cell the table must FIT it: sparklines go first when the cell is narrow, the remaining columns share the width
-  // proportionally (text truncates, nothing is cut off at the edge); outside a cell the declared widths apply and the table scrolls.
-  const base = visibleColumns(columns, view);
+  // In a fixed cell the table must FIT it: the columns share the width proportionally (text truncates, nothing is cut off at
+  // the edge) and the rest scrolls sideways; outside a cell the declared widths apply and the table scrolls.
   useLayoutEffect(() => {
     const root = scroller.current;
     const row = root?.querySelector('tbody tr')?.getBoundingClientRect().height;
     const head = root?.querySelector('thead')?.getBoundingClientRect().height;
-    // A horizontal scrollbar takes height away from the rows: it is measured, not assumed (overlay scrollbars report 0).
-    const bar = root ? Math.max(0, root.offsetHeight - root.clientHeight - 2) : 0;
-    if (row && head && (Math.abs(row - metrics.row) > 0.5 || Math.abs(head - metrics.head) > 0.5 || Math.abs(bar - metrics.bar) > 0.5)) setMetrics({ row, head, bar });
+    if (!root || !row || !head) return;
+    const foot = root.querySelector('tfoot')?.getBoundingClientRect().height ?? (totalsId ? metrics.foot : 0);
+    // A scrollbar's thickness is only known while one is showing (overlay scrollbars report 0): the last one seen is kept.
+    const seen = root.offsetHeight - root.clientHeight - 2;
+    const scrollbar = seen > 0 ? seen : metrics.scrollbar;
+    // A small tolerance only: a quarter of a pixel per row is already a whole row over a tall table.
+    const moved = (a: number, b: number) => Math.abs(a - b) > 0.05;
+    if (moved(row, metrics.row) || moved(head, metrics.head) || moved(foot, metrics.foot) || moved(scrollbar, metrics.scrollbar)) setMetrics({ row, head, foot, scrollbar });
   });
   // Every column stays (trend included): when they do not fit side by side the table scrolls horizontally, so columns can keep being added.
   const shown = base;
-  const declared = (column: GridColumn) => view.widths[column.key] ?? column.width ?? 140;
-  const available = box.width - (selectable ? 32 : 0);
-  const declaredTotal = shown.reduce((sum, column) => sum + declared(column), 0);
-  // Columns give up to 40 % of their declared width so as many as possible stay visible; what still does not fit scrolls sideways.
-  const fitScale = dense && available > 0 && declaredTotal > available ? Math.max(0.6, available / declaredTotal) : 1;
-  const widthOf = (column: GridColumn) => (dense && fitScale < 1 ? Math.max(44, Math.floor(declared(column) * fitScale)) : view.widths[column.key] ?? column.width);
-  const tableWidth = dense ? shown.reduce((sum, column) => sum + (widthOf(column) ?? 140), selectable ? 32 : 0) : undefined;
   const maxima = useMemo(() => Object.fromEntries(columns.filter((column) => column.kind === 'bar' || column.heat).map((column) => [column.key, Math.max(0, ...rows.map((row) => asNumber(row[column.key]) ?? 0))])), [columns, rows]);
   // Several rows may share one trend series (a consignee over many months): the row id is positional, the series key is not.
   const rowId = (_row: AnalyticsRow, index: number) => `${page}:${index}`;

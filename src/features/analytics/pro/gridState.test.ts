@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { collectPages, defaultView, moveColumn, pageWindow, parseColumns, reconcileView, rowKeyOf, sparklineSeries, toggleColumn, trendDirection, visibleColumns } from './gridState.ts';
+import { collectPages, defaultView, fitPageRows, moveColumn, pageWindow, parseColumns, reconcileView, rowKeyOf, sparklineSeries, toggleColumn, trendDirection, visibleColumns } from './gridState.ts';
 
 const label = (raw: unknown) => (typeof raw === 'object' && raw ? String((raw as Record<string, unknown>).es ?? '') : '');
 const columns = parseColumns([
@@ -66,4 +66,20 @@ test('collectPages reads every page and says when rows are still missing', async
   // A source that ignores the offset (anonymous showcase) is reported incomplete instead of duplicating rows.
   const stuck = await collectPages(async () => ({ rows: Array.from({ length: 100 }, (_, i) => ({ n: i })) }));
   assert.deepEqual([stuck.complete, stuck.rows.length], [false, 100]);
+});
+
+test('fitPageRows chooses rows that fit with the total and the horizontal scrollbar', () => {
+  const cell = { width: 451, height: 673, head: 27.1, row: 22.55, foot: 32.4, tableMinWidth: 408, scrollbar: 10 };
+  const fits = (input: typeof cell, rows: number) => 2 + input.head + input.foot + (input.tableMinWidth > input.width - 2 ? input.scrollbar : 0) + rows * input.row <= input.height;
+  // Heights and widths around the ones where the old formula flipped between two sizes.
+  for (let height = 300; height <= 900; height += 7) {
+    for (const width of [300, 405, 409, 410, 411, 451]) {
+      const input = { ...cell, height, width };
+      const rows = fitPageRows(input);
+      assert.ok(fits(input, rows), `${width}x${height}: ${rows} rows overflow`);
+      assert.ok(!fits(input, rows + 1), `${width}x${height}: room is left for another row`);
+    }
+  }
+  assert.equal(fitPageRows({ ...cell, foot: 0 }), fitPageRows(cell) + 1, 'the total takes the place of a row here');
+  assert.equal(fitPageRows({ ...cell, height: 60 }), 3, 'never fewer than three rows');
 });

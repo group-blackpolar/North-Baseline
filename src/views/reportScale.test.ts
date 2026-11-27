@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { fitContentHeight, reportMode, reportScale, type ScaleSection } from './reportScale.ts';
+import { measuredReport, REPORT_PADDING, fitContentHeight, reportMode, reportScale, type ScaleSection } from './reportScale.ts';
 
 const at = (id: string, type: string, y: number, h: number, props?: Record<string, unknown>) => ({ id, type, props, layout: { desktop: { y, h } } });
 
@@ -45,4 +45,14 @@ test('fitContentHeight: tallest fit section = rows x rowHeight + gaps + chrome; 
   assert.equal(fitContentHeight([grouped]), 10 * 16 + 9 * 16 + 150, 'a grouped member is drawn inside its group, not at its own cell');
   assert.equal(fitContentHeight([{ layout: { rowHeight: 16 }, components: [at('a', 'card', 0, 4)] }]), null, 'not fit: scrolls');
   assert.equal(fitContentHeight([{ layout: {}, components: [] }]), null);
+});
+
+test('the measured size ignores whatever the padding takes, so the scale cannot feed back into itself', () => {
+  const element = { offsetWidth: 1124, offsetHeight: 900 };
+  // The same element reads the same whatever scale its padding was drawn at.
+  assert.deepEqual(measuredReport(element, true), { width: 1124 - REPORT_PADDING, height: 900 - REPORT_PADDING });
+  assert.deepEqual(measuredReport(element, false), { width: 1124 - REPORT_PADDING, height: 0 });
+  assert.deepEqual(measuredReport({ offsetWidth: 10, offsetHeight: 10 }, true), { width: 0, height: 0 });
+  const scale = reportScale(measuredReport(element, true), true, 940);
+  assert.equal(reportScale(measuredReport(element, true), true, 940), scale);
 });

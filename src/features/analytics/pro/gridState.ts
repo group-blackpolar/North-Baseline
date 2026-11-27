@@ -111,6 +111,24 @@ export async function collectPages<R extends { rows: unknown[] }>(fetchPage: (of
   return { ...first, rows, rowCount: rows.length, complete: false };
 }
 
+export type PageFit = {
+  /** OUTER size of the scrolling box: scrollbars that appear inside it do not change it. */
+  width: number; height: number;
+  head: number; row: number; /** Grand-total row stuck to the bottom (0 without one). */ foot: number;
+  /** Narrowest the table can be, and what a horizontal scrollbar takes when the box is narrower than that. */
+  tableMinWidth: number; scrollbar: number;
+};
+
+/**
+ * Rows that fit a fixed cell. Every input is independent of how many rows are asked for: a measure that depends on the
+ * page size feeds back into it, and the table then requests two sizes in turn for ever.
+ */
+export function fitPageRows({ width, height, head, row, foot, tableMinWidth, scrollbar }: PageFit): number {
+  const BORDERS = 2;
+  const bar = tableMinWidth > width - BORDERS ? scrollbar : 0;
+  return Math.max(3, Math.floor((height - BORDERS - head - foot - bar) / row));
+}
+
 /** One ordered numeric series per row key, built only from the rows CORECROW returned. */
 export function sparklineSeries(rows: AnalyticsRow[], rowKeys: string[], categoryKey: string, valueKey: string): Map<string, number[]> {
   const buckets = new Map<string, Array<[string, number]>>();
