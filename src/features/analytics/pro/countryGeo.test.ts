@@ -21,3 +21,12 @@ test('projection maps the globe into the map box', () => {
   assert.equal(x, MAP_WIDTH);
   assert.equal(y, MAP_HEIGHT, 'latitudes below the clip land on the bottom edge');
 });
+
+test('Spanish customs names resolve to the same place as the English ones, and non-countries stay unlocated', () => {
+  for (const [es, en] of [['Estados Unidos (Los)', 'UNITED STATES OF AMERICA'], ['ESPA\u00d1A', 'SPAIN'], ['PA\u00cdSES BAJOS (HOLANDA)', 'NETHERLANDS'], ['RUSIA, (LA) FEDERACI\u00d3N DE', 'RUSSIAN FEDERATION'], ['COREA (LA REP\u00daBLICA DE)', 'KOREA (REPUBLIC OF)'], ['TAIW\u00c1N (PROVINCIA DE CHINA)', 'TAIWAN']] as const) {
+    assert.ok(locateCountry(en), en);
+    assert.deepEqual(locateCountry(es), locateCountry(en), es);
+  }
+  assert.equal(locateCountry('ZONA LIBRE DE COLON'), null);
+  assert.equal(locateCountry('NO DISPONIBLE'), null);
+});

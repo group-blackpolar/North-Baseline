@@ -115,8 +115,10 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
     const filters: DatasetQueryFilter[] = trend.rowKeys.slice(0, 2).map((key) => ({ fieldId: key, operator: 'IN', value: [...new Set(rows.map((row) => row[key]).filter((value): value is string | number => typeof value === 'string' || typeof value === 'number'))].slice(0, 100) }));
     return filters.every((filter) => Array.isArray(filter.value) && filter.value.length) ? { filters } : null;
   }, [columns, rows, trend, trendId]);
-  const trendData = useBindingResult(trendRequest ? trendId : null, trendRequest ?? {});
-  const series = useMemo(() => (trend && trendData.response ? sparklineSeries(analyticsRows(trendData.response), trend.rowKeys, trend.categoryKey, trend.valueKey) : new Map<string, number[]>()), [trend, trendData.response]);
+  const trendData = useBindingResult(trendRequest ? trendId : null, trendRequest ?? {}, { allPages: true });
+  // A series built from part of the rows looks like a real trend and is not: none is drawn.
+  const trendIncomplete = (trendData.response as { complete?: boolean } | null)?.complete === false;
+  const series = useMemo(() => (trend && trendData.response && !trendIncomplete ? sparklineSeries(analyticsRows(trendData.response), trend.rowKeys, trend.categoryKey, trend.valueKey) : new Map<string, number[]>()), [trend, trendData.response, trendIncomplete]);
 
   // In a fixed cell the table must FIT it: sparklines go first when the cell is narrow, the remaining columns share the width
   // proportionally (text truncates, nothing is cut off at the edge); outside a cell the declared widths apply and the table scrolls.
@@ -154,7 +156,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
     if (column.kind === 'rank') return <span className="tabular-nums text-text-secondary">{numberFormat.format((page - 1) * pageSize + index + 1)}</span>;
     if (column.kind === 'sparkline') {
       const values = seriesOf(row);
-      if (!values || values.length < 2) return <span className="text-text-muted">{trendData.status === 'loading' ? '' : '—'}</span>;
+      if (!values || values.length < 2) return <span className="text-text-muted" title={trendIncomplete ? t('grid.trendIncomplete') : undefined}>{trendData.status === 'loading' ? '' : '—'}</span>;
       const direction = trendDirection(values);
       const color = direction === 'up' ? '#1F9D63' : direction === 'down' ? '#E0475B' : 'var(--color-text-muted)';
       return <Sparkline values={values} color={color} className="h-6 w-20" label={t('grid.trend')} />;

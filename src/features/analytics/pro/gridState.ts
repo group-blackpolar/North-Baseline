@@ -91,6 +91,26 @@ export function pageWindow(page: number, pages: number, span = 2): Array<number 
 
 export const rowKeyOf = (row: AnalyticsRow, keys: string[]): string => JSON.stringify(keys.map((key) => row[key] ?? null));
 
+// ponytail: CORECROW does not say whether more rows exist, so a page that is a whole multiple of 100 (the default and every
+// published trend limit) is followed by one more request. Replace with a `hasMore` from the API if limits stop being round.
+/**
+ * Reads every page of a binding whose rows come back in a stable order. `complete: false` means rows are missing (page cap
+ * reached, or a source that ignores offsets): whatever is built from them would be cut off and must not be shown.
+ */
+export async function collectPages<R extends { rows: unknown[] }>(fetchPage: (offset: number) => Promise<R>, maxPages = 10): Promise<R & { complete: boolean }> {
+  const first = await fetchPage(0);
+  const size = first.rows.length;
+  if (size < 100 || size % 100 !== 0) return { ...first, complete: true };
+  const rows = [...first.rows];
+  for (let page = 1; page < maxPages; page += 1) {
+    const next = await fetchPage(rows.length);
+    if (next.rows.length && JSON.stringify(next.rows[0]) === JSON.stringify(first.rows[0])) break;
+    rows.push(...next.rows);
+    if (next.rows.length < size) return { ...first, rows, rowCount: rows.length, complete: true };
+  }
+  return { ...first, rows, rowCount: rows.length, complete: false };
+}
+
 /** One ordered numeric series per row key, built only from the rows CORECROW returned. */
 export function sparklineSeries(rows: AnalyticsRow[], rowKeys: string[], categoryKey: string, valueKey: string): Map<string, number[]> {
   const buckets = new Map<string, Array<[string, number]>>();
