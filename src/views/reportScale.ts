@@ -56,6 +56,18 @@ export function reportScale({ width, height }: ReportSize, fitted: boolean, base
   return Math.round(scale * 100) / 100;
 }
 
+/** The report's own padding at scale 1 (both sides together), taken off its outer size. */
+export const REPORT_PADDING = 24;
+
+/**
+ * The size the scale is derived from: the OUTER size less a constant. The padding itself grows with the scale, so reading
+ * the content box feeds the scale back into its own input, and the whole report then flips between two sizes for ever.
+ */
+export const measuredReport = (element: { offsetWidth: number; offsetHeight: number }, trackHeight: boolean): ReportSize => ({
+  width: Math.max(0, element.offsetWidth - REPORT_PADDING),
+  height: trackHeight ? Math.max(0, element.offsetHeight - REPORT_PADDING) : 0,
+});
+
 /** Live size of an element. Height is only tracked when asked (a scrolling page's height depends on its content).
  *  The element is held in state (callback ref) because the report may mount its <article> after the component itself. */
 export function useReportSize<T extends HTMLElement>(trackHeight: boolean) {
@@ -65,11 +77,10 @@ export function useReportSize<T extends HTMLElement>(trackHeight: boolean) {
     if (!element || typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver(([entry]) => {
       if (!entry) return;
-      const width = Math.round(entry.contentRect.width);
-      const height = trackHeight ? Math.round(entry.contentRect.height) : 0;
+      const { width, height } = measuredReport(element, trackHeight);
       setSize((current) => (current.width === width && current.height === height ? current : { width, height }));
     });
-    observer.observe(element);
+    observer.observe(element, { box: 'border-box' });
     return () => observer.disconnect();
   }, [element, trackHeight]);
   return [setElement, size, element] as const;
