@@ -20,7 +20,7 @@ const dayOf = (value: FacetValue['value']) => (typeof value === 'string' && /^\d
  * Period filter for a date field: presets anchored on the latest month that holds data, whole years and months that
  * actually exist (with record counts, from CORECROW), and a custom range. It always produces a closed [from, to] day range.
  */
-export function PeriodSelect({ label, from, to, onChange, loadPeriods, compact = false }: { compact?: boolean; label: string; from?: string; to?: string; onChange: (range: { from?: string; to?: string }) => void; loadPeriods?: PeriodLoader }) {
+export function PeriodSelect({ label, from, to, onChange, loadPeriods, notice, compact = false }: { notice?: string; compact?: boolean; label: string; from?: string; to?: string; onChange: (range: { from?: string; to?: string }) => void; loadPeriods?: PeriodLoader }) {
   const { t, locale } = useI18n();
   const anchorRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -57,6 +57,7 @@ export function PeriodSelect({ label, from, to, onChange, loadPeriods, compact =
       </button>
       <Popover open={open} onOpenChange={setOpen} anchorRef={anchorRef} label={label} minWidth={340}>
         <div className="space-y-3 overflow-y-auto p-3">
+          {notice ? <p role="status" className="rounded-md border border-border bg-surface-hover px-2 py-1 text-[length:calc(0.7rem*var(--s,1))] text-text-secondary">{notice}</p> : null}
           {latest ? (
             <section aria-label={t('flt.presets')}>
               <p className="mb-1.5 text-[length:calc(0.68rem*var(--s,1))] font-semibold uppercase tracking-wide text-text-muted">{t('flt.presets')}</p>
@@ -77,14 +78,14 @@ export function PeriodSelect({ label, from, to, onChange, loadPeriods, compact =
                   <p className="mb-1 text-[length:calc(0.68rem*var(--s,1))] font-semibold uppercase tracking-wide text-text-muted">{t('flt.year')}</p>
                   <ul className="max-h-48 space-y-px overflow-y-auto">
                     {state.years.map((entry) => { const day = dayOf(entry.value); if (!day) return null; const year = Number(day.slice(0, 4)); const bounds = yearBounds(year); const active = selectedKind.kind === 'year' && from === bounds.from;
-                      return <li key={year}><button type="button" aria-pressed={active} className={cn(item, active && 'bg-accent-soft text-accent')} onClick={() => apply(bounds)}><span className="font-medium">{year}</span><span className="tabular-nums text-text-muted">{number.format(entry.count)}</span></button></li>; })}
+                      return <li key={year}><button type="button" aria-pressed={active} className={cn(item, active && 'bg-accent-soft text-accent')} onClick={() => apply(bounds)}><span className="font-medium">{year}</span><span className="tabular-nums text-text-muted">{entry.count === 1 ? t('flt.records.one') : t('flt.records.many', { n: number.format(entry.count) })}</span></button></li>; })}
                   </ul>
                 </section>
                 <section aria-label={t('flt.month')}>
                   <p className="mb-1 text-[length:calc(0.68rem*var(--s,1))] font-semibold uppercase tracking-wide text-text-muted">{t('flt.month')}</p>
                   <ul className="max-h-48 space-y-px overflow-y-auto">
                     {state.months.map((entry) => { const day = dayOf(entry.value); if (!day) return null; const bounds = monthBounds(day); const active = selectedKind.kind === 'month' && from === bounds.from;
-                      return <li key={day}><button type="button" aria-pressed={active} className={cn(item, active && 'bg-accent-soft text-accent')} onClick={() => { apply(bounds); setOpen(false); }}><span className="font-medium capitalize">{monthLabel(day)}</span><span className="tabular-nums text-text-muted">{number.format(entry.count)}</span></button></li>; })}
+                      return <li key={day}><button type="button" aria-pressed={active} className={cn(item, active && 'bg-accent-soft text-accent')} onClick={() => { apply(bounds); setOpen(false); }}><span className="font-medium capitalize">{monthLabel(day)}</span><span className="tabular-nums text-text-muted">{entry.count === 1 ? t('flt.records.one') : t('flt.records.many', { n: number.format(entry.count) })}</span></button></li>; })}
                   </ul>
                 </section>
               </div>

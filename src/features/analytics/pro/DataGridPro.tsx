@@ -93,8 +93,14 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
   const data = useBindingResult(dataId, request);
   const rows = useMemo(() => (data.response ? analyticsRows(data.response) : []), [data.response]);
   // Grand total: its own single-row binding, same filters as the table, so it is exact for the whole selection (not just this page).
+  // While the table is searched, the total is asked with the same search. A binding that declares no searchable fields rejects
+  // it: the unsearched figure is then shown, and labelled as such, never passed off as the total of what is on screen.
   const totalsData = useBindingResult(totalsId, {});
-  const totalsRow = useMemo(() => (totalsData.response ? analyticsRows(totalsData.response)[0] ?? null : null), [totalsData.response]);
+  const searchedTotals = useBindingResult(search ? totalsId : null, { search });
+  const searchedRow = search && searchedTotals.status === 'ready' && !searchedTotals.refreshing && searchedTotals.response ? analyticsRows(searchedTotals.response)[0] ?? null : null;
+  const unsearchedRow = useMemo(() => (totalsData.response ? analyticsRows(totalsData.response)[0] ?? null : null), [totalsData.response]);
+  const totalsRow = searchedRow ?? unsearchedRow;
+  const totalsLabel = search && !searchedRow ? t('grid.totalNoSearch') : localizedText(totalsSpec?.label, locales) || t('grid.grandTotal');
   const total = data.response?.totalRows ?? rows.length;
   const pages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -255,7 +261,7 @@ export function DataGridPro({ componentId, panelKey, props, bindings, locales }:
                   {selectable ? <td className="border-t border-border px-2" /> : null}
                   {shown.map((column, index) => (
                     <td key={column.key} className={cn('border-t border-border text-text', dense ? 'h-7 px-1.5' : 'h-9 px-3', align(column) === 'right' && 'text-right tabular-nums')}>
-                      {index === 0 ? localizedText(totalsSpec?.label, locales) || t('grid.grandTotal') : column.kind !== 'number' && column.kind !== 'decimal' && column.kind !== 'bar' ? null : formatValue(totalsRow[column.key] ?? null, column.kind === 'decimal' ? 'decimal' : 'number', locale)}
+                      {index === 0 ? totalsLabel : column.kind !== 'number' && column.kind !== 'decimal' && column.kind !== 'bar' ? null : formatValue(totalsRow[column.key] ?? null, column.kind === 'decimal' ? 'decimal' : 'number', locale)}
                     </td>
                   ))}
                 </tr>

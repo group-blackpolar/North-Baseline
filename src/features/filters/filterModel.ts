@@ -40,9 +40,9 @@ export function selectionToFilters(definition: Definition, selection: FilterSele
   const out: DatasetQueryFilter[] = [];
   const values = selection.values ?? [];
   if (values.length) {
-    if (values.length > 1 && ops.has('IN')) out.push({ fieldId, operator: 'IN', value: values.slice(0, 100) });
+    if (values.length > 1 && ops.has('IN')) out.push({ fieldId, operator: 'IN', value: values });
     else if (ops.has('EQ')) out.push({ fieldId, operator: 'EQ', value: values[0]! });
-    else if (ops.has('IN')) out.push({ fieldId, operator: 'IN', value: values.slice(0, 100) });
+    else if (ops.has('IN')) out.push({ fieldId, operator: 'IN', value: values });
   }
   const text = selection.text?.trim();
   if (text) {
@@ -60,12 +60,37 @@ export function selectionToFilters(definition: Definition, selection: FilterSele
   return out;
 }
 
-/** The filters one binding receives: every active selection translated through THAT binding's own definitions. */
+/** CORECROW's limit for one IN list; the controls stop here so a selection is never cut behind the reader's back. */
+export const MAX_FILTER_VALUES = 100;
+
+/** The filters one binding receives: every active selection translated through THAT binding's own definitions.
+ *  Nothing is trimmed: over CORECROW's limits the request is rejected and the widget shows an error, never a wider result. */
 export function filtersForDefinitions(definitions: Definition[], selections: FilterSelections, exceptFieldId?: string): DatasetQueryFilter[] {
   return definitions
     .filter((definition) => definition.fieldId !== exceptFieldId)
-    .flatMap((definition) => selectionToFilters(definition, selections[definition.fieldId]))
-    .slice(0, 10);
+    .flatMap((definition) => selectionToFilters(definition, selections[definition.fieldId]));
+}
+
+export type FacetPlan = { bindingId: string; filters: DatasetQueryFilter[]; /** Active fields the options cannot take into account. */ ignored: string[] };
+
+/**
+ * Which binding answers a field's options. It never depends on the order responses arrived in: the binding that applies
+ * the most active filters wins, then the page's main (table) bindings, then the fullest allowlist, then the id.
+ */
+export function planFacet(definitionsByBinding: Record<string, Definition[]>, fieldId: string, selections: FilterSelections, preferred: ReadonlySet<string> = new Set()): FacetPlan | null {
+  // Only selections some binding of this page understands count; stale ones restored from the session do not.
+  const active = [...new Set(Object.values(definitionsByBinding).flat().filter((definition) => definition.fieldId !== fieldId && selectionToFilters(definition, selections[definition.fieldId]).length > 0).map((definition) => definition.fieldId))].sort();
+  const plans = Object.entries(definitionsByBinding)
+    .filter(([, definitions]) => definitions.some((definition) => definition.fieldId === fieldId))
+    .map(([bindingId, definitions]) => ({
+      bindingId,
+      size: definitions.length,
+      filters: filtersForDefinitions(definitions, selections, fieldId),
+      ignored: active.filter((id) => !definitions.some((definition) => definition.fieldId === id && selectionToFilters(definition, selections[id]).length > 0)),
+    }))
+    .sort((a, b) => a.ignored.length - b.ignored.length || Number(preferred.has(b.bindingId)) - Number(preferred.has(a.bindingId)) || b.size - a.size || a.bindingId.localeCompare(b.bindingId));
+  const best = plans[0];
+  return best ? { bindingId: best.bindingId, filters: best.filters, ignored: best.ignored } : null;
 }
 
 export function toggleValue(selection: FilterSelection | undefined, value: FilterScalar, multi: boolean): FilterSelection {

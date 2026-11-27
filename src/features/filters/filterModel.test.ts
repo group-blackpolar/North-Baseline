@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
-import { activeCount, chipsOf, filterModeOf, filtersForDefinitions, removeChip, selectionToFilters, toggleValue } from './filterModel.ts';
+import { activeCount, chipsOf, filterModeOf, filtersForDefinitions, planFacet, removeChip, selectionToFilters, toggleValue } from './filterModel.ts';
 
 type Def = Parameters<typeof filterModeOf>[0];
 const consignee: Def = { fieldId: 'f1', type: 'TEXT', operators: ['EQ', 'IN', 'CONTAINS'] };
@@ -25,12 +25,12 @@ test('selections become only allowed operators', () => {
   assert.deepEqual(selectionToFilters(consignee, { values: [], text: '  ' }), []);
 });
 
-test('a binding only receives filters for fields it defines, never more than ten', () => {
+test('a binding only receives filters for fields it defines, nothing is trimmed', () => {
   const selections = { f1: { values: ['A'] }, f2: { from: '2026-01-01' }, other: { values: ['x'] } };
   assert.equal(filtersForDefinitions([consignee], selections).length, 1);
   assert.equal(filtersForDefinitions([consignee, arrival], selections, 'f1').length, 1);
   const many: Def[] = Array.from({ length: 12 }, (_, i) => ({ fieldId: `k${i}`, type: 'TEXT', operators: ['EQ'] }));
-  assert.equal(filtersForDefinitions(many, Object.fromEntries(many.map((d) => [d.fieldId, { values: ['v'] }]))).length, 10);
+  assert.equal(filtersForDefinitions(many, Object.fromEntries(many.map((d) => [d.fieldId, { values: ['v'] }]))).length, 12);
 });
 
 test('toggle, chips and removal keep selections consistent', () => {
@@ -43,4 +43,25 @@ test('toggle, chips and removal keep selections consistent', () => {
   const afterOne = removeChip(selections, chips[0]!);
   assert.deepEqual(afterOne.f1?.values, ['B']);
   assert.equal(activeCount(removeChip(afterOne, chips[1]!)), 0);
+});
+
+test('facet options come from the binding that applies the active filters, whatever order the bindings registered in', () => {
+  const name: Def = { fieldId: 'name', type: 'TEXT', operators: ['IN', 'EQ'] };
+  const country: Def = { fieldId: 'country', type: 'TEXT', operators: ['IN', 'EQ'] };
+  const date: Def = { fieldId: 'date', type: 'DATE', operators: ['GTE', 'LTE'] };
+  const selections = { name: { values: ['A'] }, country: { values: ['X'] }, date: { from: '2026-07-01', to: '2026-09-30' }, stale: { values: ['?'] } };
+  const trend = [name, country];
+  const full = [name, country, date];
+  for (const bindings of [{ trend, ranking: full, kpi: full }, { kpi: full, ranking: full, trend }]) {
+    const plan = planFacet(bindings, 'name', selections, new Set(['ranking']))!;
+    assert.equal(plan.bindingId, 'ranking');
+    assert.deepEqual(plan.ignored, []);
+    assert.deepEqual(plan.filters.map((f) => `${f.fieldId} ${f.operator}`), ['country EQ', 'date GTE', 'date LTE']);
+  }
+  assert.equal(planFacet({ b: full, a: full }, 'name', selections)!.bindingId, 'a');
+  // A preferred binding never wins over one that applies more of the selection, and what cannot be applied is reported.
+  assert.equal(planFacet({ trend, kpi: full }, 'name', selections, new Set(['trend']))!.bindingId, 'kpi');
+  assert.deepEqual(planFacet({ trend }, 'name', { date: { from: '2026-07-01' } }), { bindingId: 'trend', filters: [], ignored: [] });
+  assert.deepEqual(planFacet({ trend, other: [date] }, 'name', selections)!.ignored, ['date']);
+  assert.equal(planFacet({ trend }, 'missing', selections), null);
 });
